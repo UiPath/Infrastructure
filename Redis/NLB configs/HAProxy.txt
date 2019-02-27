@@ -1,0 +1,36 @@
+# edit /etc/haproxy/haproxy.conf and add (modify according to your setup) - THIS IS PURELY INFORMATIVE
+
+# Specifies TCP timeout on connect for use by the frontend ft_redis
+# Set the max time to wait for a connection attempt to a server to succeed
+# The server and client side expected to acknowledge or send data.
+defaults REDIS
+timeout connect 3s
+timeout server 6s
+timeout client 6s
+
+# Specifies listening socket for accepting client connections using the default
+# REDIS TCP timeout and backend bk_redis TCP health check.
+frontend ft_redis
+bind *:6378 name redis
+default_backend bk_redis
+
+# Specifies the backend Redis proxy server TCP health settings
+# Ensure it only forward incoming connections to reach a master.
+backend bk_redis
+mode tcp
+option tcplog
+option tcp-check
+tcp-check connect
+
+#uncomment these lines if you have basic auth
+#tcp-check send AUTH\ yourpassword\r\n
+#tcp-check expect string +OK
+tcp-check send PING\r\n
+tcp-check expect string +PONG
+tcp-check send info\ replication\r\n
+tcp-check expect string role:master
+tcp-check send QUIT\r\n
+tcp-check expect string +OK
+server redis-1 10.10.0.2:6379 maxconn 1024 check inter 1s
+server redis-2 10.10.0.3:6379 maxconn 1024 check inter 1s
+server redis-3 10.10.0.4:6379 maxconn 1024 check inter 1s
