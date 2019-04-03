@@ -1,0 +1,349 @@
+{
+  "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+      "location": {
+          "defaultValue": "[resourceGroup().location]",
+          "type": "String",
+          "metadata": {
+              "description": "Location for all resources."
+          }
+      },
+      "orchestratorUrl": {
+
+          "type": "String",
+          "metadata": {
+              "description": "Orchestrator URL."
+          }
+      },
+      "orchAdmin": {
+          "type": "string",
+          "defaultValue": "admin",
+          "metadata": {
+              "description": "User admin of the orchestrator."
+          }
+      },
+      "orchPassword": {
+          "type": "string",
+
+          "metadata": {
+              "description": "Password for the orchestrator."
+          }
+      },
+      "Tennant": {
+          "type": "string",
+          "defaultValue": "default",
+          "metadata": {
+              "description": "Orchestrator Tennant"
+          }
+      },
+      "RobotType": {
+          "type": "string",
+          "defaultValue": "Unattended",
+          "allowedValues": [
+              "Unattended",
+              "Attended"
+          ],
+          "metadata": {
+              "description": "Robot Type"
+              }
+          },
+      "virtualMachineName": {
+          "type": "String",
+          "minLength": 4,
+          "maxLength": 15,
+          "metadata": {
+              "description": "Virtual Machine Name"
+          }
+      },
+      "howMany": {
+          "type": "Int",
+          "defaultValue": 1,
+          "minValue": 1,
+          "maxValue": 10,
+          "metadata": {
+              "description": "how many Robots?"
+          }
+      },
+      "continueFromLastVM" : {
+      "type": "int",
+      "minValue": 0,
+      "defaultValue": 0,
+        "metadata" : {
+            "description" : "Continue from Last VM name index"
+        }
+      },
+      "vNetNewOrExisting": {
+        "type": "string",
+        "defaultValue": "new",
+        "allowedValues": [
+          "new",
+          "existing"
+        ],
+        "metadata": {
+          "description": "Specify whether to create a new or existing virtual network for the VM."
+        }
+      },
+      "virtualNetworkName" : {
+        "type" : "string",
+        "defaultValue": "newVnet",
+        "metadata": {
+          "description" : "Enter existing vnet name or type new name to create new VNET"
+        }
+      },
+
+      "adminUsername": {
+          "type": "String",
+          "minLength": 4,
+          "maxLength": 15,
+          "metadata": {
+              "description": "VMs Admin username"
+          }
+      },
+      "adminPassword": {
+          "type": "String",
+          "metadata": {
+              "description": "VMs Admin password"
+          }
+      },
+      "virtualMachineSize": {
+          "defaultValue": "Standard_B2s",
+          "allowedValues": [
+              "Standard_B2s",
+              "Standard_F4s"
+          ],
+          "type": "String"
+      }
+  },
+  "variables": {
+      "scriptUriBase": "https://raw.githubusercontent.com/hteo1337/UiPathScripts/997e929554a20195ae0bceb16636a7778230f438/Setup/Install-UiRobot.ps1",
+      "HostingType": "Standard",
+      "CredentialType": "Default",
+      "vmName": "[parameters('virtualMachineName')]",
+      "nsgId": "[resourceId(resourceGroup().name, 'Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]",
+      "osDiskType": "StandardSSD_LRS",
+      "publicIpAddressName": "[concat(variables('vmName'), '-pip')]",
+      "publicIpAddressSku": "Basic",
+      "publicIpAddressType": "Dynamic",
+      "networkInterfaceName": "[concat(variables('vmName'), '-nic')]",
+      "networkSecurityGroupName": "[concat(parameters('virtualNetworkName'), '-nsg')]",
+      "virtualNetworkName": "[parameters('virtualNetworkName')]",
+      "addressPrefix": "10.0.0.0/24",
+      "subnetPrefix": "[variables('addressPrefix')]",
+      "subnetName": "[concat(parameters('virtualNetworkName'), '-subnet')]",
+      "vnetId": "[resourceId(resourceGroup().name,'Microsoft.Network/virtualNetworks', variables('virtualNetworkName'))]",
+      "subnetRef": "[concat(variables('vnetId'), '/subnets/', variables('subnetName'))]",
+      "scriptUriNamePieces": "[split(variables('scriptUriBase'), '/')]",
+      "scriptFileString": "[variables('scriptUriNamePieces')[sub(length(variables('scriptUriNamePieces')), 1)]]",
+      "scriptFileBreakString": "[split(variables('scriptFileString'), '?')]",
+      "scriptFileName": "[variables('scriptFileBreakString')[0]]",
+      "attendedBot" : "[concat ('powershell -ExecutionPolicy Unrestricted -File ',' ', variables('scriptFileName'),' ','-orchestratorUrl',' ',parameters('orchestratorUrl'),' ','-Tennant',' ',parameters('Tennant'),' ','-orchAdmin',' ',parameters('orchAdmin'),' ','-orchPassword',' ',parameters('orchPassword'),' ','-HostingType',' ',variables('HostingType'),' ','-RobotType',' ',parameters('RobotType'),' ','-adminUsername',' ',parameters('adminUsername'))]",
+      "unattendedBot": "[concat ('powershell -ExecutionPolicy Unrestricted -File ',' ', variables('scriptFileName'),' ','-orchestratorUrl',' ',parameters('orchestratorUrl'),' ','-Tennant',' ',parameters('Tennant'),' ','-orchAdmin',' ',parameters('orchAdmin'),' ','-orchPassword',' ',parameters('orchPassword'),' ','-HostingType',' ',variables('HostingType'),' ','-RobotType',' ',parameters('RobotType'),' ','-adminUsername',' ',parameters('adminUsername'),' ','-machinePassword',' ',parameters('adminPassword'),' ','-credType',' ',variables('CredentialType'))]"
+  },
+  "resources": [
+      {
+          "type": "Microsoft.Network/networkInterfaces",
+          "name": "[concat(variables('networkInterfaceName'),add(copyIndex(1),parameters('continueFromLastVM')))]",
+          "apiVersion": "2018-04-01",
+          "location": "[parameters('location')]",
+          "copy": {
+              "name": "virtualMachineName",
+              "count": "[parameters('howMany')]"
+          },
+          "tags": {},
+          "properties": {
+              "ipConfigurations": [
+                  {
+                      "name": "ipconfig1",
+                      "properties": {
+                          "subnet": {
+                              "id": "[variables('subnetRef')]"
+                          },
+                          "privateIPAllocationMethod": "Dynamic",
+                          "publicIpAddress": {
+                              "id": "[resourceId(resourceGroup().name, 'Microsoft.Network/publicIpAddresses', concat(variables('publicIpAddressName'),add(copyIndex(1),parameters('continueFromLastVM'))))]"
+                          }
+                      }
+                  }
+              ],
+              "networkSecurityGroup": {
+                  "id": "[variables('nsgId')]"
+              }
+          },
+          "dependsOn": [
+              "[concat('Microsoft.Network/networkSecurityGroups/', variables('networkSecurityGroupName'))]",
+              "[concat('Microsoft.Network/publicIpAddresses/', variables('publicIpAddressName'),add(copyIndex(1),parameters('continueFromLastVM')))]"
+          ]
+      },
+      {   "condition": "[equals(parameters('vNetNewOrExisting'), 'new')]",
+          "type": "Microsoft.Network/networkSecurityGroups",
+          "name": "[variables('networkSecurityGroupName')]",
+          "apiVersion": "2018-08-01",
+          "location": "[parameters('location')]",
+          "tags": {},
+          "properties": {
+              "securityRules": [
+                  {
+                      "name": "HTTP",
+                      "properties": {
+                          "priority": 300,
+                          "protocol": "TCP",
+                          "access": "Allow",
+                          "direction": "Inbound",
+                          "sourceAddressPrefix": "*",
+                          "sourcePortRange": "*",
+                          "destinationAddressPrefix": "*",
+                          "destinationPortRange": "80"
+                      }
+                  },
+                  {
+                      "name": "RDP",
+                      "properties": {
+                          "priority": 320,
+                          "protocol": "TCP",
+                          "access": "Allow",
+                          "direction": "Inbound",
+                          "sourceAddressPrefix": "*",
+                          "sourcePortRange": "*",
+                          "destinationAddressPrefix": "*",
+                          "destinationPortRange": "3389"
+                      }
+                  },
+                  {
+                      "name": "HTTPS",
+                      "properties": {
+                          "priority": 340,
+                          "protocol": "TCP",
+                          "access": "Allow",
+                          "direction": "Inbound",
+                          "sourceAddressPrefix": "*",
+                          "sourcePortRange": "*",
+                          "destinationAddressPrefix": "*",
+                          "destinationPortRange": "443"
+                      }
+                  }
+              ]
+          }
+      },
+      {
+         "condition": "[equals(parameters('vNetNewOrExisting'), 'new')]",
+          "type": "Microsoft.Network/virtualNetworks",
+          "name": "[variables('virtualNetworkName')]",
+          "apiVersion": "2018-08-01",
+          "location": "[parameters('location')]",
+          "tags": {},
+          "properties": {
+              "addressSpace": {
+                  "addressPrefixes": [
+                      "[variables('addressPrefix')]"
+                  ]
+              },
+              "subnets": [
+                  {
+                      "name": "[variables('subnetName')]",
+                      "properties": {
+                          "addressPrefix": "[variables('subnetPrefix')]"
+                      }
+                  }
+              ]
+          }
+      },
+      {
+          "type": "Microsoft.Network/publicIpAddresses",
+          "sku": {
+              "name": "[variables('publicIpAddressSku')]"
+          },
+          "name": "[concat(variables('publicIpAddressName'),add(copyIndex(1),parameters('continueFromLastVM')))]",
+          "apiVersion": "2018-08-01",
+          "location": "[parameters('location')]",
+          "copy": {
+              "name": "virtualMachineName",
+              "count": "[parameters('howMany')]"
+          },
+          "tags": {},
+          "properties": {
+              "publicIpAllocationMethod": "[variables('publicIpAddressType')]"
+          }
+      },
+      {
+          "type": "Microsoft.Compute/virtualMachines",
+          "name": "[concat(parameters('virtualMachineName'),add(copyIndex(1),parameters('continueFromLastVM')))]",
+          "apiVersion": "2018-04-01",
+          "location": "[parameters('location')]",
+          "copy": {
+              "name": "virtualMachineName",
+              "count": "[parameters('howMany')]"
+          },
+          "tags": {},
+          "properties": {
+              "hardwareProfile": {
+                  "vmSize": "[parameters('virtualMachineSize')]"
+              },
+              "storageProfile": {
+                  "osDisk": {
+                      "createOption": "fromImage",
+                      "managedDisk": {
+                          "storageAccountType": "[variables('osDiskType')]"
+                      }
+                  },
+                  "imageReference": {
+                      "publisher": "MicrosoftWindowsServer",
+                      "offer": "WindowsServer",
+                      "sku": "2016-Datacenter",
+                      "version": "latest"
+                  }
+              },
+              "networkProfile": {
+                  "networkInterfaces": [
+                      {
+                          "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(variables('networkInterfaceName'),add(copyIndex(1),parameters('continueFromLastVM'))))]"
+                      }
+                  ]
+              },
+              "osProfile": {
+                  "computerName": "[concat(parameters('virtualMachineName'),add(copyIndex(1),parameters('continueFromLastVM')))]",
+                  "adminUsername": "[parameters('adminUsername')]",
+                  "adminPassword": "[parameters('adminPassword')]",
+                  "windowsConfiguration": {
+                      "enableAutomaticUpdates": true,
+                      "provisionVmAgent": true
+                  }
+              }
+          },
+          "dependsOn": [
+              "[concat('Microsoft.Network/networkInterfaces/', concat(variables('networkInterfaceName'),add(copyIndex(1),parameters('continueFromLastVM'))))]"
+          ]
+      },
+      {
+          "type": "Microsoft.Compute/virtualMachines/extensions",
+          "name": "[concat(parameters('virtualMachineName'),add(copyIndex(1),parameters('continueFromLastVM')),'/CustomScriptExtension')]",
+          "apiVersion": "2015-06-15",
+          "location": "[parameters('location')]",
+          "copy": {
+              "name": "virtualMachineName",
+              "count": "[parameters('howMany')]"
+          },
+          "properties": {
+              "publisher": "Microsoft.Compute",
+              "type": "CustomScriptExtension",
+              "typeHandlerVersion": "1.7",
+              "autoUpgradeMinorVersion": true,
+              "settings": {
+                  "fileUris": "[split(variables('scriptUriBase'), ' ')]"
+              },
+              "protectedSettings": {
+                  "commandToExecute": "[if(equals(parameters('RobotType'), 'Attended'),variables('attendedBot'),variables('unattendedBot'))]"
+              }
+          },
+          "dependsOn": [
+              "[concat('Microsoft.Compute/virtualMachines/', concat(variables('vmName'),add(copyIndex(1),parameters('continueFromLastVM'))))]"
+          ]
+      }
+  ],
+  "outputs": {
+      "adminUsername": {
+          "type": "String",
+          "value": "[parameters('adminUsername')]"
+      }
+  }
+}
