@@ -70,7 +70,7 @@ ipa=${getIP}
 
 fi
 
-sed -e "s/^daemonize no$/daemonize yes/" -e "s/^bind.*$/bind ${ipa}/" -e "s/^dir \.\//dir \/var\/redis\/6379\//" -e "s/^loglevel verbose$/loglevel notice/" -e "s/^logfile.*/logfile \/var\/log\/redis\/redis_6379.log/" -e "s/^pidfile.*/pidfile \/var\/run\/redis\/redis_6379.pid/"  -e "s/^tcp-keepalive.*/tcp-keepalive 60/" -e "s/^# maxmemory-policy noeviction/maxmemory-policy noeviction/"  -e "s/^appendonly no/appendonly yes/" -e "s/^protected-mode yes/protected-mode no/" redis.conf > /etc/redis/6379.conf
+sed -e "s/^daemonize no$/daemonize yes/" -e "s/^bind.*$/bind ${ipa}/" -e "s/^dir \.\//dir \/var\/redis\/6379\//" -e "s/^loglevel verbose$/loglevel notice/" -e "s/^logfile.*/logfile \/var\/log\/redis\/redis_6379.log/" -e "s/^pidfile.*/pidfile \/var\/run\/redis\/redis_6379.pid/"  -e "s/^tcp-keepalive.*/tcp-keepalive 60/" -e "s/^# maxmemory-policy noeviction/maxmemory-policy noeviction/"  -e "s/^protected-mode yes/protected-mode no/" redis.conf > /etc/redis/6379.conf
 
 
 
