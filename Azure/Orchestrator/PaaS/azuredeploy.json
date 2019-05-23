@@ -12,8 +12,11 @@
     },
     "orchestratorVersion": {
       "type": "string",
-      "defaultValue": "18.4.4",
+      "defaultValue": "19.4.3",
       "allowedValues": [
+        "19.4.3",
+      	"19.4.2",
+        "18.4.5",
         "18.4.4",
         "18.4.3",
         "18.4.2",
@@ -35,12 +38,40 @@
         "description": "Size of the Orchestrator based on no. of total robots connected : Small size is for maximum 100 robots, Medium size for total no. of Robots between 100 and 500, Large size is for over 500 Robots"
       }
     },
+    "orchestratorInstances": {
+      "type": "int",
+      "defaultValue": 1,
+      "minValue": 1,
+      "maxValue": 10,
+      "metadata": {
+        "description": "No. of Orchestrator instances on App service"
+      }
+    },
+    "orchestratorAlertRules": {
+      "type": "string",
+      "defaultValue": "yes",
+      "allowedValues": [
+        "yes",
+        "no"
+      ],
+      "metadata": {
+        "description": "Provision Orchestrator with AppInsight rules. You will need higher permissions on Azure subscription as these rules are added at RG level"
+      }
+    },
     "SQLServerName": {
       "type": "string",
       "minLength": 4,
       "maxLength": 35,
       "metadata": {
         "description": "SQL Azure DB Server name"
+      }
+    },
+    "SQLServerDBName": {
+      "type": "string",
+      "minLength": 4,
+      "maxLength": 35,
+      "metadata": {
+        "description": "SQL Azure DB name"
       }
     },
     "SQLServerAdminLogin": {
@@ -74,9 +105,9 @@
     "appServiceTier": "PremiumV2",
     "skuCode": "P1v2",
     "appServiceWorkerSize": "3",
-    "workerSizeId" : "3",
-    "numberOfWorkers" : "1",
-    "dbName": "[ toLower(concat(parameters('appName'), '-db')) ]",
+    "workerSizeId": "3",
+    "numberOfWorkers": "1",
+    "dbName": "[ toLower(parameters('SQLServerDBName'))]",
     "dbEdition": "[if(contains(parameters('orchestratorSize'), 'small'), 'Standard', if(contains(parameters('orchestratorSize'), 'medium'), 'Standard', 'Premium'))]",
     "dbPerformanceLevel": "[if(contains(parameters('orchestratorSize'), 'small'), 'S1', if(contains(parameters('orchestratorSize'), 'medium'), 'S3', 'P4'))]",
     "storageAccountType": "Standard_LRS",
@@ -109,11 +140,22 @@
       "koreasouth": "koreacentral",
       "eastus2euap": "eastus"
     },
-  "appInsightsRegion":  "[variables('logAnalyticsLocationMap')[parameters('location')]]",
+    "appInsight": "[trim(toLower(concat( parameters('appName'),'-appin' ) ))]",
+    "appInsightsRegion": "[variables('logAnalyticsLocationMap')[parameters('location')]]",
     "storageAccountName": "[replace(concat(variables('appName'),'sc'),'-','')]",
+    "storageid": "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
     "appServicePlanName": "[concat(variables('appName'), '-serviceplan')]",
     "collation": "SQL_Latin1_General_CP1_CI_AS",
-    "databaseMaxSizeBytes": "1073741824"
+    "databaseMaxSizeBytes": "1073741824",
+    "redisCacheName" : "[concat(variables('appName'),'-redis')]",
+    "redisid": "[resourceId('Microsoft.Cache/Redis/', variables('redisCacheName'))]",
+    "redisCacheSKU":"[if(contains(parameters('orchestratorSize'), 'small'), 'Standard', if(contains(parameters('orchestratorSize'), 'medium'), 'Standard', 'Premium'))]",
+    "redisCacheFamily":"[if(contains(parameters('orchestratorSize'), 'small'), 'C', if(contains(parameters('orchestratorSize'), 'medium'), 'C', 'P'))]",
+    "redisCacheCapacity":"[if(contains(parameters('orchestratorSize'), 'small'), '2', if(contains(parameters('orchestratorSize'), 'medium'), '2', '3'))]",
+    "enableNonSslPort":"true",
+    "redisPort": "[if(contains(variables('enableNonSslPort'),'true'),'6380','6379')]",
+    "diagnosticsEnabled":"true"
+
   },
   "resources": [
     {
@@ -160,7 +202,7 @@
           "type": "firewallrules",
           "location": "[parameters('location')]",
           "dependsOn": [
-            "[concat('Microsoft.Sql/servers/', variables('SQLServerName'))]"
+            "[resourceId('Microsoft.Sql/servers/', variables('SQLServerName'))]"
           ],
           "properties": {
             "endIpAddress": "0.0.0.0",
@@ -197,7 +239,7 @@
       "sku": {
         "Tier": "[variables('appServiceTier')]",
         "Name": "[variables('skuCode')]"
-    }
+      }
     },
     {
       "apiVersion": "2018-11-01",
@@ -208,7 +250,9 @@
         "[concat('hidden-related:', '/subscriptions/', subscription().subscriptionId,'/resourcegroups/', resourceGroup().name, '/providers/Microsoft.Web/serverfarms/', variables('appServicePlanName'))]": "empty"
       },
       "dependsOn": [
-        "[concat('Microsoft.Web/serverFarms/', variables('appServicePlanName'))]"
+        "[resourceId('Microsoft.Web/serverFarms/', variables('appServicePlanName'))]",
+        "[resourceId('Microsoft.Cache/Redis/', variables('redisCacheName'))]",
+        "[resourceId('Microsoft.Insights/components/', variables('appInsight'))]"
       ],
       "properties": {
         "name": "[variables('appName')]",
@@ -221,8 +265,146 @@
               "ConnectionString": "[concat('Data Source=tcp:', reference(concat('Microsoft.Sql/servers/', variables('SQLServerName'))).fullyQualifiedDomainName, ',1433;Initial Catalog=', variables('dbName'), ';User Id=', parameters('SQLServerAdminLogin'), '@', variables('SQLServerName'), ';Password=', parameters('SQLServerAdminPassword'), ';')]",
               "type": "SQLAzure"
             }
+          ],
+          "appSettings": [
+            {
+              "name": "LoadBalancer.UseRedis",
+              "value": "[if(not(equals(parameters('orchestratorInstances'),1)),'true','false')]"
+            },
+            {
+              "name": "LoadBalancer.Redis.ConnectionString",
+              "value": "[if(not(equals(parameters('orchestratorInstances'),1)),concat(reference(variables('redisid'), '2018-03-01').hostName,':',variables('redisPort'),',password=',listKeys(variables('redisid'), '2018-03-01').primaryKey,',ssl=',variables('enableNonSslPort'),',abortConnect=False'),json('null'))]"
+            },
+            {
+              "name": "LoadBalancer.SignalR.UseRedisScaleout",
+              "value": "[if(not(equals(parameters('orchestratorInstances'),1)),'true','false')]"
+            },
+            {
+              "name": "LoadBalancer.SignalR.RedisScaleout.ConnectionString",
+              "value": "[if(not(equals(parameters('orchestratorInstances'),1)),concat(reference(variables('redisid'), '2018-03-01').hostName,':',variables('redisPort'),',password=',listKeys(variables('redisid'), '2018-03-01').secondaryKey,',ssl=',variables('enableNonSslPort'),',abortConnect=False'),json('null'))]"
+            },
+            {
+              "name": "APPINSIGHTS_INSTRUMENTATIONKEY",
+              "value": "[reference(resourceId('Microsoft.Insights/components', variables('appInsight'))).InstrumentationKey]"
+            },
+            {
+              "name": "ApplicationInsightsAgent_EXTENSION_VERSION",
+              "value": "~2"
+            },
+            {
+              "name": "DiagnosticServices_EXTENSION_VERSION",
+              "value": "~3"
+            },
+            {
+              "name": "APPINSIGHTS_PROFILERFEATURE_VERSION",
+              "value": "1.0.0"
+            },
+            {
+              "name": "APPINSIGHTS_SNAPSHOTFEATURE_VERSION",
+              "value": "1.0.0"
+            },
+            {
+              "name": "InstrumentationEngine_EXTENSION_VERSION",
+              "value": "~1"
+            },
+            {
+              "name": "SnapshotDebugger_EXTENSION_VERSION",
+              "value": "~1"
+            },
+            {
+              "name": "XDT_MicrosoftApplicationInsights_BaseExtensions",
+              "value": "~1"
+            },
+            {
+              "name": "XDT_MicrosoftApplicationInsights_Mode",
+              "value": "recommended"
+            },
+            {
+              "name": "NuGet.Packages.ApiKey",
+              "value": "49B62823-8342-4ACA-A40B-D8741FB07178"
+            },
+            {
+              "name": "NuGet.Activities.ApiKey",
+              "value": "49B62823-8342-4ACA-A40B-D8741FB07178"
+            },
+            {
+              "name": "NuGet.Packages.Path",
+              "value": "~/NuGetPackages"
+            },
+            {
+              "name": "NuGet.Activities.Path",
+              "value": "~/NuGetPackages/Activities"
+            },
+            {
+              "name": "NuGet.Repository.Type",
+              "value": "[if(contains(parameters('orchestratorVersion'),'19'),'Composite',json('null'))]"
+            },
+            {
+              "name": "Storage.Type",
+              "value": "[if(contains(parameters('orchestratorVersion'),'19'),'Azure',json('null'))]"
+            },
+            {
+              "name": "Storage.Location",
+              "value": "[if(contains(parameters('orchestratorVersion'),'19'),concat('DefaultEndpointsProtocol=https;AccountName=',variables('storageAccountName'),';AccountKey=',listKeys(variables('storageid'), '2019-04-01').keys[0].value,';'),json('null'))]"
+            },
+            {
+              "name": "WindowsAuth.Enabled",
+              "value": "false"
+            },
+            {
+              "name": "WindowsAuth.Domain",
+              "value": ""
+            },
+            {
+              "name": "WindowsAuth.AutoLogin.Enabled",
+              "value": "false"
+            },
+            {
+              "name": "Auth.Cookie.Expire",
+              "value": "30"
+            },
+            {
+              "name": "AcceptedRootUrls",
+              "value": "http://localhost:6234"
+            },
+            {
+              "name": "Auth.Password.DefaultExpirationDays",
+              "value": "0"
+            },
+            {
+              "name": "Tenant.Registration.Enabled",
+              "value": "false"
+            },
+            {
+              "name": "OrganizationUnit.Enabled",
+              "value": "false"
+            },
+            {
+              "name": "CustomTitle",
+              "value": ""
+            },
+            {
+              "name": "ExternalAuth.AzureAD.Enabled",
+              "value": "false"
+            },
+            {
+              "name": "ExternalAuth.AzureAD.ApplicationId",
+              "value": ""
+            },
+            {
+              "name": "ExternalAuth.AzureAD.RedirectUri",
+              "value": ""
+            },
+            {
+              "name": "ExternalAuth.Saml2.Enabled",
+              "value": "false"
+            }
+
           ]
-        }
+        },
+        "name": "[variables('appName')]",
+        "enabled": true
+
       },
       "resources": [
         {
@@ -230,10 +412,11 @@
           "name": "MSDeploy",
           "type": "Extensions",
           "dependsOn": [
-            "[concat('Microsoft.Web/Sites/', variables('appName'))]",
+            "[resourceId('Microsoft.Web/Sites/', variables('appName'))]",
             "[concat('Microsoft.Web/Sites/', variables('appName'), '/config/web')]",
             "[concat('Microsoft.Sql/servers/', variables('SQLServerName'), '/databases/', variables('dbName'))]",
-            "[concat('Microsoft.Storage/storageAccounts/', variables('storageAccountName'))]"
+            "[resourceId('Microsoft.Storage/storageAccounts/', variables('storageAccountName'))]"
+
           ],
           "properties": {
             "packageUri": "[variables('orchestratorLink')]",
@@ -247,6 +430,7 @@
               "machineKeyValidation": "HMACSHA256",
               "machineKeyValidationKey": "[variables('validationMachineKey')]",
               "EncryptionKey": "[variables('encriptionKey')]"
+
             }
           }
         },
@@ -271,7 +455,7 @@
           "name": "web",
           "type": "config",
           "dependsOn": [
-            "[concat('Microsoft.Web/Sites/', variables('appName'))]"
+            "[resourceId('Microsoft.Web/Sites/', variables('appName'))]"
           ],
           "properties": {
             "phpVersion": "off",
@@ -286,6 +470,7 @@
       ]
     },
     {
+      "condition": "[greaterOrEquals(parameters('orchestratorInstances'),2)]",
       "apiVersion": "2015-04-01",
       "name": "[concat(variables('appServicePlanName'), '-scaleset')]",
       "type": "microsoft.insights/autoscalesettings",
@@ -294,16 +479,16 @@
         "[concat('hidden-link:', '/subscriptions/', subscription().subscriptionId,'/resourcegroups/', resourceGroup().name, '/providers/Microsoft.Web/serverfarms/', variables('appServicePlanName'))]": "Resource"
       },
       "dependsOn": [
-        "[concat('Microsoft.Web/serverfarms/', variables('appServicePlanName'))]"
+        "[resourceId('Microsoft.Web/serverfarms/', variables('appServicePlanName'))]"
       ],
       "properties": {
         "profiles": [
           {
             "name": "Default",
             "capacity": {
-              "minimum": "1",
-              "maximum": "2",
-              "default": "1"
+              "minimum": "[parameters('orchestratorInstances')]",
+              "maximum": "15",
+              "default": "[parameters('orchestratorInstances')]"
             },
             "rules": [
               {
@@ -351,6 +536,7 @@
       }
     },
     {
+      "condition": "[equals(parameters('orchestratorAlertRules'), 'yes')]",
       "apiVersion": "2016-03-01",
       "name": "[concat('ServerErrors ', variables('appName'))]",
       "type": "microsoft.insights/alertrules",
@@ -359,12 +545,12 @@
         "[concat('hidden-link:', resourceGroup().id, '/providers/Microsoft.Web/sites/', variables('appName'))]": "Resource"
       },
       "dependsOn": [
-        "[concat('Microsoft.Web/sites/', variables('appName'))]"
+        "[resourceId('Microsoft.Web/sites/', variables('appName'))]"
       ],
       "properties": {
         "name": "[concat('ServerErrors ', variables('appName'))]",
         "description": "[concat(variables('appName'), ' has some server errors, status code 5xx.')]",
-        "isEnabled": false,
+        "isEnabled": "[variables('diagnosticsEnabled')]",
         "condition": {
           "odata.type": "Microsoft.WindowsAzure.Management.Monitoring.Alerts.Models.ThresholdRuleCondition",
           "dataSource": {
@@ -384,6 +570,7 @@
       }
     },
     {
+      "condition": "[equals(parameters('orchestratorAlertRules'), 'yes')]",
       "apiVersion": "2016-03-01",
       "name": "[concat('ForbiddenRequests ', variables('appName'))]",
       "type": "microsoft.insights/alertrules",
@@ -392,12 +579,12 @@
         "[concat('hidden-link:', resourceGroup().id, '/providers/Microsoft.Web/sites/', variables('appName'))]": "Resource"
       },
       "dependsOn": [
-        "[concat('Microsoft.Web/sites/', variables('appName'))]"
+        "[resourceId('Microsoft.Web/sites/', variables('appName'))]"
       ],
       "properties": {
         "name": "[concat('ForbiddenRequests ', variables('appName'))]",
         "description": "[concat(variables('appName'), ' has some requests that are forbidden, status code 403.')]",
-        "isEnabled": false,
+        "isEnabled": "[variables('diagnosticsEnabled')]",
         "condition": {
           "odata.type": "Microsoft.WindowsAzure.Management.Monitoring.Alerts.Models.ThresholdRuleCondition",
           "dataSource": {
@@ -417,6 +604,7 @@
       }
     },
     {
+      "condition": "[equals(parameters('orchestratorAlertRules'), 'yes')]",
       "apiVersion": "2016-03-01",
       "name": "[concat('CPUHigh ', variables('appServicePlanName'))]",
       "type": "microsoft.insights/alertrules",
@@ -425,12 +613,12 @@
         "[concat('hidden-link:', '/subscriptions/', subscription().subscriptionId,'/resourcegroups/', resourceGroup().name, '/providers/Microsoft.Web/serverfarms/', variables('appServicePlanName'))]": "Resource"
       },
       "dependsOn": [
-        "[concat('Microsoft.Web/serverfarms/', variables('appServicePlanName'))]"
+        "[resourceId('Microsoft.Web/serverfarms/', variables('appServicePlanName'))]"
       ],
       "properties": {
         "name": "[concat('CPUHigh ', variables('appServicePlanName'))]",
         "description": "[concat('The average CPU is high across all the instances of ', variables('appServicePlanName'))]",
-        "isEnabled": false,
+        "isEnabled": "[variables('diagnosticsEnabled')]",
         "condition": {
           "odata.type": "Microsoft.WindowsAzure.Management.Monitoring.Alerts.Models.ThresholdRuleCondition",
           "dataSource": {
@@ -450,6 +638,7 @@
       }
     },
     {
+      "condition": "[equals(parameters('orchestratorAlertRules'), 'yes')]",
       "apiVersion": "2016-03-01",
       "name": "[concat('LongHttpQueue ', variables('appServicePlanName'))]",
       "type": "microsoft.insights/alertrules",
@@ -458,12 +647,12 @@
         "[concat('hidden-link:', '/subscriptions/', subscription().subscriptionId,'/resourcegroups/', resourceGroup().name, '/providers/Microsoft.Web/serverfarms/', variables('appServicePlanName'))]": "Resource"
       },
       "dependsOn": [
-        "[concat('Microsoft.Web/serverfarms/', variables('appServicePlanName'))]"
+        "[resourceId('Microsoft.Web/serverfarms/', variables('appServicePlanName'))]"
       ],
       "properties": {
         "name": "[concat('LongHttpQueue ', variables('appServicePlanName'))]",
         "description": "[concat('The HTTP queue for the instances of ', variables('appServicePlanName'), ' has a large number of pending requests.')]",
-        "isEnabled": false,
+        "isEnabled": "[variables('diagnosticsEnabled')]",
         "condition": {
           "odata.type": "Microsoft.WindowsAzure.Management.Monitoring.Alerts.Models.ThresholdRuleCondition",
           "dataSource": {
@@ -484,18 +673,57 @@
     },
     {
       "apiVersion": "2018-05-01-preview",
-      "name": "[concat(variables('appName'),'-appin')]",
+      "name": "[variables('appInsight')]",
       "type": "microsoft.insights/components",
       "location": "[variables('appInsightsRegion')]",
       "tags": {
         "[concat('hidden-link:', resourceGroup().id, '/providers/Microsoft.Web/sites/', variables('appName'))]": "Resource"
       },
-      "dependsOn": [
-        "[concat('Microsoft.Web/sites/', variables('appName'))]"
-      ],
       "properties": {
         "applicationId": "[variables('appName')]"
       }
+    },
+    {
+      "condition": "[greaterOrEquals(parameters('orchestratorInstances'),2)]",
+      "apiVersion": "2018-03-01",
+      "name": "[variables('redisCacheName')]",
+      "type": "Microsoft.Cache/Redis",
+      "location": "[parameters('location')]",
+      "properties": {
+        "enableNonSslPort": "[variables('enableNonSslPort')]",
+        "sku": {
+          "capacity": "[variables('redisCacheCapacity')]",
+          "family": "[variables('redisCacheFamily')]",
+          "name": "[variables('redisCacheSKU')]"
+        }
+      },
+      "resources": [
+        {
+          "condition": "[greaterOrEquals(parameters('orchestratorInstances'),2)]",
+          "apiVersion": "2017-05-01-preview",
+          "type": "Microsoft.Cache/redis/providers/diagnosticsettings",
+          "name": "[concat(variables('redisCacheName'),'/Microsoft.Insights/','redisinsight')]",
+          "location": "[parameters('location')]",
+          "dependsOn": [
+            "[concat('Microsoft.Cache/Redis/', variables('redisCacheName'))]"
+          ],
+          "properties": {
+            "storageAccountId": "[resourceId('Microsoft.Storage/storageAccounts',variables('storageAccountName'))]",
+            "logs": [],
+            "metrics": [
+              {
+                "timeGrain": "AllMetrics",
+                "enabled": "[variables('diagnosticsEnabled')]",
+                "retentionPolicy": {
+                  "days": 90,
+                  "enabled": "[variables('diagnosticsEnabled')]"
+                }
+              }
+            ]
+          }
+        }
+      ]
     }
+
   ]
 }

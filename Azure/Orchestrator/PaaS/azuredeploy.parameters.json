@@ -6,7 +6,7 @@
       "value": null
     },
     "orchestratorVersion": {
-      "value": "18.4.5"
+      "value": "19.4.3"
     },
     "orchestratorSize": {
       "value": "small"
@@ -15,9 +15,12 @@
       "value": 1
     },
     "orchestratorAlertRules": {
-      "value": "no"
+      "value": "yes"
     },
     "SQLServerName": {
+      "value": null
+    },
+    "SQLServerDBName": {
       "value": null
     },
     "SQLServerAdminLogin": {
