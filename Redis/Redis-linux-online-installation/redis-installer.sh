@@ -87,13 +87,13 @@ select yn in "Single" "Cluster"; do
 done
 
 echo  "Setup redis-server init script"
-wget https://raw.githubusercontent.com/hteo1337/Redis/master/Redis-linux-online-installation/redis-server
+wget https://raw.githubusercontent.com/UiPath/Infrastructure/master/Redis/Redis-linux-online-installation/redis-server
 cp redis-server /etc/init.d/redis-server
 chmod 750 /etc/init.d/redis-server
 
 if [[ ${single} == 0 ]];then
 echo  "Setup redis-sentinel init script"
-wget https://raw.githubusercontent.com/hteo1337/Redis/master/Redis-linux-online-installation/redis-sentinel
+wget https://raw.githubusercontent.com/UiPath/Infrastructure/master/Redis/Redis-linux-online-installation/redis-sentinel
 cp redis-sentinel /etc/init.d/redis-sentinel
 chmod 750 /etc/init.d/redis-sentinel
 
