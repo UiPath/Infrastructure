@@ -41,6 +41,17 @@
         "description": "Robot Type"
       }
     },
+    "addRobotsToExistingEnvs": {
+        "type": "string",
+        "defaultValue": "No",
+        "allowedValues": [
+            "Yes",
+            "No"
+        ],
+        "metadata": {
+            "description": "Add Robots to all Existing Environments"
+        }
+    },
     "adminUsername": {
       "type": "String",
       "metadata": {
@@ -95,7 +106,7 @@
     "scriptFileBreakString": "[split(variables('scriptFileString'), '?')]",
     "scriptFileName": "[variables('scriptFileBreakString')[0]]",
     "attendedBot": "[concat ('powershell -ExecutionPolicy Unrestricted -File ',' ', variables('scriptFileName'),' ','-orchestratorUrl',' ',parameters('orchestratorUrl'),' ','-Tennant',' ',parameters('Tennant'),' ','-orchAdmin',' ',parameters('orchAdmin'),' ','-orchPassword',' ',parameters('orchPassword'),' ','-HostingType',' ',variables('HostingType'),' ','-RobotType',' ',parameters('RobotType'),' ','-adminUsername',' ',parameters('adminUsername'))]",
-    "unattendedBot": "[concat ('powershell -ExecutionPolicy Unrestricted -File ',' ', variables('scriptFileName'),' ','-orchestratorUrl',' ',parameters('orchestratorUrl'),' ','-Tennant',' ',parameters('Tennant'),' ','-orchAdmin',' ',parameters('orchAdmin'),' ','-orchPassword',' ',parameters('orchPassword'),' ','-HostingType',' ',variables('HostingType'),' ','-RobotType',' ',parameters('RobotType'),' ','-adminUsername',' ',parameters('adminUsername'),' ','-machinePassword',' ',parameters('adminPassword'),' ','-credType',' ',variables('CredentialType'))]",
+    "unattendedBot": "[concat ('powershell -ExecutionPolicy Unrestricted -File ',' ', variables('scriptFileName'),' ','-orchestratorUrl',' ',parameters('orchestratorUrl'),' ','-Tennant',' ',parameters('Tennant'),' ','-orchAdmin',' ',parameters('orchAdmin'),' ','-orchPassword',' ',parameters('orchPassword'),' ','-HostingType',' ',variables('HostingType'),' ','-RobotType',' ',parameters('RobotType'),' ','-adminUsername',' ',parameters('adminUsername'),' ','-machinePassword',' ',parameters('adminPassword'),' ','-credType',' ',variables('CredentialType'),' ','-addRobotsToExistingEnvs',' ',parameters('addRobotsToExistingEnvs'))]",
     "windowsOSV": "2016-Datacenter",
     "osDiskType": "StandardSSD_LRS",
     "location": "[resourceGroup().location]",
