@@ -110,7 +110,7 @@ $sScriptVersion = "1.0"
 # Debug mode; $true - enabled ; $false - disabled
 $sDebug = $true
 # Log File Info
-$sLogPath = "C:\temp\log\"
+$sLogPath = "C:\temp\log"
 $sLogName = "Install-Orchestrator.ps1.log"
 $sLogFile = Join-Path -Path $sLogPath -ChildPath $sLogName
 
@@ -342,44 +342,56 @@ function Main {
 
 }
 
-function Install-UrlRewrite
-{
+<#
+    .SYNOPSIS
+      Install URL Rewrite necessary for UiPath Orchestrator.
+
+    .PARAMETER urlRWpath
+      Mandatory. String. Path to URL Rewrite package. Example: $urlRWpath = "C:\temp\rewrite_amd64.msi"
+
+    .INPUTS
+      Parameters above.
+
+    .OUTPUTS
+      None
+    
+    .Example
+      Install-UrlRewrite -urlRWpath "C:\temp\rewrite_amd64.msi"
+#>
+function Install-UrlRewrite {
   
-  param(
+    param(
 
-  [Parameter(Mandatory=$true)]
-  [string]
-  $urlRWpath
+        [Parameter(Mandatory = $true)]
+        [string]
+        $urlRWpath
 
-  )
+    )
 
     # Do nothing if URL Rewrite module is already installed
     $rewriteDllPath = Join-Path $Env:SystemRoot 'System32\inetsrv\rewrite.dll'
 
-    if (Test-Path -Path $rewriteDllPath)
-    {
-      Log-Write -LogPath $sLogFile -LineValue  "IIS URL Rewrite 2.0 Module is already installed"
+    if (Test-Path -Path $rewriteDllPath) {
+        Log-Write -LogPath $sLogFile -LineValue  "IIS URL Rewrite 2.0 Module is already installed"
 
         return
     }
 
-	$installer = $urlRWpath
+    $installer = $urlRWpath
 
     $exitCode = 0
     $argumentList = "/i `"$installer`" /q /norestart"
 
-  Log-Write -LogPath $sLogFile -LineValue  "Installing IIS URL Rewrite 2.0 Module"
+    Log-Write -LogPath $sLogFile -LineValue  "Installing IIS URL Rewrite 2.0 Module"
 
-	$exitCode = (Start-Process -FilePath "msiexec.exe" -ArgumentList $argumentList -Wait -Passthru).ExitCode
+    $exitCode = (Start-Process -FilePath "msiexec.exe" -ArgumentList $argumentList -Wait -Passthru).ExitCode
 
-	if ($exitCode -ne 0 -and $exitCode -ne 1641 -and $exitCode -ne 3010)
-	{
-		Log-Error -LogPath $sLogFile -ErrorDesc "Failed to install IIS URL Rewrite 2.0 Module (Exit code: $exitCode)" -ExitGracefully $False
-	}
-	else
-	{
-		Log-Write -LogPath $sLogFile -LineValue  "IIS URL Rewrite 2.0 Module successfully installed"
-	}
+    if ($exitCode -ne 0 -and $exitCode -ne 1641 -and $exitCode -ne 3010) {
+        Log-Error -LogPath $sLogFile -ErrorDesc "Failed to install IIS URL Rewrite 2.0 Module (Exit code: $exitCode)" -ExitGracefully $False
+    }
+    else {
+        Log-Write -LogPath $sLogFile -LineValue  "IIS URL Rewrite 2.0 Module successfully installed"
+    }
 }
 
 <#
@@ -405,9 +417,9 @@ function Generate-Key {
 
     param(
 
-      [Parameter(Mandatory = $true)]
-      [string]
-      $passphrase
+        [Parameter(Mandatory = $true)]
+        [string]
+        $passphrase
     
     )
     function KeyGenFromBuffer([int] $KeyLength, [byte[]] $Buffer) {
