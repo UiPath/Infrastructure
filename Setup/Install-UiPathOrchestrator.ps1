@@ -1,11 +1,63 @@
+<#
+    .SYNOPSIS
+      Install UiPath Orchestrator.
+
+    .Description
+      Install UiPath Orchestrator and configure web.config based on a passphrase.
+
+    .PARAMETER orchestratorVersion
+      String. Allowed versions: FTS 19.x and LTS 18.4.x . Version of the Orchestrator which will be installed. Example: $orchestratorVersion = "19.4.3"
+ 
+    .PARAMETER hostname
+      String. Orchestrator server name, public or private DNS of the server can also be used. Example: $hostname = "serverName"
+ 
+    .PARAMETER dbServerName
+      String. Mandatory. SQL server name. Example: $dbServerName = "SQLServerName.local"
+ 
+    .PARAMETER dbName
+      String. Mandatory. Database Name. Example: $dbName = "devtestdb"
+ 
+    .PARAMETER dbUserName
+      String. Mandatory. Database Username. Example: $dbUserName = "devtestdbuser"
+ 
+    .PARAMETER dbPassword
+      String. Mandatory. Database Password  Example: $dbPassword = "d3vt3std@taB@s3!"
+
+    .PARAMETER passphrase
+      String. Mandatory. Passphrase is used to generate same AppEncryption key, Nuget API keys, Machine Validation and Decryption keys.  Example: $passphrase = "AnyPassPhrase!@#$"
+ 
+    .PARAMETER redisHost
+      String. There is no need to use Redis if there is only one Orchestrator instance. Redis is mandatory in multi-node deployment.  Example: $redisHost = "redishostDNS"
+ 
+    .PARAMETER nuGetStoragePath
+      String. Mandatory. Storage Path where the Nuget Packages are saved. Also you can use NFS or SMB share.  Example: $nuGetStoragePath = "\\nfs-share\NugetPackages"
+
+    .PARAMETER orchestratorAdminPassword
+      String. Mandatory. Orchestrator Admin password is necessary for a new installation and to change the Nuget API keys. Example: $orchestratorAdminPassword = "P@ssW05D!"
+ 
+    .PARAMETER orchestratorAdminUsername
+      String. Orchestrator Admin username in order to change the Nuget API Keys.  Example: $orchestratorAdminUsername = "admin"
+ 
+    .PARAMETER tennant
+      String. Orchestrator Tennant in order to change the Nuget API Key.  Example: $tennant = "Default"
+ 
+    .INPUTS
+      Parameters above.
+
+    .OUTPUTS
+      None
+    
+    .Example
+      powershell.exe -ExecutionPolicy Bypass -File "\\fileLocation\Install-UiPathOrchestrator.ps1" -OrchestratorVersion "19.4.3" -passphrase "AnyPassPhrase!@#$" -dbServerName  "SQLServerName.local"  -dbName "devtestdb"  -dbUserName "devtestdbuser" -dbPassword "d3vt3std@taB@s3!" -orchestratorAdminPassword "P@ssW05D!" -redisHost "redishostDNS" -NuGetStoragePath "\\nfs-share\NugetPackages"
+#>
 [CmdletBinding()]
 
 param(
 
     [Parameter()]
-    [ValidateSet('19.4.3','19.4.2', '18.4.5', '18.4.4', '18.4.3', '18.4.2', '18.4.1')]
+    [ValidateSet('19.4.3', '19.4.2', '18.4.6', '18.4.5', '18.4.4', '18.4.3', '18.4.2', '18.4.1')]
     [string]
-    $OrchestratorVersion = "19.4.3",
+    $orchestratorVersion = "19.4.3",
 
     [string]
     $hostname,
@@ -28,7 +80,26 @@ param(
 
     [Parameter(Mandatory = $true)]
     [string]
-    $orchestratorAdminPassword
+    $passphrase,
+
+    [string[]]
+    $redisHost,
+
+    [Parameter(Mandatory = $true)]
+    [string]
+    $nuGetStoragePath,
+
+    [Parameter()]
+    [string]
+    $orchestratorAdminUsername = "admin",
+
+    [Parameter(Mandatory = $true)]
+    [string]
+    $orchestratorAdminPassword,
+
+    [Parameter()]
+    [string]
+    $tennant = "Default"
 
 )
 
@@ -40,21 +111,20 @@ $sScriptVersion = "1.0"
 $sDebug = $true
 # Log File Info
 $sLogPath = "C:\temp\log\"
-$sLogName = "Install-UiPathOrchestrator.log"
+$sLogName = "Install-Orchestrator.ps1.log"
 $sLogFile = Join-Path -Path $sLogPath -ChildPath $sLogName
 
 function Main {
     try {
-        Start-Transcript -Path C:\temp\log\Install-UipathOrchestrator-Transcript.ps1.txt -Append
+        Start-Transcript -Path "$sLogPath\Install-UipathOrchestrator-Transcript.ps1.txt" -Append
 
         # Setup temp dir in %appdata%\Local\Temp
         $tempDirectory = (Join-Path 'C:\temp\' "UiPath-$(Get-Date -f "yyyyMMddhhmmssfff")")
         New-Item -ItemType Directory -Path $tempDirectory -Force
 
         $source = @()
-        $source += "https://download.uipath.com/versions/$OrchestratorVersion/UiPathOrchestrator.msi"
+        $source += "https://download.uipath.com/versions/$orchestratorVersion/UiPathOrchestrator.msi"
         $source += "https://download.microsoft.com/download/C/9/E/C9E8180D-4E51-40A6-A9BF-776990D8BCA9/rewrite_amd64.msi"
-        $source += "http://www.uipath.com/hubfs/server/AddServerRolesAndFeatures.zip"
 
         $tries = 5
         while ($tries -ge 1) {
@@ -78,29 +148,52 @@ function Main {
                     throw $_
                 }
                 else {
-                    Write-Verbose "Failed download. Retrying again in 5 seconds"
+                    Write-Verbose
+                    Log-Write -LogPath $sLogFile -LineValue "Failed download. Retrying again in 5 seconds"
                     Start-Sleep 5
                 }
             }
         }
     }
     catch {
-        Write-Verbose "$($_.exception.message)@ $(Get-Date)"
+
+        Log-Error -LogPath $sLogFile -ErrorDesc "$($_.exception.message) on $(Get-Date)" -ExitGracefully $True
+
     }
 
     if (!$hostname) { $hostname = $env:COMPUTERNAME }
 
-    #unzip AddServerRolesAndFeatures.zip
-    unzipArchive -File "$tempDirectory\AddServerRolesAndFeatures.zip" -Destination "$tempDirectory"
+    $features = @(
+        'IIS-DefaultDocument',
+        'IIS-HttpErrors',
+        'IIS-StaticContent',
+        'IIS-RequestFiltering',
+        'IIS-URLAuthorization',
+        'IIS-WindowsAuthentication',
+        'IIS-NetFxExtensibility45',
+        'IIS-ASPNET45',
+        'IIS-ISAPIExtensions',
+        'IIS-ISAPIFilter',
+        'IIS-WebSockets',
+        'IIS-ManagementConsole',
+        'IIS-ManagementScriptingTools',
+        'WCF-TCP-PortSharing45',
+        'ClientForNFS-Infrastructure'
+    )
+    Install-UiPathOrchestratorFeatures -features $features
 
-
-    #install windows features
-    Install-WindowsFeature -ConfigurationFilePath "$tempDirectory\RolesAndFeatures.xml" -ComputerName "$env:COMPUTERNAME"
+    $checkFeature = Get-WindowsFeature "IIS-DirectoryBrowsing"
+    if ( $checkFeature.Installed -eq $true) {
+        Disable-WindowsOptionalFeature -FeatureName IIS-DirectoryBrowsing -Remove -NoRestart -Online
+        Log-Write -LogPath $sLogPath -LineValue "Feature IIS-DirectoryBrowsing is removed" 
+    }
 
     #install URLrewrite
+    Install-UrlRewrite -urlRWpath "$tempDirectory\rewrite_amd64.msi"
     Start-Process "$tempDirectory\rewrite_amd64.msi" '/qn' -PassThru | Wait-Process
 
-    # New-SelfSignedCertificate -DnsName $hostname -CertStoreLocation cert:\LocalMachine\My
+
+    # ((Invoke-WebRequest -Uri http://169.254.169.254/latest/meta-data/public-hostname -UseBasicParsing).RawContent -split "`n")[-1]
 
     $cert = New-SelfSignedCertificate -DnsName "$env:COMPUTERNAME", "$hostname" -CertStoreLocation cert:\LocalMachine\My -FriendlyName "Orchestrator Self-Signed certificate" -KeySpec Signature -HashAlgorithm SHA256 -KeyExportPolicy Exportable  -NotAfter (Get-Date).AddYears(20)
 
@@ -111,6 +204,11 @@ function Main {
     Import-Certificate -FilePath "$($tempDirectory)\OrchPublicKey.cer" -CertStoreLocation "cert:\LocalMachine\Root"
 
     #install Orchestrator
+
+    $getEncryptionKey = Generate-Key -passphrase $passphrase
+
+
+
 
     $orchParams = @(
         "/i"
@@ -125,6 +223,11 @@ function Main {
         "DB_PASSWORD=$($dbPassword)",
         "HOSTADMIN_PASSWORD=$($orchestratorAdminPassword)",
         "DEFAULTTENANTADMIN_PASSWORD=$($orchestratorAdminPassword)",
+        "APP_ENCRYPTION_KEY=$($getEncryptionKey.encryptionKey)",
+        "APP_NUGET_ACTIVITIES_KEY=$($getEncryptionKey.nugetKey)",
+        "APP_NUGET_PACKAGES_KEY=$($getEncryptionKey.nugetKey)",
+        "APP_MACHINE_DECRYPTION_KEY=$($getEncryptionKey.DecryptionKey)",
+        "APP_MACHINE_VALIDATION_KEY=$($getEncryptionKey.Validationkey)",
         "/qn",
         "/norestart",
         "/l*vx"
@@ -134,56 +237,471 @@ function Main {
 
     Start-Process 'msiexec.exe' -ArgumentList $orchParams -Wait -NoNewWindow -PassThru
 
+    #Remove the default Binding
+    Remove-WebBinding -Name "Default Web Site" -BindingInformation "*:80:"
+
     #add public DNS to bindings
-    New-WebBinding -Name "UiPath*" -IPAddress "*" -Protocol https -HostHeader "$hostname"
+    New-WebBinding -Name "UiPath*" -IPAddress "*" -Protocol http
+    New-WebBinding -Name "UiPath*" -IPAddress "*" -Protocol https
 
     #stopping default website
     Set-ItemProperty "IIS:\Sites\Default Web Site" serverAutoStart False
     Stop-Website 'Default Web Site'
 
+    #disable https to http for AWS ELB
+    Set-WebConfigurationProperty '/system.webserver/rewrite/rules/rule[@name="Redirect HTTP to HTTPS"]' -Name enabled -Value false -PSPath "IIS:\sites\UiPath Orchestrator"
+
+    #test Orchestrator URL
+    try {
+        TestOrchestratorConnection -orchestratorURL "https://$hostname"
+        TestOrchestratorConnection -orchestratorURL "http://$hostname"
+    }
+    catch {
+        Log-Error -LogPath $sLogFile -ErrorDesc "$($_.exception.message) at testing Orchestrator URL" -ExitGracefully $False
+    }
+
+    if ($redisHost) {
+        $LBkey = @("LoadBalancer.Enabled" , "LoadBalancer.UseRedis", "LoadBalancer.Redis.ConnectionString", "NuGet.Packages.ApiKey", "NuGet.Activities.ApiKey")
+
+        $LBvalue = @("true", "true", "$($redisHost)", "$($getEncryptionKey.nugetKey)", "$($getEncryptionKey.nugetKey)")
+
+        for ($i = 0; $i -lt $LBkey.count; $i++) {
+
+            Set-AppSettings -path "C:\UiPathOrchestrator" -key $LBkey[$i] -value $LBvalue[$i]
+
+        }
+
+        SetMachineKey -webconfigPath "C:\UiPathOrchestrator\web.config" -validationKey $getEncryptionKey.Validationkey -decryptionKey $getEncryptionKey.DecryptionKey -validation "SHA1" -decryption "AES"
+
+        Restart-WebSitesSite -Name "UiPath*"
+
+    }
+
+    #set storage path
+    if ($orchestratorVersion -lt "19.4.1") {
+
+        $LBkey = @("NuGet.Packages.Path", "NuGet.Activities.Path" )
+
+        $LBvalue = @("\\$($nuGetStoragePath)", "\\$($nuGetStoragePath)\Activities")
+
+        for ($i = 0; $i -lt $LBkey.count; $i++) {
+
+            Set-AppSettings -path "C:\UiPathOrchestrator" -key $LBkey[$i] -value $LBvalue[$i]
+
+        }
+
+    }
+    else {
+        $LBkey = "Storage.Location"
+        $LBvalue = "RootPath=\\$($nuGetStoragePath)"
+        Set-AppSettings -path "C:\UiPathOrchestrator" -key $LBkey -value $LBvalue
+    }
+
+
     # Remove temp directory
     Log-Write -LogPath $sLogFile -LineValue "Removing temp directory $($tempDirectory)"
     Remove-Item $tempDirectory -Recurse -Force | Out-Null
 
+
+    #Set Deployment Key
+    #Login to Orchestrator via API
+    $dataLogin = @{
+        tenancyName            = $tennant
+        usernameOrEmailAddress = $orchestratorAdminUsername
+        password               = $orchestratorAdminPassword
+    } | ConvertTo-Json
+
+    $orchUrl_login = "localhost/account/login"
+
+    #Get the login session used for all requests
+    $orchWebResponse = Invoke-RestMethod -Uri $orchUrl_login  -Method Post -Body $dataLogin -ContentType "application/json" -UseBasicParsing -Session websession
+
+    #Get Orchestrator Deployment Keys & Settings
+    $getNugetKey = 'localhost/odata/Settings'
+    $getNugetKeyResponse = Invoke-RestMethod -Uri $getNugetKey -Method GET -ContentType "application/json" -UseBasicParsing -WebSession $websession
+
+    $nugetNameKeys = @("NuGet.Packages.ApiKey", "NuGet.Activities.ApiKey")
+    $nugetValueKey = $($getEncryptionKey.nugetKey)
+
+    foreach ($nugetNameKey in $nugetNameKeys) {
+
+        $getOldNugetKey = $getNugetKeyResponse.value | Where-Object { $_.Name -eq $nugetNameKey } | Select-Object -ExpandProperty value
+
+        $insertNugetPackagesKey = @{
+            Value = $nugetValueKey
+            Name  = $nugetNameKey
+        } | ConvertTo-Json
+
+        if ($getOldNugetKey -ne $nugetValueKey) {
+
+            $orchUrlSettings = "localhost/odata/Settings('$nugetNameKey')"
+            $orchWebSettingsResponse = Invoke-RestMethod -Method PUT -Uri $orchUrlSettings -Body $insertNugetPackagesKey -ContentType "application/json" -UseBasicParsing -WebSession $websession
+
+        }
+    }
+
 }
 
-function unzipArchive {
+function Install-UrlRewrite
+{
+  
+  param(
+
+  [Parameter(Mandatory=$true)]
+  [string]
+  $urlRWpath
+
+  )
+
+    # Do nothing if URL Rewrite module is already installed
+    $rewriteDllPath = Join-Path $Env:SystemRoot 'System32\inetsrv\rewrite.dll'
+
+    if (Test-Path -Path $rewriteDllPath)
+    {
+      Log-Write -LogPath $sLogFile -LineValue  "IIS URL Rewrite 2.0 Module is already installed"
+
+        return
+    }
+
+	$installer = $urlRWpath
+
+    $exitCode = 0
+    $argumentList = "/i `"$installer`" /q /norestart"
+
+  Log-Write -LogPath $sLogFile -LineValue  "Installing IIS URL Rewrite 2.0 Module"
+
+	$exitCode = (Start-Process -FilePath "msiexec.exe" -ArgumentList $argumentList -Wait -Passthru).ExitCode
+
+	if ($exitCode -ne 0 -and $exitCode -ne 1641 -and $exitCode -ne 3010)
+	{
+		Log-Error -LogPath $sLogFile -ErrorDesc "Failed to install IIS URL Rewrite 2.0 Module (Exit code: $exitCode)" -ExitGracefully $False
+	}
+	else
+	{
+		Log-Write -LogPath $sLogFile -LineValue  "IIS URL Rewrite 2.0 Module successfully installed"
+	}
+}
+
+<#
+    .SYNOPSIS
+      Generate web.config keys.
+
+    .Description
+      Generate same AppEncryption key, Nuget API keys, Machine Validation and Decryption keys based on a passphrase.
+
+    .PARAMETER passphrase
+      String. Mandatory. Passphrase to generate AppEncryption key, Nuget API keys, Machine Validation and Decryption keys. Example: $passphrase = "YourP@ssphr4s3!"
+
+    .INPUTS
+      Parameters above.
+
+    .OUTPUTS
+      Encyption key, Nuget API key, Machine Validation and Decryption keys.
+    
+    .Example
+      Generate-Key -passphrase "YourP@ssphr4s3!"
+#>
+function Generate-Key {
 
     param(
-        [string]
-        $File,
 
-        [string]
-        $Destination,
+      [Parameter(Mandatory = $true)]
+      [string]
+      $passphrase
+    
+    )
+    function KeyGenFromBuffer([int] $KeyLength, [byte[]] $Buffer) {
 
-        [switch]
-        $ForceCOM
+        (1..$KeyLength | ForEach-Object { '{0:X2}' -f $Buffer[$_] }) -join ''
+
+    }
+
+    # Register CryptoProviders
+    $hashProvider = New-Object System.Security.Cryptography.SHA256CryptoServiceProvider
+    $encrypter = New-Object System.Security.Cryptography.AesCryptoServiceProvider
+
+    $encrypter.Key = $hashProvider.ComputeHash([System.Text.ASCIIEncoding]::UTF8.GetBytes($passphrase))
+
+    $encryptionKey = [System.Convert]::ToBase64String($encrypter.Key)
+
+    # NugetKey from passphrase
+    $nugethashProvider = New-Object System.Security.Cryptography.MD5CryptoServiceProvider
+
+    $nugetGUID = $nugethashProvider.ComputeHash([System.Text.ASCIIEncoding]::UTF8.GetBytes($passphrase))
+
+    $nugetkey = [System.guid]::New($nugetGUID)
+
+    $BufferKeyPrimary = [system.Text.Encoding]::UTF8.GetBytes($encrypter.Key)
+    $BufferKeySecondary = [system.Text.Encoding]::UTF8.GetBytes($BufferKeyPrimary)
+
+    $decryptionKey = KeyGenFromBuffer -Buffer $BufferKeyPrimary -KeyLength 32
+
+    $validationKey = KeyGenFromBuffer -Buffer $BufferKeySecondary -KeyLength 64
+
+    $hashProvider.Dispose()
+    $encrypter.Dispose()
+
+    New-Object -TypeName PSObject -Property @{
+        Validationkey = $validationkey
+        DecryptionKey = $decryptionKey
+        encryptionKey = $encryptionKey
+        nugetKey      = $nugetkey.Guid
+    }
+
+}
+
+<#
+    .SYNOPSIS
+      Modify MachineKey.
+
+    .Description
+      Modify MachineKey section in an existing web.config.
+
+    .PARAMETER webconfigPath
+      Mandatory. String. Path of an existing web.config. Example: $webconfigPath = "C:\UiPathOrchestrator\web.config"
+
+    .PARAMETER validationKey
+      Mandatory. String. The key name to be added/modified . Example: $validationKey = "ValidationKey 128 bytes"
+
+    .PARAMETER decryptionKey
+      Mandatory. String. The value to be added/modified for the specified key. Example: $decryptionKey = "DecryptionKey 64 bytes"
+
+    .PARAMETER validation
+      Mandatory. String. The value to be added/modified for the specified key. Example: $validation = "SHA1"
+
+    .PARAMETER decryption
+      Mandatory. String. The value to be added/modified for the specified key. Example: $decryption = "AES"
+
+    .INPUTS
+      Parameters above.
+
+    .OUTPUTS
+      None
+    
+    .Example
+      SetMachineKey -webconfigPath "C:\UiPathOrchestrator\web.config" -validationKey "ValidationKey 128 bytes" -decryptionKey "DecryptionKey 64 bytes" -validation "SHA1" -decryption "AES"
+
+#>
+function SetMachineKey {
+
+    param(
+
+        [Parameter(Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
+        [String] $webconfigPath,
+
+        [Parameter(Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
+        [String] $validationKey,
+
+        [Parameter(Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
+        [String] $decryptionKey,
+
+        [Parameter(Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
+        [String] $validation,
+
+        [Parameter(Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
+        [String] $decryption
+
+    )
+
+    $currentDate = (get-date).tostring("mm_dd_yyyy-hh_mm_s") # month_day_year - hours_mins_seconds
+
+    $machineConfig = $webconfigPath
+
+    if (Test-Path $machineConfig) {
+        $xml = [xml](get-content $machineConfig)
+        $xml.Save($machineConfig + "_$currentDate")
+        $root = $xml.get_DocumentElement()
+        $system_web = $root."system.web"
+        if ($system_web.machineKey -eq $nul) {
+            $machineKey = $xml.CreateElement("machineKey")
+            $a = $system_web.AppendChild($machineKey)
+        }
+        $system_web.SelectSingleNode("machineKey").SetAttribute("validationKey", "$validationKey")
+        $system_web.SelectSingleNode("machineKey").SetAttribute("decryptionKey", "$decryptionKey")
+        $system_web.SelectSingleNode("machineKey").SetAttribute("validation", "$validation")
+        $system_web.SelectSingleNode("machineKey").SetAttribute("decryption", "$decryption")
+        $a = $xml.Save($machineConfig)
+    }
+    else { 
+        Write-Error -Message "Error: Webconfig does not exist in '$webconfigPath'"
+        Log-Error -LogPath $sLogFile -ErrorDesc "Error: Webconfig does not exist '$webconfigPath'" -ExitGracefully $True
+    }
+}
+
+<#
+    .SYNOPSIS
+      Add/Modify AppSettings.
+
+    .Description
+      Add/Modify AppSettings section in an existing web.config.
+
+    .PARAMETER path
+      Mandatory. String. Path of an existing web.config. Example: $path = "C:\UiPathOrchestrator"
+
+    .PARAMETER key
+      Mandatory. String. The key name to be added/modified . Example: $key = "NuGet.Packages.Path"
+
+    .PARAMETER value
+      Mandatory. String. The value to be added/modified for the specified key. Example: $value = "\\localhost\NugetPackagesFolder"
+
+    .INPUTS
+      Parameters above.
+
+    .OUTPUTS
+      None
+    
+    .Example
+      Set-AppSettings -path "C:\UiPathOrchestrator" -key "NuGet.Packages.Path" -value "\\localhost\NugetPackagesFolder"
+#>
+function Set-AppSettings {
+    param (
+        # web.config path
+        [Parameter(Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
+        [String] $path,
+
+        # Key to add/update
+        [Parameter(Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
+        [String] $key,
+
+        # Value
+        [Parameter(Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
+        [String] $value
     )
 
 
-    If (-not $ForceCOM -and ($PSVersionTable.PSVersion.Major -ge 3) -and
-        ((Get-ItemProperty -Path "HKLM:\Software\Microsoft\NET Framework Setup\NDP\v4\Full" -ErrorAction SilentlyContinue).Version -like "4.5*" -or
-            (Get-ItemProperty -Path "HKLM:\Software\Microsoft\NET Framework Setup\NDP\v4\Client" -ErrorAction SilentlyContinue).Version -like "4.5*")) {
-        Write-Verbose -Message "Attempting to Unzip $File to location $Destination using .NET 4.5"
-        try {
-            [System.Reflection.Assembly]::LoadWithPartialName("System.IO.Compression.FileSystem") | Out-Null
-            [System.IO.Compression.ZipFile]::ExtractToDirectory("$File", "$Destination")
+    # Make a backup copy before editing
+    $ConfigBackup = "$path\web.config.$(Get-Date -Format yyyyMMdd_hhmmsstt).backup"
+    try { Copy-Item -Path "$path\web.config" -Destination $ConfigBackup -Force -EA 1 } catch { throw }
+    Write-Verbose "Backed up '$path\web.config' to '$ConfigBackup'"
+    Log-Write -LogPath $sLogFile -LineValue "Backed up '$path\web.config' to '$ConfigBackup'"
+
+
+    $webconfig = Join-Path $path "web.config"
+    [bool] $found = $false
+
+    if (Test-Path $webconfig) {
+        $xml = [xml](get-content $webconfig);
+        $root = $xml.get_DocumentElement();
+
+        foreach ($item in $root.appSettings.add) {
+            if ($item.key -eq $key) {
+                $item.value = $value;
+                $found = $true;
+            }
         }
-        catch {
-            Write-Warning -Message "Unexpected Error. Error details: $_.Exception.Message"
+
+        if (-not $found) {
+            $newElement = $xml.CreateElement("add");
+            $nameAtt1 = $xml.CreateAttribute("key")
+            $nameAtt1.psbase.value = $key;
+            $newElement.SetAttributeNode($nameAtt1);
+
+            $nameAtt2 = $xml.CreateAttribute("value");
+            $nameAtt2.psbase.value = $value;
+            $newElement.SetAttributeNode($nameAtt2);
+
+            $xml.configuration["appSettings"].AppendChild($newElement);
         }
+
+        $xml.Save($webconfig)
     }
     else {
-        Write-Verbose -Message "Attempting to Unzip $File to location $Destination using COM"
-        try {
-            $shell = New-Object -ComObject Shell.Application
-            $shell.Namespace($destination).copyhere(($shell.NameSpace($file)).items())
-        }
-        catch {
-            Write-Warning -Message "Unexpected Error. Error details: $_.Exception.Message"
-        }
+        Write-Error -Message "Error: File not found '$webconfig'"
+        Log-Error -LogPath $sLogFile -ErrorDesc "Error: File not found '$webconfig'" -ExitGracefully $True
+    }
+}
+
+<#
+    .SYNOPSIS
+      Test URL.
+
+    .Description
+      Test if the installation of the UiPath Orchestrator it's successfully via URL.
+
+    .PARAMETER orchestratorURL
+      String. URL of the recently deployed orchestrator. Example: $orchestratorURL = https://localhost
+
+    .INPUTS
+      Parameters above.
+
+    .OUTPUTS
+      None
+    
+    .Example
+      TestOrchestratorConnection -orchestratorURL "https://$hostname"
+#>
+function TestOrchestratorConnection {
+    param (
+        [string]
+        $orchestratorURL
+    )
+    # First we create the request.
+    $HTTP_Request = [System.Net.WebRequest]::Create("$orchestratorURL")
+
+    # We then get a response from the site.
+    $HTTP_Response = $HTTP_Request.GetResponse()
+
+    # We then get the HTTP code as an integer.
+    $HTTP_Status = [int]$HTTP_Response.StatusCode
+
+    if ($HTTP_Status -eq 200) {
+        Log-Write -LogPath $sLogFile -LineValue "Orchestrator Site is OK!"
+    }
+    else {
+        Log-Write -LogPath $sLogFile -LineValue "The Orchestrator Site may be down, please check!"
     }
 
+    # Finally, we clean up the http request by closing it.
+    $HTTP_Response.Close()
+
+}
+
+<#
+    .SYNOPSIS
+      Install Windows Features.
+
+    .Description
+      Install necessary Windows Features for UiPath Orchestrator.
+
+    .PARAMETER features
+      Mandatory. Array. Windows Features you want to install on the local server. Example: $features = 'ClientForNFS-Infrastructure'
+
+    .INPUTS
+      Parameters above.
+
+    .OUTPUTS
+      None
+    
+    .Example
+      Install-UiPathOrchestratorFeatures -features  @('IIS-DefaultDocument','WCF-TCP-PortSharing45','ClientForNFS-Infrastructure')
+#>
+function Install-UiPathOrchestratorFeatures {
+    param (
+
+        [Parameter(Mandatory = $true)]
+        [string[]] $features
+
+    )
+
+    foreach ($feature in $features) {
+
+        try {
+            Log-Write -LogPath $sLogFile -LineValue "Installing feature $feature"
+            Enable-WindowsOptionalFeature -Online -FeatureName $feature -all -NoRestart
+        }
+        catch {
+            Log-Error -LogPath $sLogFile -ErrorDesc "$($_.exception.message) on installing $($feature)" -ExitGracefully $True
+        }
+
+    }
 
 }
 
@@ -265,7 +783,7 @@ function Log-Start {
         $sFullPath = $LogPath + "\" + $LogName
 
         # Check if file exists and delete if it does
-        If ((Test-Path -Path $sFullPath)) {
+        if ((Test-Path -Path $sFullPath)) {
             Remove-Item -Path $sFullPath -Force
         }
 
@@ -382,7 +900,7 @@ function Log-Error {
         Write-Debug "Error: An error has occurred [$ErrorDesc]."
 
         # If $ExitGracefully = True then run Log-Finish and exit script
-        If ($ExitGracefully -eq $True) {
+        if ($ExitGracefully -eq $True) {
             Log-Finish -LogPath $LogPath
             Break
         }
@@ -435,7 +953,7 @@ function Log-Finish {
         Write-Debug ""
 
         # Exit calling script if NoExit has not been specified or is set to False
-        If (!($NoExit) -or ($NoExit -eq $False)) {
+        if (!($NoExit) -or ($NoExit -eq $False)) {
             Exit
         }
     }
