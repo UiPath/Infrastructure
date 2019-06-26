@@ -14,8 +14,8 @@ Param
 
     Write-Host "Using DNS zone:"$DNSZone
     Write-Host "Using Redis cluster name:"$RedisClusterName
-    
-    foreach ($redisnode in $RedisNodeIP) {
+
+    for ($i = 1; $i -le $RedisNodeIP.Length; $i++) {
         $redisNodeName = Read-Host "Please enter the name of the Redis node (in order of the IP provided earlier): "
         $nodeFQDN = $redisNodeName + ".$DNSZone"
         Add-DnsServerResourceRecordA -Name $redisNodeName -ZoneName $DNSZone -IPv4Address $RedisNodeIP -AllowUpdateAny
