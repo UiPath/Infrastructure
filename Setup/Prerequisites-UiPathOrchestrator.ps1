@@ -80,7 +80,6 @@ function Main {
         'IIS-WebSockets',
         'IIS-ManagementConsole',
         'IIS-ManagementScriptingTools',
-        'WCF-TCP-PortSharing45',
         'ClientForNFS-Infrastructure'
     )
 
