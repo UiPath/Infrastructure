@@ -13,8 +13,8 @@ Upgrade process :</br>
 1. Select the Subscription and the Resource group where the WebApp was deployed.</br>
 2. Click the button "Deploy to Azure" and the template will be loaded automatically in the Azure Portal.</br>
 3. Complete the following fields:</br>
-    -appName - name of the WebApp where the Orchestrator was deployed</br>
-    -servicePlanName - name of the Service Plan where the WebApp resides</br>
+    -appName - full name of the WebApp resource where the Orchestrator was deployed</br>
+    -servicePlanName - full name of the Service Plan resource where the WebApp resides</br>
     -orchestratorVersion - desired upgrade version of the Orchestrator</br>
     -location - location of the WebApp (leave default if it's same location as the Resource group location)</br>
     -passphrase - Passphrase used to generate Application encryption key, NuGet API keys, Machine Decryption and Validation keys (mandatory, in order to re-add them in the new web.config)</br>
