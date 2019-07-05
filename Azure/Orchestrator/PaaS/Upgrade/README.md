@@ -6,7 +6,7 @@ This ARM template will upgrade UiPath Orchestrator from Azure Marketplace and th
 !! Attention !!</br>
 Backup the web.config from the WebApp.</br>
 Backup the NuGet packages folder if resides in the WebApp. </br>
-If you upgrade from 18.x to 19.x you will need to convert all NuGet packages using PackageMigrator or change NuGet.Repository.Type to Legacy, example : <add key="NuGet.Repository.Type" value="Legacy" /> </br>
+If you upgrade from 18.x to 19.x you will need to convert all NuGet packages using PackageMigrator or change NuGet.Repository.Type to Legacy, example : ```<add key="NuGet.Repository.Type" value="Legacy" />``` </br>
 !! Attention !!</br></br>
 
 Upgrade process :</br>
