@@ -8,26 +8,29 @@
     .PARAMETER orchestratorVersion
       String. Allowed versions: FTS 19.x and LTS 18.4.x . Version of the Orchestrator which will be installed. Example: $orchestratorVersion = "19.4.3"
  
-    .PARAMETER hostname
-      String. Orchestrator server name, public or private DNS of the server can also be used. Example: $hostname = "serverName"
+    .PARAMETER orchestratorFolder
+      String. Path where Orchestrator will be installed. Example: $orchestratorFolder = "C:\Program Files\UiPath\Orchestrator"
  
-    .PARAMETER dbServerName
-      String. Mandatory. SQL server name. Example: $dbServerName = "SQLServerName.local"
+    .PARAMETER orchestratorHostname
+      String. Orchestrator server name, public or private DNS of the server can also be used. Example: $orchestratorHostname = "serverName"
  
-    .PARAMETER dbName
-      String. Mandatory. Database Name. Example: $dbName = "devtestdb"
+    .PARAMETER databaseServerName
+      String. Mandatory. SQL server name. Example: $databaseServerName = "SQLServerName.local"
  
-    .PARAMETER dbUserName
-      String. Mandatory. Database Username. Example: $dbUserName = "devtestdbuser"
+    .PARAMETER databaseName
+      String. Mandatory. Database Name. Example: $databaseName = "devtestdb"
  
-    .PARAMETER dbPassword
-      String. Mandatory. Database Password  Example: $dbPassword = "d3vt3std@taB@s3!"
+    .PARAMETER databaseUserName
+      String. Mandatory. Database Username. Example: $databaseUserName = "devtestdbuser"
+ 
+    .PARAMETER databaseUserPassword
+      String. Mandatory. Database Password  Example: $databaseUserPassword = "d3vt3std@taB@s3!"
 
     .PARAMETER passphrase
       String. Mandatory. Passphrase is used to generate same AppEncryption key, Nuget API keys, Machine Validation and Decryption keys.  Example: $passphrase = "AnyPassPhrase!@#$"
  
-    .PARAMETER redisHost
-      String. There is no need to use Redis if there is only one Orchestrator instance. Redis is mandatory in multi-node deployment.  Example: $redisHost = "redishostDNS"
+    .PARAMETER redisServerHost
+      String. There is no need to use Redis if there is only one Orchestrator instance. Redis is mandatory in multi-node deployment.  Example: $redisServerHost = "redishostDNS"
  
     .PARAMETER nuGetStoragePath
       String. Mandatory. Storage Path where the Nuget Packages are saved. Also you can use NFS or SMB share.  Example: $nuGetStoragePath = "\\nfs-share\NugetPackages"
@@ -38,8 +41,8 @@
     .PARAMETER orchestratorAdminUsername
       String. Orchestrator Admin username in order to change the Nuget API Keys.  Example: $orchestratorAdminUsername = "admin"
  
-    .PARAMETER tennant
-      String. Orchestrator Tennant in order to change the Nuget API Key.  Example: $tennant = "Default"
+    .PARAMETER orchestratorTennant
+      String. Orchestrator Tennant in order to change the Nuget API Key.  Example: $orchestratorTennant = "Default"
  
     .INPUTS
       Parameters above.
@@ -48,58 +51,69 @@
       None
     
     .Example
-      powershell.exe -ExecutionPolicy Bypass -File "\\fileLocation\Install-UiPathOrchestrator.ps1" -OrchestratorVersion "19.4.3" -passphrase "AnyPassPhrase!@#$" -dbServerName  "SQLServerName.local"  -dbName "devtestdb"  -dbUserName "devtestdbuser" -dbPassword "d3vt3std@taB@s3!" -orchestratorAdminPassword "P@ssW05D!" -redisHost "redishostDNS" -NuGetStoragePath "\\nfs-share\NugetPackages"
+      powershell.exe -ExecutionPolicy Bypass -File "\\fileLocation\Install-UiPathOrchestrator.ps1" -OrchestratorVersion "19.4.3" -orchestratorFolder "C:\Program Files\UiPath\Orchestrator" -passphrase "AnyPassPhrase!@#$" -databaseServerName  "SQLServerName.local"  -databaseName "devtestdb"  -databaseUserName "devtestdbuser" -databaseUserPassword "d3vt3std@taB@s3!" -orchestratorAdminPassword "P@ssW05D!" -redisServerHost "redishostDNS" -NuGetStoragePath "\\nfs-share\NugetPackages"
 #>
 [CmdletBinding()]
 
 param(
 
     [Parameter()]
-    [ValidateSet('19.4.3', '19.4.2', '18.4.6', '18.4.5', '18.4.4', '18.4.3', '18.4.2', '18.4.1')]
-    [string]
-    $orchestratorVersion = "19.4.3",
-
-    [string]
-    $hostname,
-
-    [Parameter(Mandatory = $true)]
-    [string]
-    $dbServerName,
-
-    [Parameter(Mandatory = $true)]
-    [string]
-    $dbName,
-
-    [Parameter(Mandatory = $true)]
-    [string]
-    $dbUserName,
-
-    [Parameter(Mandatory = $true)]
-    [string]
-    $dbPassword,
-
-    [Parameter(Mandatory = $true)]
-    [string]
-    $passphrase,
-
-    [string[]]
-    $redisHost,
-
-    [Parameter(Mandatory = $true)]
-    [string]
-    $nuGetStoragePath,
+    [ValidateSet('19.4.4','19.4.3', '19.4.2', '18.4.6', '18.4.5', '18.4.4', '18.4.3', '18.4.2', '18.4.1')]
+    [string] $orchestratorVersion = "19.4.3",
 
     [Parameter()]
-    [string]
-    $orchestratorAdminUsername = "admin",
+    [string] $orchestratorFolder = "${env:ProgramFiles(x86)}\Uipath\Orchestrator",
 
     [Parameter(Mandatory = $true)]
-    [string]
-    $orchestratorAdminPassword,
+    [string]  $passphrase,
 
     [Parameter()]
-    [string]
-    $tennant = "Default"
+    [AllowEmptyString()]
+    [string]  $orchestratorHostname,
+
+    [Parameter(Mandatory = $true)]
+    [string]  $databaseServerName,
+
+    [Parameter(Mandatory = $true)]
+    [string]  $databaseName,
+
+    [Parameter(Mandatory = $true)]
+    [string]  $databaseUserName,
+
+    [Parameter(Mandatory = $true)]
+    [string]  $databaseUserPassword,
+
+    [Parameter()]
+    [ValidateSet('SQL', 'WINDOWS')]
+    [string]  $databaseAuthenticationMode = "SQL",
+
+    [Parameter()]
+    [ValidateSet('USER', 'APPPOOLIDENTITY')]
+    [string]  $appPoolIdentityType = "APPPOOLIDENTITY",
+
+    [Parameter()]
+    [string]  $appPoolIdentityUser,
+
+    [Parameter()]
+    [string]  $appPoolIdentityUserPassword,
+
+    [Parameter()]
+    [string[]] $redisServerHost,
+
+    [Parameter(Mandatory = $true)]
+    [string] $nuGetStoragePath,
+
+    [Parameter()]
+    [string] $orchestratorAdminUsername = "admin",
+
+    [Parameter(Mandatory = $true)]
+    [string] $orchestratorAdminPassword,
+
+    [Parameter()]
+    [string] $orchestratorTennant = "Default",
+
+    [Parameter()]
+    [string] $orchestratorLicenseCode
 
 )
 
@@ -161,7 +175,7 @@ function Main {
 
     }
 
-    if (!$hostname) { $hostname = $env:COMPUTERNAME }
+    if (!$orchestratorHostname) { $orchestratorHostname = $env:COMPUTERNAME }
 
     $features = @(
         'IIS-DefaultDocument',
@@ -177,7 +191,6 @@ function Main {
         'IIS-WebSockets',
         'IIS-ManagementConsole',
         'IIS-ManagementScriptingTools',
-        'WCF-TCP-PortSharing45',
         'ClientForNFS-Infrastructure'
     )
     Install-UiPathOrchestratorFeatures -features $features
@@ -190,12 +203,11 @@ function Main {
 
     #install URLrewrite
     Install-UrlRewrite -urlRWpath "$tempDirectory\rewrite_amd64.msi"
-    Start-Process "$tempDirectory\rewrite_amd64.msi" '/qn' -PassThru | Wait-Process
 
 
     # ((Invoke-WebRequest -Uri http://169.254.169.254/latest/meta-data/public-hostname -UseBasicParsing).RawContent -split "`n")[-1]
 
-    $cert = New-SelfSignedCertificate -DnsName "$env:COMPUTERNAME", "$hostname" -CertStoreLocation cert:\LocalMachine\My -FriendlyName "Orchestrator Self-Signed certificate" -KeySpec Signature -HashAlgorithm SHA256 -KeyExportPolicy Exportable  -NotAfter (Get-Date).AddYears(20)
+    $cert = New-SelfSignedCertificate -DnsName "$env:COMPUTERNAME", "$orchestratorHostname" -CertStoreLocation cert:\LocalMachine\My -FriendlyName "Orchestrator Self-Signed certificate" -KeySpec Signature -HashAlgorithm SHA256 -KeyExportPolicy Exportable  -NotAfter (Get-Date).AddYears(20)
 
     $thumbprint = $cert.Thumbprint
 
@@ -207,35 +219,45 @@ function Main {
 
     $getEncryptionKey = Generate-Key -passphrase $passphrase
 
+    $msiFeatures = @("OrchestratorFeature")
+    $msiProperties = @{}
+    $msiProperties += @{
+    "ORCHESTRATORFOLDER"= "`"$($orchestratorFolder)`"";
+    "DB_SERVER_NAME"="$($databaseServerName)";
+    "DB_DATABASE_NAME"="$($databaseName)";
+    "HOSTADMIN_PASSWORD"="$($orchestratorAdminPassword)";
+    "DEFAULTTENANTADMIN_PASSWORD"="$($orchestratorAdminPassword)";
+    "APP_ENCRYPTION_KEY"="$($getEncryptionKey.encryptionKey)";
+    "APP_NUGET_ACTIVITIES_KEY"="$($getEncryptionKey.nugetKey)";
+    "APP_NUGET_PACKAGES_KEY"="$($getEncryptionKey.nugetKey)";
+    "APP_MACHINE_DECRYPTION_KEY"="$($getEncryptionKey.DecryptionKey)";
+    "APP_MACHINE_VALIDATION_KEY"="$($getEncryptionKey.Validationkey)";
+    "TELEMETRY_ENABLED"="0";
+    }
+      if ($appPoolIdentityType -eq "USER") {
 
+        $msiProperties += @{
+            "APPPOOL_IDENTITY_TYPE"="USER";
+            "APPPOOL_USER_NAME"="$($appPoolIdentityUser)";
+            "APPPOOL_PASSWORD"="$($appPoolIdentityUserPassword)";
+        }
+    }
+    else {
+        $msiProperties += @{"APPPOOL_IDENTITY_TYPE"="APPPOOLIDENTITY";}
+    }
 
+    if ($databaseAuthenticationMode -eq "SQL") {
+        $msiProperties += @{
+            "DB_AUTHENTICATION_MODE"="SQL";
+            "DB_USER_NAME"="$($databaseUserName)";
+            "DB_PASSWORD"="$($databaseUserPassword)";
+        }
+    }
+    else {
+        $msiProperties += @{"DB_AUTHENTICATION_MODE"="WINDOWS";}
+    }
 
-    $orchParams = @(
-        "/i"
-        "$($tempDirectory)\UiPathOrchestrator.msi",
-        "ADDLOCAL=OrchestratorFeature",
-        "ORCHESTRATORFOLDER=C:\UiPathOrchestrator",
-        "APPPOOL_IDENTITY_TYPE=APPPOOLIDENTITY",
-        "DB_SERVER_NAME=$($dbServerName)",
-        "DB_DATABASE_NAME=$($dbName)",
-        "DB_AUTHENTICATION_MODE=SQL",
-        "DB_USER_NAME=$($dbUserName)",
-        "DB_PASSWORD=$($dbPassword)",
-        "HOSTADMIN_PASSWORD=$($orchestratorAdminPassword)",
-        "DEFAULTTENANTADMIN_PASSWORD=$($orchestratorAdminPassword)",
-        "APP_ENCRYPTION_KEY=$($getEncryptionKey.encryptionKey)",
-        "APP_NUGET_ACTIVITIES_KEY=$($getEncryptionKey.nugetKey)",
-        "APP_NUGET_PACKAGES_KEY=$($getEncryptionKey.nugetKey)",
-        "APP_MACHINE_DECRYPTION_KEY=$($getEncryptionKey.DecryptionKey)",
-        "APP_MACHINE_VALIDATION_KEY=$($getEncryptionKey.Validationkey)",
-        "/qn",
-        "/norestart",
-        "/l*vx"
-        "$($sLogPath)\Install-UiPathOrchestrator.log"
-    )
-
-
-    Start-Process 'msiexec.exe' -ArgumentList $orchParams -Wait -NoNewWindow -PassThru
+    Install-UiPathOrchestratorEnterprise -msiPath "$($tempDirectory)\UiPathOrchestrator.msi" -logPath "$($sLogPath)\Install-UiPathOrchestrator.log" -msiFeatures $msiFeatures -msiProperties $msiProperties
 
     #Remove the default Binding
     Remove-WebBinding -Name "Default Web Site" -BindingInformation "*:80:"
@@ -253,25 +275,25 @@ function Main {
 
     #test Orchestrator URL
     try {
-        TestOrchestratorConnection -orchestratorURL "https://$hostname"
-        TestOrchestratorConnection -orchestratorURL "http://$hostname"
+        TestOrchestratorConnection -orchestratorURL "https://$orchestratorHostname"
+        TestOrchestratorConnection -orchestratorURL "http://$orchestratorHostname"
     }
     catch {
         Log-Error -LogPath $sLogFile -ErrorDesc "$($_.exception.message) at testing Orchestrator URL" -ExitGracefully $False
     }
 
-    if ($redisHost) {
+    if ($redisServerHost) {
         $LBkey = @("LoadBalancer.Enabled" , "LoadBalancer.UseRedis", "LoadBalancer.Redis.ConnectionString", "NuGet.Packages.ApiKey", "NuGet.Activities.ApiKey")
 
-        $LBvalue = @("true", "true", "$($redisHost)", "$($getEncryptionKey.nugetKey)", "$($getEncryptionKey.nugetKey)")
+        $LBvalue = @("true", "true", "$($redisServerHost)", "$($getEncryptionKey.nugetKey)", "$($getEncryptionKey.nugetKey)")
 
         for ($i = 0; $i -lt $LBkey.count; $i++) {
 
-            Set-AppSettings -path "C:\UiPathOrchestrator" -key $LBkey[$i] -value $LBvalue[$i]
+            Set-AppSettings -path "$orchestratorFolder" -key $LBkey[$i] -value $LBvalue[$i]
 
         }
 
-        SetMachineKey -webconfigPath "C:\UiPathOrchestrator\web.config" -validationKey $getEncryptionKey.Validationkey -decryptionKey $getEncryptionKey.DecryptionKey -validation "SHA1" -decryption "AES"
+        SetMachineKey -webconfigPath "$orchestratorFolder\web.config" -validationKey $getEncryptionKey.Validationkey -decryptionKey $getEncryptionKey.DecryptionKey -validation "SHA1" -decryption "AES"
 
         Restart-WebSitesSite -Name "UiPath*"
 
@@ -286,7 +308,7 @@ function Main {
 
         for ($i = 0; $i -lt $LBkey.count; $i++) {
 
-            Set-AppSettings -path "C:\UiPathOrchestrator" -key $LBkey[$i] -value $LBvalue[$i]
+            Set-AppSettings -path "$orchestratorFolder" -key $LBkey[$i] -value $LBvalue[$i]
 
         }
 
@@ -294,7 +316,7 @@ function Main {
     else {
         $LBkey = "Storage.Location"
         $LBvalue = "RootPath=\\$($nuGetStoragePath)"
-        Set-AppSettings -path "C:\UiPathOrchestrator" -key $LBkey -value $LBvalue
+        Set-AppSettings -path "$orchestratorFolder" -key $LBkey -value $LBvalue
     }
 
 
@@ -306,7 +328,7 @@ function Main {
     #Set Deployment Key
     #Login to Orchestrator via API
     $dataLogin = @{
-        tenancyName            = $tennant
+        tenancyName            = $orchestratorTennant
         usernameOrEmailAddress = $orchestratorAdminUsername
         password               = $orchestratorAdminPassword
     } | ConvertTo-Json
@@ -340,6 +362,148 @@ function Main {
         }
     }
 
+  if($orchestratorLicenseCode) {
+
+    Try {
+      
+    #Check if Orchestrator is already licensed
+    $getLicenseURL = "localhost/odata/Settings/UiPath.Server.Configuration.OData.GetLicense()"
+    $getOrchestratorLicense = Invoke-RestMethod -Uri $getLicenseURL -Method GET -ContentType "application/json" -UseBasicParsing -WebSession $websession
+
+    if ( $getOrchestratorLicense.IsExpired -eq $true) {
+            # Create boundary
+            $boundary = [System.Guid]::NewGuid().ToString()	
+
+            # Create linefeed characters
+            $LF = "`r`n"
+
+            # Create the body lines
+            $bodyLines = (
+            "--$boundary",
+            "Content-Disposition: form-data; name=`"OrchestratorLicense`"; filename=`"OrchestratorLicense.txt`"",
+            "Content-Type: application/octet-stream$LF",
+            $orchestratorLicenseCode,
+            "--$boundary--"
+              ) -join $LF
+
+            $licenseURL = "localhost/odata/Settings/UiPath.Server.Configuration.OData.UploadLicense"
+            $uploadLicense = Invoke-RestMethod -Uri $licenseURL -Method POST -ContentType "multipart/form-data; boundary=`"$boundary`"" -Body $bodyLines -WebSession $websession
+
+            Log-Write -LogPath $sLogFile -LineValue "Licensing Orchestrator..."
+
+        }
+      }
+      Catch {
+              Log-Error -LogPath $sLogFile -ErrorDesc "The following error occurred: $($_.exception.message)" -ExitGracefully $False
+      }
+      
+    }
+
+}
+
+<#
+.DESCRIPTION
+Installs an MSI by calling msiexec.exe, with verbose logging
+.PARAMETER msiPath
+Path to the MSI to be installed
+.PARAMETER logPath
+Path to a file where the MSI execution will be logged via "msiexec [...] /lv*"
+.PARAMETER features
+A list of features that will be installed via ADDLOCAL="..."
+.PARAMETER properties
+Additional MSI properties to be passed to msiexec
+#>
+function Invoke-MSIExec {
+
+  param (
+      [Parameter(Mandatory = $true)]
+      [string] $msiPath,
+      
+      [Parameter(Mandatory = $true)]
+      [string] $logPath,
+
+      [string[]] $features,
+
+      [System.Collections.Hashtable] $properties
+  )
+
+  if (!(Test-Path $msiPath)) {
+      throw "No .msi file found at path '$msiPath'"
+  }
+
+  $msiExecArgs = "/i `"$msiPath`" /q /l*vx `"$logPath`" "
+
+  if ($features) {
+      $msiExecArgs += "ADDLOCAL=`"$($features -join ',')`" "
+  }
+
+  if ($properties) {
+      $msiExecArgs += (($properties.GetEnumerator() | ForEach-Object { "$($_.Key)=$($_.Value)" }) -join " ")
+  }
+
+  $process = Start-Process "msiexec" -ArgumentList $msiExecArgs -Wait -PassThru
+
+  return $process
+}
+
+<#
+.DESCRIPTION
+Installs UiPath by calling Invoke-MSIExec
+.PARAMETER msiPath
+Path to the MSI to be installed
+.PARAMETER installationFolder
+Where UiPath will be installed
+.PARAMETER licenseCode
+License code used to activate Studio
+.PARAMETER msiFeatures
+A list of MSI features to pass to Invoke-MSIExec
+.PARAMETER msiProperties
+A list of MSI properties to pass to Invoke-MSIExec
+#>
+function Install-UiPathOrchestratorEnterprise {
+
+  param (
+      [Parameter(Mandatory = $true)]
+      [string] $msiPath,
+
+      [string] $installationFolder,
+
+      [string] $licenseCode,
+
+      [string] $logPath,
+
+      [string[]] $msiFeatures,
+
+      [System.Collections.Hashtable] $msiProperties
+  )
+
+  if (!$msiProperties) {
+      $msiProperties = @{}
+  }
+
+  if ($licenseCode) {
+      $msiProperties["CODE"] = $licenseCode;
+  }
+
+  if ($installationFolder) {
+      $msiProperties["APPLICATIONFOLDER"] = "`"$installationFolder`"";
+  }
+
+  if(!$logPath) {
+  $logPath = Join-Path $script:tempDirectory "install.log"
+  }
+
+  Log-Write -LogPath $sLogFile -LineValue "Installing UiPath"
+
+  $process = Invoke-MSIExec -msiPath $msiPath -logPath $logPath -features $msiFeatures -properties $msiProperties
+
+  Log-Write -LogPath $sLogFile -LineValue "Installing Features $($msiFeatures)"
+ 
+
+  return @{
+      LogPath = $logPath;
+      MSIExecProcess = $process;
+  }
 }
 
 <#
@@ -648,7 +812,7 @@ function Set-AppSettings {
       None
     
     .Example
-      TestOrchestratorConnection -orchestratorURL "https://$hostname"
+      TestOrchestratorConnection -orchestratorURL "https://$orchestratorHostname"
 #>
 function TestOrchestratorConnection {
     param (
