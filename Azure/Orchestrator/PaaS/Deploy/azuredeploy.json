@@ -39,11 +39,7 @@
     "orchestratorSize": {
       "type": "string",
       "defaultValue": "small",
-      "allowedValues": [
-        "small",
-        "medium",
-        "large"
-      ],
+      "allowedValues": ["small", "medium", "large"],
       "metadata": {
         "description": "Size of the Orchestrator based on no. of total robots connected : Small size is for maximum 100 robots, Medium size for total no. of Robots between 100 and 500, Large size is for over 500 Robots"
       }
@@ -60,10 +56,7 @@
     "orchestratorAlertRules": {
       "type": "string",
       "defaultValue": "yes",
-      "allowedValues": [
-        "yes",
-        "no"
-      ],
+      "allowedValues": ["yes", "no"],
       "metadata": {
         "description": "Provision Orchestrator with AppInsight rules. You will need higher permissions on Azure subscription as these rules are added at RG level"
       }
@@ -123,19 +116,19 @@
     "storageAccountType": "Standard_LRS",
     "salt": "[uniqueString(parameters('passphrase'))]",
     "encriptionKey": "[base64(substring(concat(variables('salt'),uniqueString(parameters('passphrase'),variables('salt')),variables('fifthKey')), 0, 32))]",
-    "firstKey" : "[guid(variables('salt'))]",                                                          
-    "secondKey": "[guid(parameters('passphrase'),variables('salt'))]",                               
-    "thirdKey" : "[guid(variables('fifthKey'))]",                                             
-    "fourthKey": "[guid(parameters('passphrase'),variables('fifthKey'))]",                    
-    "fifthKey" : "[uniqueString(variables('salt'))]",                                                   
-    "sixthKey" : "[uniqueString(variables('firstKey'))]",
-    "seventhKey" : "[guid(variables('salt'),variables('fifthKey'))]",
-    "eighthKey" : "[guid(parameters('passphrase'))]",
+    "firstKey": "[guid(variables('salt'))]",
+    "secondKey": "[guid(parameters('passphrase'),variables('salt'))]",
+    "thirdKey": "[guid(variables('fifthKey'))]",
+    "fourthKey": "[guid(parameters('passphrase'),variables('fifthKey'))]",
+    "fifthKey": "[uniqueString(variables('salt'))]",
+    "sixthKey": "[uniqueString(variables('firstKey'))]",
+    "seventhKey": "[guid(variables('salt'),variables('fifthKey'))]",
+    "eighthKey": "[guid(parameters('passphrase'))]",
     "machineKey": "[toUpper(substring(replace(concat(variables('eighthKey'),variables('thirdKey'),variables('salt')),'-',''), 0, 64))]",
     "validationMachineKey": "[toUpper(substring(replace(concat(variables('firstKey'),variables('secondKey'),variables('fourthKey'),variables('seventhKey'),variables('fifthKey'),variables('sixthKey')),'-',''), 0, 128))]",
-    "apiKey" : "[guid(parameters('passphrase'),variables('firstKey'))]",
+    "apiKey": "[guid(parameters('passphrase'),variables('firstKey'))]",
     "activitiesApiKey": "[guid(parameters('passphrase'),variables('firstKey'))]",
-    "logAnalyticsLocationMap": {
+    "azureLocationMap": {
       "eastasia": "southeastasia",
       "southeastasia": "southeastasia",
       "centralus": "westus2",
@@ -159,24 +152,32 @@
       "ukwest": "uksouth",
       "westcentralus": "westus2",
       "koreasouth": "koreacentral",
-      "eastus2euap": "eastus"
+      "eastus2euap": "eastus",
+      "USDoD Central": "usgovvirginia",
+      "USDoD East": "usgovvirginia",
+      "usgovarizona": "usgovvirginia",
+      "usgoviowa": "usgovvirginia",
+      "usgovtexas": "usgovvirginia",
+      "usgovvirginia": "usgovvirginia"
     },
+    "appInsightsRegion": "[variables('azureLocationMap')[parameters('location')]]",
     "appInsight": "[trim(toLower(concat( parameters('appName'),'-appin' ) ))]",
-    "appInsightsRegion": "[variables('logAnalyticsLocationMap')[parameters('location')]]",
+    "location": "[if(startsWith(parameters('location'), 'us'), variables('appInsightsRegion'), parameters('location'))]",
+    "servicePlanGovAPI": "2018-02-01",
     "storageAccountName": "[replace(concat(variables('appName'),'sc'),'-','')]",
     "storageid": "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
     "appServicePlanName": "[concat(variables('appName'), '-serviceplan')]",
     "collation": "SQL_Latin1_General_CP1_CI_AS",
-    "databaseMaxSizeBytes": "1073741824",
-    "redisCacheName" : "[concat(variables('appName'),'-redis')]",
+    "databaseMaxSizeBytes": "21474836480",
+    "redisCacheName": "[concat(variables('appName'),'-redis')]",
     "redisid": "[resourceId('Microsoft.Cache/Redis/', variables('redisCacheName'))]",
-    "redisCacheSKU":"[if(contains(parameters('orchestratorSize'), 'small'), 'Standard', if(contains(parameters('orchestratorSize'), 'medium'), 'Standard', 'Premium'))]",
-    "redisCacheFamily":"[if(contains(parameters('orchestratorSize'), 'small'), 'C', if(contains(parameters('orchestratorSize'), 'medium'), 'C', 'P'))]",
-    "redisCacheCapacity":"[if(contains(parameters('orchestratorSize'), 'small'), '2', if(contains(parameters('orchestratorSize'), 'medium'), '2', '3'))]",
-    "enableNonSslPort":"true",
+    "redisCacheSKU": "[if(contains(parameters('orchestratorSize'), 'small'), 'Standard', if(contains(parameters('orchestratorSize'), 'medium'), 'Standard', 'Premium'))]",
+    "redisCacheFamily": "[if(contains(parameters('orchestratorSize'), 'small'), 'C', if(contains(parameters('orchestratorSize'), 'medium'), 'C', 'P'))]",
+    "redisCacheCapacity": "[if(contains(parameters('orchestratorSize'), 'small'), '2', if(contains(parameters('orchestratorSize'), 'medium'), '2', '3'))]",
+    "enableNonSslPort": "true",
     "redisPort": "[if(contains(variables('enableNonSslPort'),'true'),'6380','6379')]",
-    "diagnosticsEnabled":"true"
-
+    "diagnosticsEnabled": "true",
+    "endpointSuffix": "[if(startsWith(parameters('location'), 'us'), 'EndpointSuffix=core.usgovcloudapi.net', 'EndpointSuffix=core.windows.net')]"
   },
   "resources": [
     {
@@ -195,7 +196,7 @@
     {
       "name": "[variables('SQLServerName')]",
       "type": "Microsoft.Sql/servers",
-      "location": "[parameters('location')]",
+      "location": "[variables('location')]",
       "apiVersion": "2017-03-01-preview",
       "properties": {
         "administratorLogin": "[parameters('SQLServerAdminLogin')]",
@@ -207,21 +208,26 @@
           "apiVersion": "2017-03-01-preview",
           "name": "[variables('dbName')]",
           "type": "databases",
-          "location": "[parameters('location')]",
-          "dependsOn": [
-            "[variables('SQLServerName')]"
-          ],
+          "location": "[variables('location')]",
+          "dependsOn": ["[variables('SQLServerName')]"],
+          "sku": {
+            "name": "[variables('dbPerformanceLevel')]",
+            "tier": "[variables('dbEdition')]"
+          },
+          "kind": "v12.0,user",
           "properties": {
-            "edition": "[variables('dbEdition')]",
+            "maxSizeBytes": "[variables('databaseMaxSizeBytes')]",
             "collation": "[variables('collation')]",
-            "requestedServiceObjectiveName": "[variables('dbPerformanceLevel')]"
+            "catalogCollation": "[variables('collation')]",
+            "zoneRedundant": false,
+            "minCapacity": "50"
           }
         },
         {
           "apiVersion": "2017-03-01-preview",
           "name": "AllowAllWindowsAzureIps",
           "type": "firewallrules",
-          "location": "[parameters('location')]",
+          "location": "[variables('location')]",
           "dependsOn": [
             "[resourceId('Microsoft.Sql/servers/', variables('SQLServerName'))]"
           ],
@@ -236,7 +242,7 @@
       "type": "Microsoft.Storage/storageAccounts",
       "name": "[variables('storageAccountName')]",
       "apiVersion": "2018-11-01",
-      "location": "[parameters('location')]",
+      "location": "[variables('location')]",
       "sku": {
         "name": "[variables('storageAccountType')]"
       },
@@ -244,10 +250,10 @@
       "properties": {}
     },
     {
-      "apiVersion": "2018-11-01",
+      "apiVersion": "[if(startsWith(parameters('location'), 'us'), variables('servicePlanGovAPI'), '2018-11-01')]",
       "name": "[variables('appServicePlanName')]",
       "type": "Microsoft.Web/serverFarms",
-      "location": "[parameters('location')]",
+      "location": "[variables('location')]",
       "kind": "",
       "properties": {
         "name": "[variables('appServicePlanName')]",
@@ -266,7 +272,7 @@
       "apiVersion": "2018-11-01",
       "name": "[variables('appName')]",
       "type": "Microsoft.Web/Sites",
-      "location": "[parameters('location')]",
+      "location": "[variables('location')]",
       "tags": {
         "[concat('hidden-related:', '/subscriptions/', subscription().subscriptionId,'/resourcegroups/', resourceGroup().name, '/providers/Microsoft.Web/serverfarms/', variables('appServicePlanName'))]": "empty"
       },
@@ -366,19 +372,7 @@
             },
             {
               "name": "Storage.Location",
-              "value": "[if(contains(parameters('orchestratorVersion'),'19'),concat('DefaultEndpointsProtocol=https;AccountName=',variables('storageAccountName'),';AccountKey=',listKeys(variables('storageid'), '2019-04-01').keys[0].value,';'),json('null'))]"
-            },
-            {
-              "name": "WindowsAuth.Enabled",
-              "value": "false"
-            },
-            {
-              "name": "WindowsAuth.Domain",
-              "value": ""
-            },
-            {
-              "name": "WindowsAuth.AutoLogin.Enabled",
-              "value": "false"
+              "value": "[if(contains(parameters('orchestratorVersion'),'19'),concat('DefaultEndpointsProtocol=https;AccountName=',variables('storageAccountName'),';AccountKey=',listKeys(variables('storageid'), '2019-04-01').keys[0].value,';',variables('endpointSuffix')),json('null'))]"
             },
             {
               "name": "Auth.Cookie.Expire",
@@ -420,12 +414,10 @@
               "name": "ExternalAuth.Saml2.Enabled",
               "value": "false"
             }
-
           ]
         },
         "name": "[variables('appName')]",
         "enabled": true
-
       },
       "resources": [
         {
@@ -437,7 +429,6 @@
             "[concat('Microsoft.Web/Sites/', variables('appName'), '/config/web')]",
             "[concat('Microsoft.Sql/servers/', variables('SQLServerName'), '/databases/', variables('dbName'))]",
             "[resourceId('Microsoft.Storage/storageAccounts/', variables('storageAccountName'))]"
-
           ],
           "properties": {
             "packageUri": "[variables('orchestratorLink')]",
@@ -453,7 +444,6 @@
               "EncryptionKey": "[variables('encriptionKey')]",
               "apiKey": "[variables('apiKey')]",
               "activitiesApiKey": "[variables('activitiesApiKey')]"
-
             }
           }
         },
@@ -711,7 +701,7 @@
       "apiVersion": "2018-03-01",
       "name": "[variables('redisCacheName')]",
       "type": "Microsoft.Cache/Redis",
-      "location": "[parameters('location')]",
+      "location": "[variables('location')]",
       "properties": {
         "enableNonSslPort": "[variables('enableNonSslPort')]",
         "sku": {
@@ -726,7 +716,7 @@
           "apiVersion": "2017-05-01-preview",
           "type": "Microsoft.Cache/redis/providers/diagnosticsettings",
           "name": "[concat(variables('redisCacheName'),'/Microsoft.Insights/','redisinsight')]",
-          "location": "[parameters('location')]",
+          "location": "[variables('location')]",
           "dependsOn": [
             "[concat('Microsoft.Cache/Redis/', variables('redisCacheName'))]"
           ],
@@ -747,6 +737,5 @@
         }
       ]
     }
-
   ]
 }
