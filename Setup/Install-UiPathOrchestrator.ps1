@@ -58,8 +58,8 @@
 param(
 
     [Parameter()]
-    [ValidateSet('19.4.4','19.4.3', '19.4.2', '18.4.6', '18.4.5', '18.4.4', '18.4.3', '18.4.2', '18.4.1')]
-    [string] $orchestratorVersion = "19.4.3",
+    [ValidateSet('19.4.4', '19.4.3', '19.4.2', '18.4.6', '18.4.5', '18.4.4', '18.4.3', '18.4.2', '18.4.1')]
+    [string] $orchestratorVersion = "19.4.4",
 
     [Parameter()]
     [string] $orchestratorFolder = "${env:ProgramFiles(x86)}\Uipath\Orchestrator",
@@ -100,7 +100,7 @@ param(
     [Parameter()]
     [string[]] $redisServerHost,
 
-    [Parameter(Mandatory = $true)]
+    [Parameter()]
     [string] $nuGetStoragePath,
 
     [Parameter()]
@@ -220,41 +220,41 @@ function Main {
     $getEncryptionKey = Generate-Key -passphrase $passphrase
 
     $msiFeatures = @("OrchestratorFeature")
-    $msiProperties = @{}
+    $msiProperties = @{ }
     $msiProperties += @{
-    "ORCHESTRATORFOLDER"= "`"$($orchestratorFolder)`"";
-    "DB_SERVER_NAME"="$($databaseServerName)";
-    "DB_DATABASE_NAME"="$($databaseName)";
-    "HOSTADMIN_PASSWORD"="$($orchestratorAdminPassword)";
-    "DEFAULTTENANTADMIN_PASSWORD"="$($orchestratorAdminPassword)";
-    "APP_ENCRYPTION_KEY"="$($getEncryptionKey.encryptionKey)";
-    "APP_NUGET_ACTIVITIES_KEY"="$($getEncryptionKey.nugetKey)";
-    "APP_NUGET_PACKAGES_KEY"="$($getEncryptionKey.nugetKey)";
-    "APP_MACHINE_DECRYPTION_KEY"="$($getEncryptionKey.DecryptionKey)";
-    "APP_MACHINE_VALIDATION_KEY"="$($getEncryptionKey.Validationkey)";
-    "TELEMETRY_ENABLED"="0";
+        "ORCHESTRATORFOLDER"          = "`"$($orchestratorFolder)`"";
+        "DB_SERVER_NAME"              = "$($databaseServerName)";
+        "DB_DATABASE_NAME"            = "$($databaseName)";
+        "HOSTADMIN_PASSWORD"          = "$($orchestratorAdminPassword)";
+        "DEFAULTTENANTADMIN_PASSWORD" = "$($orchestratorAdminPassword)";
+        "APP_ENCRYPTION_KEY"          = "$($getEncryptionKey.encryptionKey)";
+        "APP_NUGET_ACTIVITIES_KEY"    = "$($getEncryptionKey.nugetKey)";
+        "APP_NUGET_PACKAGES_KEY"      = "$($getEncryptionKey.nugetKey)";
+        "APP_MACHINE_DECRYPTION_KEY"  = "$($getEncryptionKey.DecryptionKey)";
+        "APP_MACHINE_VALIDATION_KEY"  = "$($getEncryptionKey.Validationkey)";
+        "TELEMETRY_ENABLED"           = "0";
     }
-      if ($appPoolIdentityType -eq "USER") {
+    if ($appPoolIdentityType -eq "USER") {
 
         $msiProperties += @{
-            "APPPOOL_IDENTITY_TYPE"="USER";
-            "APPPOOL_USER_NAME"="$($appPoolIdentityUser)";
-            "APPPOOL_PASSWORD"="$($appPoolIdentityUserPassword)";
+            "APPPOOL_IDENTITY_TYPE" = "USER";
+            "APPPOOL_USER_NAME"     = "$($appPoolIdentityUser)";
+            "APPPOOL_PASSWORD"      = "$($appPoolIdentityUserPassword)";
         }
     }
     else {
-        $msiProperties += @{"APPPOOL_IDENTITY_TYPE"="APPPOOLIDENTITY";}
+        $msiProperties += @{"APPPOOL_IDENTITY_TYPE" = "APPPOOLIDENTITY"; }
     }
 
     if ($databaseAuthenticationMode -eq "SQL") {
         $msiProperties += @{
-            "DB_AUTHENTICATION_MODE"="SQL";
-            "DB_USER_NAME"="$($databaseUserName)";
-            "DB_PASSWORD"="$($databaseUserPassword)";
+            "DB_AUTHENTICATION_MODE" = "SQL";
+            "DB_USER_NAME"           = "$($databaseUserName)";
+            "DB_PASSWORD"            = "$($databaseUserPassword)";
         }
     }
     else {
-        $msiProperties += @{"DB_AUTHENTICATION_MODE"="WINDOWS";}
+        $msiProperties += @{"DB_AUTHENTICATION_MODE" = "WINDOWS"; }
     }
 
     Install-UiPathOrchestratorEnterprise -msiPath "$($tempDirectory)\UiPathOrchestrator.msi" -logPath "$($sLogPath)\Install-UiPathOrchestrator.log" -msiFeatures $msiFeatures -msiProperties $msiProperties
@@ -299,26 +299,29 @@ function Main {
 
     }
 
-    #set storage path
-    if ($orchestratorVersion -lt "19.4.1") {
+     #set storage path
+    if ($nuGetStoragePath) {
+       
+        if ($orchestratorVersion -lt "19.4.1") {
 
-        $LBkey = @("NuGet.Packages.Path", "NuGet.Activities.Path" )
+            $LBkey = @("NuGet.Packages.Path", "NuGet.Activities.Path" )
 
-        $LBvalue = @("\\$($nuGetStoragePath)", "\\$($nuGetStoragePath)\Activities")
+            $LBvalue = @("\\$($nuGetStoragePath)", "\\$($nuGetStoragePath)\Activities")
 
-        for ($i = 0; $i -lt $LBkey.count; $i++) {
+            for ($i = 0; $i -lt $LBkey.count; $i++) {
 
-            Set-AppSettings -path "$orchestratorFolder" -key $LBkey[$i] -value $LBvalue[$i]
+                Set-AppSettings -path "$orchestratorFolder" -key $LBkey[$i] -value $LBvalue[$i]
 
+            }
+
+        }
+        else {
+            $LBkey = "Storage.Location"
+            $LBvalue = "RootPath=\\$($nuGetStoragePath)"
+            Set-AppSettings -path "$orchestratorFolder" -key $LBkey -value $LBvalue
         }
 
     }
-    else {
-        $LBkey = "Storage.Location"
-        $LBvalue = "RootPath=\\$($nuGetStoragePath)"
-        Set-AppSettings -path "$orchestratorFolder" -key $LBkey -value $LBvalue
-    }
-
 
     # Remove temp directory
     Log-Write -LogPath $sLogFile -LineValue "Removing temp directory $($tempDirectory)"
@@ -362,40 +365,40 @@ function Main {
         }
     }
 
-  if($orchestratorLicenseCode) {
+    if ($orchestratorLicenseCode) {
 
-    Try {
+        Try {
       
-    #Check if Orchestrator is already licensed
-    $getLicenseURL = "localhost/odata/Settings/UiPath.Server.Configuration.OData.GetLicense()"
-    $getOrchestratorLicense = Invoke-RestMethod -Uri $getLicenseURL -Method GET -ContentType "application/json" -UseBasicParsing -WebSession $websession
+            #Check if Orchestrator is already licensed
+            $getLicenseURL = "localhost/odata/Settings/UiPath.Server.Configuration.OData.GetLicense()"
+            $getOrchestratorLicense = Invoke-RestMethod -Uri $getLicenseURL -Method GET -ContentType "application/json" -UseBasicParsing -WebSession $websession
 
-    if ( $getOrchestratorLicense.IsExpired -eq $true) {
-            # Create boundary
-            $boundary = [System.Guid]::NewGuid().ToString()	
+            if ( $getOrchestratorLicense.IsExpired -eq $true) {
+                # Create boundary
+                $boundary = [System.Guid]::NewGuid().ToString()	
 
-            # Create linefeed characters
-            $LF = "`r`n"
+                # Create linefeed characters
+                $LF = "`r`n"
 
-            # Create the body lines
-            $bodyLines = (
-            "--$boundary",
-            "Content-Disposition: form-data; name=`"OrchestratorLicense`"; filename=`"OrchestratorLicense.txt`"",
-            "Content-Type: application/octet-stream$LF",
-            $orchestratorLicenseCode,
-            "--$boundary--"
-              ) -join $LF
+                # Create the body lines
+                $bodyLines = (
+                    "--$boundary",
+                    "Content-Disposition: form-data; name=`"OrchestratorLicense`"; filename=`"OrchestratorLicense.txt`"",
+                    "Content-Type: application/octet-stream$LF",
+                    $orchestratorLicenseCode,
+                    "--$boundary--"
+                ) -join $LF
 
-            $licenseURL = "localhost/odata/Settings/UiPath.Server.Configuration.OData.UploadLicense"
-            $uploadLicense = Invoke-RestMethod -Uri $licenseURL -Method POST -ContentType "multipart/form-data; boundary=`"$boundary`"" -Body $bodyLines -WebSession $websession
+                $licenseURL = "localhost/odata/Settings/UiPath.Server.Configuration.OData.UploadLicense"
+                $uploadLicense = Invoke-RestMethod -Uri $licenseURL -Method POST -ContentType "multipart/form-data; boundary=`"$boundary`"" -Body $bodyLines -WebSession $websession
 
-            Log-Write -LogPath $sLogFile -LineValue "Licensing Orchestrator..."
+                Log-Write -LogPath $sLogFile -LineValue "Licensing Orchestrator..."
 
+            }
         }
-      }
-      Catch {
-              Log-Error -LogPath $sLogFile -ErrorDesc "The following error occurred: $($_.exception.message)" -ExitGracefully $False
-      }
+        Catch {
+            Log-Error -LogPath $sLogFile -ErrorDesc "The following error occurred: $($_.exception.message)" -ExitGracefully $False
+        }
       
     }
 
@@ -415,35 +418,35 @@ Additional MSI properties to be passed to msiexec
 #>
 function Invoke-MSIExec {
 
-  param (
-      [Parameter(Mandatory = $true)]
-      [string] $msiPath,
+    param (
+        [Parameter(Mandatory = $true)]
+        [string] $msiPath,
       
-      [Parameter(Mandatory = $true)]
-      [string] $logPath,
+        [Parameter(Mandatory = $true)]
+        [string] $logPath,
 
-      [string[]] $features,
+        [string[]] $features,
 
-      [System.Collections.Hashtable] $properties
-  )
+        [System.Collections.Hashtable] $properties
+    )
 
-  if (!(Test-Path $msiPath)) {
-      throw "No .msi file found at path '$msiPath'"
-  }
+    if (!(Test-Path $msiPath)) {
+        throw "No .msi file found at path '$msiPath'"
+    }
 
-  $msiExecArgs = "/i `"$msiPath`" /q /l*vx `"$logPath`" "
+    $msiExecArgs = "/i `"$msiPath`" /q /l*vx `"$logPath`" "
 
-  if ($features) {
-      $msiExecArgs += "ADDLOCAL=`"$($features -join ',')`" "
-  }
+    if ($features) {
+        $msiExecArgs += "ADDLOCAL=`"$($features -join ',')`" "
+    }
 
-  if ($properties) {
-      $msiExecArgs += (($properties.GetEnumerator() | ForEach-Object { "$($_.Key)=$($_.Value)" }) -join " ")
-  }
+    if ($properties) {
+        $msiExecArgs += (($properties.GetEnumerator() | ForEach-Object { "$($_.Key)=$($_.Value)" }) -join " ")
+    }
 
-  $process = Start-Process "msiexec" -ArgumentList $msiExecArgs -Wait -PassThru
+    $process = Start-Process "msiexec" -ArgumentList $msiExecArgs -Wait -PassThru
 
-  return $process
+    return $process
 }
 
 <#
@@ -462,48 +465,48 @@ A list of MSI properties to pass to Invoke-MSIExec
 #>
 function Install-UiPathOrchestratorEnterprise {
 
-  param (
-      [Parameter(Mandatory = $true)]
-      [string] $msiPath,
+    param (
+        [Parameter(Mandatory = $true)]
+        [string] $msiPath,
 
-      [string] $installationFolder,
+        [string] $installationFolder,
 
-      [string] $licenseCode,
+        [string] $licenseCode,
 
-      [string] $logPath,
+        [string] $logPath,
 
-      [string[]] $msiFeatures,
+        [string[]] $msiFeatures,
 
-      [System.Collections.Hashtable] $msiProperties
-  )
+        [System.Collections.Hashtable] $msiProperties
+    )
 
-  if (!$msiProperties) {
-      $msiProperties = @{}
-  }
+    if (!$msiProperties) {
+        $msiProperties = @{ }
+    }
 
-  if ($licenseCode) {
-      $msiProperties["CODE"] = $licenseCode;
-  }
+    if ($licenseCode) {
+        $msiProperties["CODE"] = $licenseCode;
+    }
 
-  if ($installationFolder) {
-      $msiProperties["APPLICATIONFOLDER"] = "`"$installationFolder`"";
-  }
+    if ($installationFolder) {
+        $msiProperties["APPLICATIONFOLDER"] = "`"$installationFolder`"";
+    }
 
-  if(!$logPath) {
-  $logPath = Join-Path $script:tempDirectory "install.log"
-  }
+    if (!$logPath) {
+        $logPath = Join-Path $script:tempDirectory "install.log"
+    }
 
-  Log-Write -LogPath $sLogFile -LineValue "Installing UiPath"
+    Log-Write -LogPath $sLogFile -LineValue "Installing UiPath"
 
-  $process = Invoke-MSIExec -msiPath $msiPath -logPath $logPath -features $msiFeatures -properties $msiProperties
+    $process = Invoke-MSIExec -msiPath $msiPath -logPath $logPath -features $msiFeatures -properties $msiProperties
 
-  Log-Write -LogPath $sLogFile -LineValue "Installing Features $($msiFeatures)"
+    Log-Write -LogPath $sLogFile -LineValue "Installing Features $($msiFeatures)"
  
 
-  return @{
-      LogPath = $logPath;
-      MSIExecProcess = $process;
-  }
+    return @{
+        LogPath        = $logPath;
+        MSIExecProcess = $process;
+    }
 }
 
 <#
