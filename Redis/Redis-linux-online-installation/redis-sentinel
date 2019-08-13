@@ -7,7 +7,7 @@
 # processname: redis-sentinel
 # config:      /etc/redis/sentinel.conf
 # config:      /etc/sysconfig/redis-sentinel
-# pidfile:     /var/run/redis/sentinel.pid
+# pidfile:     /etc/redis/sentinel.pid
 
 # Source function library.
 . /etc/rc.d/init.d/functions
@@ -20,7 +20,7 @@
 
 redis="/usr/local/bin/redis-sentinel"
 prog=$(basename $redis)
-PIDFILE="/var/run/redis/sentinel.pid"
+PIDFILE="/etc/redis/sentinel.pid"
 REDIS_CONF_FILE="/etc/redis/sentinel.conf"
 
 [ -f /etc/sysconfig/redis-sentinel ] && . /etc/sysconfig/redis-sentinel
