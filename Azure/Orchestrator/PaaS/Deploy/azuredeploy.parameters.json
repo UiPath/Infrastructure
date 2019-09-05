@@ -1,0 +1,30 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "appName": {
+      "value": null
+    },
+    "orchestratorVersion": {
+      "value": "19.4.4"
+    },
+    "orchestratorSize": {
+      "value": "small"
+    },
+    "orchestratorInstances": {
+      "value": 1
+    },
+    "SQLServerName": {
+      "value": null
+    },
+    "SQLServerDBName": {
+      "value": null
+    },
+    "SQLServerAdminLogin": {
+      "value": null
+    },
+    "SQLServerAdminPassword": {
+      "value": null
+    }
+  }
+}
