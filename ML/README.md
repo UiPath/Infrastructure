@@ -6,11 +6,11 @@ Run :
 
 ## Distros supported on cloud
 **Ubuntu 16.04.** <br>
-**RHEL 7.x** (except Azure, [click here](#azure))**.**<br>
+**RHEL 7.x** (except Azure, [click here](#azure------------))**.**<br>
 
 ### Azure            <br>
 **VM Tier** : NC6.<br> 
-Use NV tiers only if you have installed the NVIDIA driver before executing the script or you can use an custom extension script from Azure to install the necessary NVIDIA driver according to that tier GPU model and [also check](#cloud-docs).            <br>
+Use NV tiers only if you have installed the NVIDIA driver before executing the script or you can use an custom extension script from Azure to install the necessary NVIDIA driver according to that tier GPU model and [also check](#cloud-docs--------------).            <br>
 **Image used** : Red Hat Enterprise Linux 7 (.latest, from marketplace).            <br>
 
 ### AWS            <br>
@@ -25,7 +25,7 @@ Use NV tiers only if you have installed the NVIDIA driver before executing the s
 
 ## Test the installation            <br>
 1) ``` nvidia-smi```             <br>
-If doesn't work or you get an error like : "NVIDIA-SMI has failed because it couldn't communicate with the NVIDIA driver. Make sure that the latest NVIDIA driver is installed and running." , then follow these docs according to the cloud where the VM was deployed [click here](#cloud-docs).<br>
+If doesn't work or you get an error like : "NVIDIA-SMI has failed because it couldn't communicate with the NVIDIA driver. Make sure that the latest NVIDIA driver is installed and running." , then follow these docs according to the cloud where the VM was deployed [click here](#cloud-docs--------------).<br>
 Also please note, you will need to use GCPU tier type on AWS and Azure, except GCP where you will need to add the GPU manually.            <br>
 
 **Output** :            <br>
