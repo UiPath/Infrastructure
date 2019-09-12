@@ -26,7 +26,7 @@ Use NV tiers only if you have installed the NVIDIA driver before executing the s
 ## Test the installation            <br>
 1) ``` nvidia-smi```             <br>
 If doesn't work or you get an error like : "NVIDIA-SMI has failed because it couldn't communicate with the NVIDIA driver. Make sure that the latest NVIDIA driver is installed and running." , then follow these docs according to the cloud where the VM was deployed [click here](#cloud-docs--------------).<br>
-Also please note, you will need to use GCPU tier type on AWS and Azure, except GCP where you will need to add the GPU manually.            <br>
+Also please note, you will need to use GPU tier type on AWS and Azure, except GCP where you will need to add the GPU manually.            <br>
 
 **Output** :            <br>
 ![NVIDIA SMI output](https://github.com/UiPath/Infrastructure/blob/master/ML/nvidia-smi.png)
