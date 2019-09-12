@@ -6,10 +6,10 @@ Run :
 
 ## Distros supported on cloud
 Ubuntu 16.04
-RHEL 7.x (except Azure,  [click here](###azure) )
+RHEL 7.x (except Azure,  [click here](#azure) )
 
 ### Azure            <br>
-VM Tier : NC6 . Use NV tiers only if you have installed the NVIDIA driver before executing the script or you can use an custom extension script from Azure to install the necessary NVIDIA driver according to that tier GPU model and [also check](##cloud-docs)            <br>
+VM Tier : NC6 . Use NV tiers only if you have installed the NVIDIA driver before executing the script or you can use an custom extension script from Azure to install the necessary NVIDIA driver according to that tier GPU model and [also check](#cloud-docs)            <br>
 Image used : Red Hat Enterprise Linux 7 (.latest, LVM)  < from marketplace >            <br>
 
 ### AWS            <br>
@@ -24,7 +24,7 @@ Image used : available RHEL 7 from marketplace             <br>
 
 ## Test the installation            <br>
 1) ``` nvidia-smi```             <br>
-If doesn't work or you get an error like : "NVIDIA-SMI has failed because it couldn't communicate with the NVIDIA driver. Make sure that the latest NVIDIA driver is installed and running." , then follow these docs according to the cloud where the VM was deployed [click here](##cloud-docs).<br>
+If doesn't work or you get an error like : "NVIDIA-SMI has failed because it couldn't communicate with the NVIDIA driver. Make sure that the latest NVIDIA driver is installed and running." , then follow these docs according to the cloud where the VM was deployed [click here](#cloud-docs).<br>
 Also please note, you will need to use GCPU familiy type on AWS and Azure, except GCP where you will need to add the GPU manually.            <br>
 
 Output :            <br>
@@ -52,4 +52,4 @@ Output :            <br>
 Install pciutils (only if it's not installed) and run:            <br>
 ```lspci -k | grep -A 2 -i "VGA"```            <br>
 ```lspci | grep -i NVIDIA```            <br>
-Check the OS version ([click here](##distros-supported-on-cloud)) and supported GPU family ([check here](https://docs.uipath.com/activities/docs/deploying-a-local-machine-learning-model))
+Check the OS version ([click here](#distros-supported-on-cloud)) and supported GPU family ([check here](https://docs.uipath.com/activities/docs/deploying-a-local-machine-learning-model))
