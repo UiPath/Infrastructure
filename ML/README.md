@@ -2,7 +2,7 @@
 ## Installation steps
 Run :
 
-curl -fsSL https://raw.githubusercontent.com/UiPath/Infrastructure/master/ML/prereq_installer.sh | sudo sh
+```curl -fsSL https://raw.githubusercontent.com/UiPath/Infrastructure/master/ML/prereq_installer.sh | sudo sh ```
 
 ## Distros supported on cloud
 Ubuntu 16.04
@@ -23,15 +23,15 @@ Image used : available RHEL 7 from marketplace             <br>
 
 
 ## Test the installation            <br>
-1) ```bash nvidia-smi```             <br>
+1) ``` nvidia-smi```             <br>
 If doesn't work or you get an error like : "NVIDIA-SMI has failed because it couldn't communicate with the NVIDIA driver. Make sure that the latest NVIDIA driver is installed and running." , then follow these docs according to the cloud where the VM was deployed [click here](##cloud-docs).<br>
 Also please note, you will need to use GCPU familiy type on AWS and Azure, except GCP where you will need to add the GPU manually.            <br>
 
 Output :            <br>
 ![NVIDIA SMI output](https://github.com/UiPath/Infrastructure/blob/master/ML/nvidia-smi.png)
 
-2) ```bash sudo docker run --runtime=nvidia --rm nvidia/cuda nvidia-smi```                <br>
-```bash sudo docker run --rm nvidia/cuda nvidia-smi```       <br>
+2) ``` sudo docker run --runtime=nvidia --rm nvidia/cuda nvidia-smi```                <br>
+``` sudo docker run --rm nvidia/cuda nvidia-smi```       <br>
 
 Output :            <br>
 ![NVIDIA SMI output](https://github.com/UiPath/Infrastructure/blob/master/ML/nvidia-smi.png)
@@ -48,7 +48,7 @@ Output :            <br>
 
 
 #### Before asking for support :
-```cat /etc/*[_-]release```
+```cat /etc/*[_-]release``` <br>
 Install pciutils (only if it's not installed) and run:            <br>
 ```lspci -k | grep -A 2 -i "VGA"```            <br>
 ```lspci | grep -i NVIDIA```            <br>
