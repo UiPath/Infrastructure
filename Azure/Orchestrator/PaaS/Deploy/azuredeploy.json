@@ -421,7 +421,6 @@
           "type": "Extensions",
           "dependsOn": [
             "[resourceId('Microsoft.Web/Sites/', variables('appName'))]",
-            "[concat('Microsoft.Web/Sites/', variables('appName'), '/config/web')]",
             "[concat('Microsoft.Sql/servers/', variables('SQLServerName'), '/databases/', variables('dbName'))]",
             "[resourceId('Microsoft.Storage/storageAccounts/', variables('storageAccountName'))]"
           ],
