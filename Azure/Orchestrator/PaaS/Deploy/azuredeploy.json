@@ -463,7 +463,8 @@
           "name": "web",
           "type": "config",
           "dependsOn": [
-            "[resourceId('Microsoft.Web/Sites/', variables('appName'))]"
+            "[resourceId('Microsoft.Web/Sites/', variables('appName'))]",
+            "[concat('Microsoft.Web/Sites/', variables('appName'), '/Extensions/MSDeploy')]"
           ],
           "properties": {
             "phpVersion": "off",
