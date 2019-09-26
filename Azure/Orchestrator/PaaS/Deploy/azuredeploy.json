@@ -10,14 +10,6 @@
         "description": "Name of azure web app"
       }
     },
-    "passphrase": {
-      "type": "string",
-      "minLength": 5,
-      "maxLength": 30,
-      "metadata": {
-        "description": "Passphrase used to generate encryption keys"
-      }
-    },
     "orchestratorVersion": {
       "type": "string",
       "defaultValue": "19.4.4",
@@ -99,20 +91,20 @@
     "dbEdition": "[if(contains(parameters('orchestratorSize'), 'small'), 'Standard', if(contains(parameters('orchestratorSize'), 'medium'), 'Standard', 'Premium'))]",
     "dbPerformanceLevel": "[if(contains(parameters('orchestratorSize'), 'small'), 'S1', if(contains(parameters('orchestratorSize'), 'medium'), 'S3', 'P4'))]",
     "storageAccountType": "Standard_LRS",
-    "salt": "[uniqueString(parameters('passphrase'))]",
-    "encriptionKey": "[base64(substring(concat(variables('salt'),uniqueString(parameters('passphrase'),variables('salt')),variables('fifthKey')), 0, 32))]",
+    "salt": "[uniqueString(resourceGroup().id)]",
+    "encriptionKey": "[base64(substring(concat(variables('salt'),uniqueString(resourceGroup().id,variables('salt')),variables('fifthKey')), 0, 32))]",
     "firstKey": "[guid(variables('salt'))]",
-    "secondKey": "[guid(parameters('passphrase'),variables('salt'))]",
+    "secondKey": "[guid(resourceGroup().id,variables('salt'))]",
     "thirdKey": "[guid(variables('fifthKey'))]",
-    "fourthKey": "[guid(parameters('passphrase'),variables('fifthKey'))]",
+    "fourthKey": "[guid(resourceGroup().id,variables('fifthKey'))]",
     "fifthKey": "[uniqueString(variables('salt'))]",
     "sixthKey": "[uniqueString(variables('firstKey'))]",
     "seventhKey": "[guid(variables('salt'),variables('fifthKey'))]",
-    "eighthKey": "[guid(parameters('passphrase'))]",
+    "eighthKey": "[guid(resourceGroup().id)]",
     "machineKey": "[toUpper(substring(replace(concat(variables('eighthKey'),variables('thirdKey'),variables('salt')),'-',''), 0, 64))]",
     "validationMachineKey": "[toUpper(substring(replace(concat(variables('firstKey'),variables('secondKey'),variables('fourthKey'),variables('seventhKey'),variables('fifthKey'),variables('sixthKey')),'-',''), 0, 128))]",
-    "apiKey": "[guid(parameters('passphrase'),variables('firstKey'))]",
-    "activitiesApiKey": "[guid(parameters('passphrase'),variables('firstKey'))]",
+    "apiKey": "[guid(resourceGroup().id,variables('firstKey'))]",
+    "activitiesApiKey": "[guid(resourceGroup().id,variables('firstKey'))]",
     "azureLocationMap": {
       "eastasia": "southeastasia",
       "southeastasia": "southeastasia",
