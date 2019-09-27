@@ -31,13 +31,6 @@
           "metadata": {
               "description": "Version of the Orchestrator"
           }
-      },
-      "applicationEncryptionKey": {
-          "defaultValue": "",
-          "type": "String",
-          "metadata": {
-              "description": "Optional if the application was installed via Azure Marketplace. Existing Application Encryption key from web.config"
-          }
       }
   },
   "variables": {
@@ -46,7 +39,7 @@
       "servicePlanName": "[parameters('servicePlanName')]",
       "salt": "[uniqueString(resourceGroup().id)]",
       "createEncryption": "[base64(substring(concat(variables('salt'),uniqueString(resourceGroup().id,variables('salt')),variables('fifthKey')), 0, 32))]",
-      "encryptionKey": "[if(not(empty(parameters('applicationEncryptionKey'))), parameters('applicationEncryptionKey'), variables('createEncryption'))]",
+      "encryptionKey": "variables('createEncryption')",
       "firstKey": "[guid(variables('salt'))]",
       "secondKey": "[guid(resourceGroup().id,variables('salt'))]",
       "thirdKey": "[guid(variables('fifthKey'))]",
