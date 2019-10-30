@@ -129,6 +129,10 @@ $sLogName = "Install-Orchestrator.ps1.log"
 $sLogFile = Join-Path -Path $sLogPath -ChildPath $sLogName
 
 function Main {
+
+    #Define TLS for Invoke-WebRequest
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
     try {
         Start-Transcript -Path "$sLogPath\Install-UipathOrchestrator-Transcript.ps1.txt" -Append
 
@@ -903,8 +907,6 @@ function Download-File {
         [Parameter(Mandatory = $true)]
         [string] $outputFile
     )
-
-[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
     Write-Verbose "Downloading file from $url to local path $outputFile"
 
