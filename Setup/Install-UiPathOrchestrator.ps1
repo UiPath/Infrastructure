@@ -895,7 +895,7 @@ function Install-UiPathOrchestratorFeatures {
   The local path where the file will be downloaded
 #>
 function Download-File {
-[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
     param (
         [Parameter(Mandatory = $true)]
         [string]$url,
@@ -903,6 +903,8 @@ function Download-File {
         [Parameter(Mandatory = $true)]
         [string] $outputFile
     )
+
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
     Write-Verbose "Downloading file from $url to local path $outputFile"
 
