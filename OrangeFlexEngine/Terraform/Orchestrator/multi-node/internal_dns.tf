@@ -19,3 +19,13 @@ resource "flexibleengine_dns_recordset_v2" "rs_uipath_local" {
   type = "A"
   records = "${flexibleengine_rds_instance_v3.uipathdb.private_ips}"
 }
+
+
+# resource "flexibleengine_dns_recordset_v2" "cds_uipath_local" {
+#   zone_id = "${flexibleengine_dns_zone_v2.uipath_local.id}"
+#   name = "redis.uipath.local."
+#   description = "record set for REDIS"
+#   ttl = 3000
+#   type = "A"
+#   records = ["${flexibleengine_dcs_instance_v1.uipath_redis.ip}"]
+# }
