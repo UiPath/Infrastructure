@@ -6,15 +6,17 @@ resource "flexibleengine_elb_loadbalancer" "orchestratorlb" {
   vpc_id =  "${flexibleengine_vpc_v1.uipath.id}"
   admin_state_up = true
   bandwidth = 100
+  vip_address = "${var.vip}"
 }
 
 resource "flexibleengine_elb_listener" "listener" {
+  depends_on=["flexibleengine_elb_loadbalancer.orchestratorlb"]
   name = "uipath-elb-listener"
   description = "uipath listener"
-  protocol = "TCP"
-  backend_protocol = "TCP"
-  protocol_port = 443
-  backend_port = 443
+  protocol = "HTTP"
+  backend_protocol = "HTTP"
+  protocol_port = 80
+  backend_port = 80
   lb_algorithm = "roundrobin"
   loadbalancer_id = "${flexibleengine_elb_loadbalancer.orchestratorlb.id}"
   timeouts {
@@ -26,8 +28,8 @@ resource "flexibleengine_elb_listener" "listener" {
 
 resource "flexibleengine_elb_health" "healthcheck" {
   listener_id = "${flexibleengine_elb_listener.listener.id}"
-  healthcheck_protocol = "TCP"
-  healthcheck_connect_port = 443
+  healthcheck_protocol = "HTTP"
+  healthcheck_connect_port = 80
   healthy_threshold = 5
   healthcheck_timeout = 25
   healthcheck_interval = 3

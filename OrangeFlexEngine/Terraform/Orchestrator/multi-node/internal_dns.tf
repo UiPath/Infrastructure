@@ -21,6 +21,8 @@ resource "flexibleengine_dns_recordset_v2" "rs_uipath_local" {
 }
 
 
+## FE BUG in TODO list
+
 # resource "flexibleengine_dns_recordset_v2" "cds_uipath_local" {
 #   zone_id = "${flexibleengine_dns_zone_v2.uipath_local.id}"
 #   name = "redis.uipath.local."

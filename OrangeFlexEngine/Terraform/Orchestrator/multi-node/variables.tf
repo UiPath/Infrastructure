@@ -1,6 +1,12 @@
 ### Variables #######
 ## check this link for sizing https://docs.uipath.com/orchestrator/docs/hardware-requirements-orchestrator#section-support-between-250-and-500-unattended-robots
 
+
+##VIP in front of Orchestrators
+
+variable "vip" {} ##taken from env TF_VAR.... style
+
+
 #### Openstack router aka VPC in FE terminalogy
 variable "vpc_name" {
   default = "uipath"
@@ -30,22 +36,9 @@ variable "subnet_gateway_ip" {
 
 ###
 
-variable  "win_image" {
-  #  default = "666078e1-a0fe-48c6-953e-098008c4c722"
-    default = "d34455d4-c48d-42f2-b9d4-dcbc73e2aa11"
-
-}
-
-variable "win_flavor" {
-    default = "s3.2xlarge.2"
-}
-
-variable "orchestrator_count" {
-     default = 2
-}
 
 variable "default_sec_group" {
-    default = "b13576ed-560b-4c77-a733-b22627f243cc"
+    default = "1b922846-de33-4907-a1b1-685c0e9f3259"
 ## Manually created from webui -- ATM - needs to be dynamically collected
 
 }
@@ -87,6 +80,20 @@ variable "orchestrator_versions" {
   # "18.4.1"
   default = "19.4.4"
 
+}
+
+variable  "win_image" {
+  #  default = "666078e1-a0fe-48c6-953e-098008c4c722"
+    default = "d34455d4-c48d-42f2-b9d4-dcbc73e2aa11"
+
+}
+
+variable "win_flavor" {
+    default = "s3.2xlarge.2"
+}
+
+variable "orchestrator_count" {
+     default = 2
 }
 
 ######## ElastiCache - REDIS ######
