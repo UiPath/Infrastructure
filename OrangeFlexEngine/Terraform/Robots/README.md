@@ -32,8 +32,3 @@ Terraform v0.12.12
 | robot\_local\_account\_password | Robot local account password. | string | `"R@pVPsf@Fx"` | yes |
 | robot\_local\_account\_role | Robot local accout role : localadmin or localuser | string | `"localadmin"` | yes |
 
-## Outputs
-
-| Name | Description |
-|------|-------------|
-| bastion\_public\_ip | BastionHost public IP. |
