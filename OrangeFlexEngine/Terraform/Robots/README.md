@@ -1,12 +1,12 @@
 # Terraform & FE => ♥ UiPath Robot.
 Steps to provision UiPath Robot in AWS :
 1. Install terraform  v0.12.3 (https://learn.hashicorp.com/terraform/getting-started/install.html).
-2. Complete the variables.tf file (see inputs below). For Robots hardware requirements and EC2 types check : https://aws.amazon.com/ec2/instance-types/  and https://robot.uipath.com/docs/hardware-requirements.
+2. Complete the variables.tf file (see inputs below). For Robots hardware requirements and ECS types check : https://docs.prod-cloud-ocb.orange-business.com/index.html  and https://robot.uipath.com/docs/hardware-requirements.
 3. Change directory to path of the UiPath Robot plan (cd C:\path\to\uirobot\plan).
 4. Run : ` terraform init `
 5. Run : ` terraform plan `
 6. Check the plan of the resources to be deployed and type ` yes ` if you agree with the plan.
-7. Wait 5-10 mins per EC2 instance and enjoy!
+7. Wait 5-10 mins per ECS instance and enjoy!
 
 ## Terraform version
 Terraform v0.12.12
