@@ -1,5 +1,5 @@
 {
-  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
       "appName": {
@@ -15,8 +15,9 @@
           }
       },
       "orchestratorVersion": {
-          "defaultValue": "19.4.4",
+          "defaultValue": "19.10.1",
           "allowedValues": [
+              "19.10.1",
               "19.4.4",
               "19.4.3",
               "19.4.2",
