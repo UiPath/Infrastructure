@@ -31,23 +31,44 @@
           "metadata": {
               "description": "Version of the Orchestrator"
           }
+      },
+      "location": {
+          "defaultValue": "[resourceGroup().location]",
+          "type": "String",
+          "metadata": {
+              "description": "Location for all resources."
+          }
+      },
+      "passphrase": {
+          "minLength": 5,
+          "maxLength": 30,
+          "type": "String",
+          "metadata": {
+              "description": "Passphrase used to generate encryption keys"
+          }
+      },
+      "applicationEncryptionKey": {
+          "defaultValue": "",
+          "type": "String",
+          "metadata": {
+              "description": "Optional if the application was installed via Azure Marketplace. Existing Application Encryption key from web.config"
+          }
       }
   },
   "variables": {
-      "location":"[resourceGroup().location]",
       "orchestratorLink": "[concat('https://download.uipath.com/versions/',parameters('orchestratorVersion'),'/','UiPath.Web.zip')]",
       "servicePlanName": "[parameters('servicePlanName')]",
-      "salt": "[uniqueString(resourceGroup().id)]",
-      "createEncryption": "[base64(substring(concat(variables('salt'),uniqueString(resourceGroup().id,variables('salt')),variables('fifthKey')), 0, 32))]",
-      "encryptionKey": "variables('createEncryption')",
+      "salt": "[uniqueString(parameters('passphrase'))]",
+      "createEncryption": "[base64(substring(concat(variables('salt'),uniqueString(parameters('passphrase'),variables('salt')),variables('fifthKey')), 0, 32))]",
+      "encryptionKey": "[if(not(empty(parameters('applicationEncryptionKey'))), parameters('applicationEncryptionKey'), variables('createEncryption'))]",
       "firstKey": "[guid(variables('salt'))]",
-      "secondKey": "[guid(resourceGroup().id,variables('salt'))]",
+      "secondKey": "[guid(parameters('passphrase'),variables('salt'))]",
       "thirdKey": "[guid(variables('fifthKey'))]",
-      "fourthKey": "[guid(resourceGroup().id,variables('fifthKey'))]",
+      "fourthKey": "[guid(parameters('passphrase'),variables('fifthKey'))]",
       "fifthKey": "[uniqueString(variables('salt'))]",
       "sixthKey": "[uniqueString(variables('firstKey'))]",
       "seventhKey": "[guid(variables('salt'),variables('fifthKey'))]",
-      "eighthKey": "[guid(resourceGroup().id)]",
+      "eighthKey": "[guid(parameters('passphrase'))]",
       "machineKey": "[toUpper(substring(replace(concat(variables('eighthKey'),variables('thirdKey'),variables('salt')),'-',''), 0, 64))]",
       "validationMachineKey": "[toUpper(substring(replace(concat(variables('firstKey'),variables('secondKey'),variables('fourthKey'),variables('seventhKey'),variables('fifthKey'),variables('sixthKey')),'-',''), 0, 128))]"
   },
@@ -69,7 +90,7 @@
                           "type": "Microsoft.Web/Sites",
                           "name": "[parameters('appName')]",
                           "apiVersion": "2015-02-01",
-                          "location": "[variables('location')]",
+                          "location": "[parameters('location')]",
                           "properties": {
                               "name": "[parameters('appName')]",
                               "serverFarmId": "[resourceId('Microsoft.Web/serverfarms/',variables('servicePlanName'))]"
