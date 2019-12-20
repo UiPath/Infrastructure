@@ -116,6 +116,8 @@ param(
     [string] $orchestratorLicenseCode
 
 )
+#Enable TLS12
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 # Set Error Action to Silently Continue
 $ErrorActionPreference = "SilentlyContinue"
