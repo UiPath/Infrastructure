@@ -64,19 +64,24 @@ variable "orchestrator_versions" {
   # "18.4.3"
   # "18.4.2"
   # "18.4.1"
-  default = "19.4.4"
+  default = "19.10.15"
 
 }
 
-######## ElastiCache - REDIS ######
-variable "redis_instance_type" {
-  description = "ElastiCache - Redis instance type size."
-  default = "cache.m4.large"
+######## High Availability Add-on ######
+variable "haa-user" {
+  description = "AWS Access Key."
+  default = "test@corp.com"
 }
 
-variable "elasticache" {
-  description = "Tag name of the ElastiCache - Redis."
-  default = "UiPath-Redis"
+variable "haa-password" {
+  description = "AWS Access Key."
+  default = "123456"
+}
+
+variable "haa-license" {
+  description = "AWS Access Key."
+  default = ""
 }
 
 ########  RDS DB #########

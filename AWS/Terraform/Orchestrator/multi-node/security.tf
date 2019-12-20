@@ -47,6 +47,20 @@ resource "aws_security_group" "uipath_stack" {
   }
 
   ingress {
+    from_port   = 8443
+    to_port     = 8443
+    protocol    = "tcp"
+    cidr_blocks = ["${var.cidr_block}", "${var.security_cidr_block}"]
+  }
+
+  ingress {
+    from_port   = 9443
+    to_port     = 9443
+    protocol    = "tcp"
+    cidr_blocks = ["${var.cidr_block}", "${var.security_cidr_block}"]
+  }
+
+  ingress {
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
@@ -99,6 +113,18 @@ resource "aws_security_group" "uipath_stack" {
   egress {
     from_port   = 22
     to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["${var.cidr_block}", "${var.security_cidr_block}"]
+  }
+  egress {
+    from_port   = 8443
+    to_port     = 8443
+    protocol    = "tcp"
+    cidr_blocks = ["${var.cidr_block}", "${var.security_cidr_block}"]
+  }
+  egress {
+    from_port   = 9443
+    to_port     = 9443
     protocol    = "tcp"
     cidr_blocks = ["${var.cidr_block}", "${var.security_cidr_block}"]
   }
