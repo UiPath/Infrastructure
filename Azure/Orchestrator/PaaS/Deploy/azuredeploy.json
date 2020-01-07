@@ -411,7 +411,6 @@
             }
           ]
         },
-        "name": "[variables('appName')]",
         "enabled": true
       },
       "resources": [
