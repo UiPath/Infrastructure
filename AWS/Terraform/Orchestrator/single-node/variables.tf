@@ -1,98 +1,72 @@
 ## Provider Variables ##
+### AWS Region ###
 variable "aws_region" {
-  description = "The region for deployment"
+  description = "The region for UiPath Orchestrator deployment."
   default     = "eu-west-2"
 }
-
+### AWS Access Key ###
 variable "access_key" {
-  default = "access_key_from_AWS"
+  description = "AWS Access Key."
+  default     = "SAGFGDGVGDBXCVER"
 }
-
+### AWS Secret Access Key ###
 variable "secret_key" {
-  default = "secret_key_from_AWS"
+  description = "AWS Secret Access Key."
+  default     = "+SAGFGDGVGDBXCVERSAGFGDGVGDBXCVER=="
 }
-
+### AWS SSH KEY ###
 variable "key_name" {
   description = "Name of the SSH keypair to use in AWS."
-
   default = {
-    "us-east-1" = "ssh_key"
-    "eu-west-2" = "ssh_key"
+    "us-east-1" = "AWS_Existing_key"
+    "eu-west-2" = "AWS_Existing_key"
   }
-}
-
-## Microsoft Windows Server 2016 Base ##
-variable "aws_w2016_std_amis" {
-  default = {
-    eu-west-2 = "ami-0f83d76c5da014440"
-  }
-}
-
-variable "aws_app_instance_type" {
-  default = "m4.large"
-}
-
-variable "aws_subnet_id" {
-  default = {
-    "us-east-1" = "subnet-xxxxxxxx"
-    "us-west-2" = "subnet-xxxxxxxx"
-    "eu-west-2" = "subnet-xxxxxxxx"
-  }
-}
-
-variable "aws_security_group" {
-  default = {
-    "us-east-1" = "sg-xxxxxxxx"
-    "us-west-2" = "sg-xxxxxxxx"
-    "eu-west-2" = "sg-xxxxxxxx"
-  }
-}
-
-### Stack Name to be associated with all resources ###
-variable "stack_name" {
-  default = "uiRobotStack"
-}
-
-## Server Names ##
-variable "app_name" {
-  default = "UiPath_Robot"
-}
-
-## Server Instances ##
-variable "instance_count" {
-  default = 1
 }
 
 ##### Script Related Resources #####
 
-## Set Initial Windows Administrator Password ##
-variable "admin_password" {
-  description = "Windows Administrator password to login as."
-  default     = "winP4s5word@!4*"
+#### Orchestrator Instance type ####
+variable "aws_app_instance_type" {
+  description = "Orchestrator Instance type."
+  default     = "m4.large"
 }
 
+## Environment name, used as prefix to name resources.
+variable "environment" {
+  description = "Environment name, used as prefix to tag the name of the resources."
+  default     = "dev"
+}
+## Application name, used as prefix to name resources.
+variable "application" {
+  description = "Application stack name, used as prefix to tag the name of the resources."
+  default     = "OrchestratorStack"
+}
 
+##### Script Related Resources #####
 
 ########  RDS DB #########
 
+# Database username
 variable "db_username" {
-  description = "RDS master user name"
-  default     = "RDS_master_username"
+  description = "RDS master user name."
+  default     = "devawsdb"
 }
 
+# Database username password, avoid using '/', '\"', or '@' 
 variable "db_password" {
-  description = "RDS master password"
-  default     = "RDS_master_password"
+  description = "RDS Master password."
+  default     = "!vfdgva%gsd"
 }
 
+# Database name
 variable "db_name" {
-  description = "RDS database name"
-  default     = "RDS_DB_NAME"
+  description = "RDS database name."
+  default     = "awstest"
 }
 
 // Environment name, used as prefix to name resources.
 variable "environment" {
-  default = "ENV_Prefix"
+  default = "dev"
 }
 
 // The allocated storage in gigabytes.
@@ -112,11 +86,8 @@ variable "rds_multi_az" {
 
 // Determines whether a final DB snapshot is created before the DB instance is deleted.
 variable "skip_final_snapshot" {
-  type    = "string"
   default = "true"
 }
-
-
 
 //  Examples:
 //  1. Get the second az in singapore:
@@ -132,7 +103,7 @@ variable "aws_availability_zones" {
       "eu-east-1c",
       "eu-east-1d",
       "eu-east-1e",
-      "eu-east-1f"
+      "eu-east-1f",
     ]
     //  Ohio
     us-east-2 = [
@@ -186,9 +157,6 @@ variable "aws_availability_zones" {
       "ca-central-1a",
       "ca-central-1b",
     ]
-    //  Beijing (2)
-    //  Ningxia (2)
-
     //  Frankfurt (3)
     eu-central-1 = [
       "eu-central-1a",
@@ -219,19 +187,47 @@ variable "aws_availability_zones" {
       "sa-east-1b",
       "sa-east-1c",
     ]
-    //  AWS GovCloud (US-West) (2)
   }
-}
+  //  Beijing (2)
+  //  Ningxia (2)
 
+  //  AWS GovCloud (US-West) (2)
+}
 
 ## UiPath Variables ##
 
+#orchestrator admin password
 variable "orchestrator_password" {
-  description = "Orchestrator Administrator password to login as."
-  default     = "winP4s5word@!4*"
+  description = "Orchestrator Administrator password to login in Default and Host Tennant."
+  default     = "0rCh35Tr@tor!"
 }
 
-#orchestrator admin password
 variable "orchestrator_version" {
-  default = "19.4.3"
+  description = "Orchestrator Version."
+  # "19.4.4" 
+  # "19.4.3" 
+  # "19.4.2"
+  # "18.4.6"
+  # "18.4.5"
+  # "18.4.4"
+  # "18.4.3"
+  # "18.4.2"
+  # "18.4.1"
+  default = "19.4.4"
+}
+
+## Set Initial Windows Administrator Password ##
+variable "admin_password" {
+  description = "Windows Administrator password used to login in the provisioned VMs."
+  default     = "WinP@55!"
+}
+
+variable "orchestrator_passphrase" {
+  description = "Orchestrator Passphrase used to generate NuGet API keys, App encryption key and machine keys."
+  default = "!asfgre2%gsd"
+}
+
+variable "orchestrator_license" {
+  description = "Orchestrator license code. The license created with regutil."
+  default     = "TheLicenseCreatedwithRegUtil"
 }
