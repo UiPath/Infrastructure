@@ -58,8 +58,8 @@
 param(
 
     [Parameter()]
-    [ValidateSet('19.4.4', '19.4.3', '19.4.2', '18.4.6', '18.4.5', '18.4.4', '18.4.3', '18.4.2', '18.4.1')]
-    [string] $orchestratorVersion = "19.4.4",
+    [ValidateSet('19.10.15','19.4.4', '19.4.3', '19.4.2', '18.4.6', '18.4.5', '18.4.4', '18.4.3', '18.4.2', '18.4.1')]
+    [string] $orchestratorVersion = "19.10.15",
 
     [Parameter()]
     [string] $orchestratorFolder = "${env:ProgramFiles(x86)}\Uipath\Orchestrator",
