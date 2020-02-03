@@ -14,12 +14,14 @@ Param (
     [AllowEmptyString()]
     [string] $machinePassword,
     [Parameter(Mandatory = $true)]
+    [ValidateSet("Standard", "Floating")]
     [string] $HostingType,
     [Parameter(Mandatory = $true)]
     [ValidateSet("Unattended", "Attended", "Development", "Nonproduction")]
     [string] $RobotType,
     [Parameter()]
     [AllowEmptyString()]
+    #Default, SmartCard
     [string] $credType,
     [Parameter()]
     [AllowEmptyString()]
@@ -93,7 +95,7 @@ function Main {
             Log-Write -LogPath $sLogFile -LineValue "Installing UiPath Robot Type [$RobotType]"
 
             #Install the Robot
-            if ($RobotType -eq "Unattended") {
+            if ($RobotType -eq "Unattended" -or "Attended" ) {
                 # log log log
                 Log-Write -LogPath $sLogFile -LineValue "Installing UiPath Robot without Studio Feature"
                 $msiFeatures = @("DesktopFeature", "Robot", "StartupLauncher", "RegisterService", "Packages")
