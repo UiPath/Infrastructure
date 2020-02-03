@@ -13,6 +13,10 @@ This ARM template will upgrade UiPath Orchestrator (WebApp - single/multi). You 
 * Version to upgrade </br>
 * Passphrase </br>
 
+---
+**Any additional settings (like elastic search) specified in the web config will be removed and you should manually add them after the upgrade one by one, NOT REPLACING THE WEB CONFIG**
+---
+
 ## Backup 
 The backup will most likely not be used but nevertheless should be done.
 *	Backup NuGet Packages – This should be done if the NuGet packages are stored on the Web App local storage (in the NuGetPackages folder). You can use the web app advanced tools (Kudu) to download the packages.
