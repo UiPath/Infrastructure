@@ -1,0 +1,118 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "appName": {
+            "type": "String",
+            "metadata": {
+                "description": "Existing name of the Azure WebApp"
+            }
+        },
+        "servicePlanName": {
+            "type": "String",
+            "metadata": {
+                "description": "Existing name of the Azure Service PlanName"
+            }
+        },
+        "orchestratorVersion": {
+            "defaultValue": "19.10.15",
+            "allowedValues": [
+                "19.10.15",
+                "19.4.4",
+                "19.4.3",
+                "19.4.2",
+                "18.4.6",
+                "18.4.5",
+                "18.4.4",
+                "18.4.3",
+                "18.4.2",
+                "18.4.1"
+            ],
+            "type": "String",
+            "metadata": {
+                "description": "Version of the Orchestrator"
+            }
+        },
+        "passphrase": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 30,
+            "metadata": {
+                "description": "Passphrase used to generate encryption keys"
+            }
+        }
+    },
+    "variables": {
+        "location": "[resourceGroup().location]",
+        "orchestratorLink": "[concat('https://download.uipath.com/versions/',if(equals(parameters('orchestratorVersion'), '19.10.15'),'19.10.15/UiPath.Orchestrator.Web.zip', concat(parameters('orchestratorVersion'),'/','UiPath.Web.zip')))]",
+        "servicePlanName": "[parameters('servicePlanName')]",
+        "salt": "[uniqueString(parameters('passphrase'))]",
+        "encryptionKey": "[base64(substring(concat(variables('salt'),uniqueString(parameters('passphrase'),variables('salt')),variables('fifthKey')), 0, 32))]",
+        "firstKey": "[guid(variables('salt'))]",
+        "secondKey": "[guid(parameters('passphrase'),variables('salt'))]",
+        "thirdKey": "[guid(variables('fifthKey'))]",
+        "fourthKey": "[guid(parameters('passphrase'),variables('fifthKey'))]",
+        "fifthKey": "[uniqueString(variables('salt'))]",
+        "sixthKey": "[uniqueString(variables('firstKey'))]",
+        "seventhKey": "[guid(variables('salt'),variables('fifthKey'))]",
+        "eighthKey": "[guid(parameters('passphrase'))]",
+        "machineKey": "[toUpper(substring(replace(concat(variables('eighthKey'),variables('thirdKey'),variables('salt')),'-',''), 0, 64))]",
+        "validationMachineKey": "[toUpper(substring(replace(concat(variables('firstKey'),variables('secondKey'),variables('fourthKey'),variables('seventhKey'),variables('fifthKey'),variables('sixthKey')),'-',''), 0, 128))]"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2015-01-01",
+            "name": "[concat('updateOrchestrator','-',parameters('orchestratorVersion'))]",
+            "properties": {
+                "mode": "Incremental",
+                "parameters": {},
+                "template": {
+                    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                    "contentVersion": "1.0.0.0",
+                    "parameters": {},
+                    "variables": {},
+                    "resources": [
+                        {
+                            "type": "Microsoft.Web/Sites",
+                            "name": "[parameters('appName')]",
+                            "apiVersion": "2015-02-01",
+                            "location": "[variables('location')]",
+                            "properties": {
+                                "name": "[parameters('appName')]",
+                                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms/',variables('servicePlanName'))]"
+                            },
+                            "resources": [
+                                {
+                                    "type": "Extensions",
+                                    "name": "MSDeploy",
+                                    "apiVersion": "2019-08-01",
+                                    "properties": {
+                                        "SkipAppData": true,
+                                        "AppOffline": true,
+                                        "addOnPackages": [
+                                            {
+                                                "packageUri": "[variables('orchestratorLink')]",
+                                                "setParameters": {
+                                                    "databaseEnableAutomaticMigrations": "true",
+                                                    "machineKeyDecryption": "AES",
+                                                    "machineKeyDecryptionKey": "[variables('machineKey')]",
+                                                    "machineKeyValidation": "HMACSHA256",
+                                                    "machineKeyValidationKey": "[variables('validationMachineKey')]",
+                                                    "EncryptionKey": "[variables('encryptionKey')]"
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    "dependsOn": [
+                                        "[resourceId('Microsoft.Web/Sites/', parameters('appName'))]"
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }
+        }
+    ]
+}
