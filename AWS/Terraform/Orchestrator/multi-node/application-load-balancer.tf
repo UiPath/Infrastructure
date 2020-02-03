@@ -23,24 +23,29 @@ resource "aws_lb_target_group" "UiPath_APPgroup" {
   }
 }
 
-# resource "aws_lb_listener" "listener_http" {
-#   load_balancer_arn = "${aws_lb.UiPath_ALB.arn}"
-#   port              = "80"
-#   protocol          = "HTTP"
+resource "aws_alb_listener" "listener-http" {
+  load_balancer_arn = "${aws_lb.UiPath_ALB.arn}"
+  port              = "80"
+  protocol          = "HTTP"
 
-#   default_action {
-#     target_group_arn = "${aws_lb_target_group.UiPath_APPgroup.arn}"
-#     type             = "forward"
-#   }
-# }
+  default_action {
+    type = "redirect"
+
+    redirect {
+      port        = "443"
+      protocol    = "HTTPS"
+      status_code = "HTTP_301"
+    }
+  }
+}
+
 
 resource "aws_lb_listener" "listener_https" {
-  depends_on                = ["aws_acm_certificate.wildcard-certificate[0]","var.certificate_arn"]
   load_balancer_arn = "${aws_lb.UiPath_ALB.arn}"
   port              = "443"
   protocol          = "HTTPS"
   ssl_policy        = "ELBSecurityPolicy-2016-08"
-  certificate_arn   = "${length(var.certificate_arn) < 1  ? aws_acm_certificate.wildcard-certificate[0].arn : var.certificate_arn }"
+  certificate_arn   = "${var.certificate_arn}"
   default_action {
     target_group_arn = "${aws_lb_target_group.UiPath_APPgroup.arn}"
     type             = "forward"

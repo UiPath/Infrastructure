@@ -1,5 +1,6 @@
 data "aws_route53_zone" "domain" {
-  name = "${var.domain}."
+  name = "${var.domain}"
+  private_zone = false
 }
 
 # Adding a DNS A record for the load balancer
