@@ -1,13 +1,12 @@
 resource "google_compute_autoscaler" "orchestrator" {
   provider = google-beta
-  # region = "${var.region}"
 
   name   = "orchestrator"
   target = google_compute_instance_group_manager.orchestrator.self_link
 
   autoscaling_policy {
-    min_replicas    = "${var.instance_count}"
-    max_replicas    = "${var.max_instances}"
+    min_replicas    = var.instance_count
+    max_replicas    = var.max_instances
     cooldown_period = 60
 
     load_balancing_utilization {
@@ -20,12 +19,12 @@ resource "google_compute_instance_template" "orchestrator" {
   provider = google-beta
 
   name           = "orchestrator"
-  machine_type   = "${var.vm_type}"
+  machine_type   = var.vm_type
   can_ip_forward = false
 
   disk {
-    source_image = "${var.image}"
-    disk_size_gb = "${var.disk_size}"
+    source_image = var.image
+    disk_size_gb = var.disk_size
   }
 
   network_interface {
@@ -59,8 +58,9 @@ resource "google_compute_instance_template" "orchestrator" {
 resource "google_compute_instance_group_manager" "orchestrator" {
   provider = google-beta
 
+  depends_on = [google_sql_database_instance.sqlserver.0]
+
   name = "orchestrator"
-  # region = "${var.region}"
 
   auto_healing_policies {
     health_check      = google_compute_health_check.orchestrator.self_link
@@ -77,7 +77,6 @@ resource "google_compute_instance_group_manager" "orchestrator" {
 
 resource "google_compute_health_check" "orchestrator" {
   provider = google-beta
-  # region = "${var.region}"
 
   unhealthy_threshold = 3
   check_interval_sec  = 10

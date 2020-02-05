@@ -5,7 +5,7 @@ data "google_compute_network" "default" {
 resource "google_compute_global_address" "private_ip_address" {
   provider = google-beta
 
-  count = "${var.create_sql == "true" ? 1 : 0}"
+  count = var.create_sql == "true" ? 1 : 0
 
   name          = "private-ip-address"
   purpose       = "VPC_PEERING"
@@ -17,7 +17,7 @@ resource "google_compute_global_address" "private_ip_address" {
 resource "google_service_networking_connection" "private_vpc_connection" {
   provider = google-beta
 
-  count = "${var.create_sql == "true" ? 1 : 0}"
+  count = var.create_sql == "true" ? 1 : 0
 
   network                 = data.google_compute_network.default.self_link
   service                 = "servicenetworking.googleapis.com"
@@ -28,12 +28,13 @@ resource "google_sql_database_instance" "sqlserver" {
   provider = google-beta
   region   = var.region
 
-  count = "${var.create_sql == "true" ? 1 : 0}"
+  count = var.create_sql == "true" ? 1 : 0
 
   depends_on = [google_service_networking_connection.private_vpc_connection]
 
   name             = "sqlserver"
   database_version = "SQLSERVER_2017_ENTERPRISE"
+  root_password    = var.sql_root_pass
 
   settings {
     tier = "db-custom-4-16384"
@@ -51,16 +52,16 @@ resource "google_sql_database_instance" "sqlserver" {
 }
 
 resource "google_sql_database" "uipath" {
-  count = "${var.create_sql == "true" ? 1 : 0}"
+  count = var.create_sql == "true" ? 1 : 0
 
-  name     = "${var.orchestrator_databasename}"
+  name     = var.orchestrator_databasename
   instance = google_sql_database_instance.sqlserver.0.name
 }
 
 resource "google_sql_user" "sqlserver" {
-  count = "${var.create_sql == "true" ? 1 : 0}"
+  count = var.create_sql == "true" ? 1 : 0
 
-  name     = "${var.orchestrator_databaseusername}"
-  password = "${var.orchestrator_databaseuserpassword}"
+  name     = var.orchestrator_databaseusername
+  password = var.orchestrator_databaseuserpassword
   instance = google_sql_database_instance.sqlserver.0.name
 }

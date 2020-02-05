@@ -1,4 +1,4 @@
-# We'll choose - use existing SQL and Redis or use providecd ones
+# We'll choose - use existing SQL and Redis or use provided ones
 locals {
   redis_host = "${var.create_redis == "true" ? google_redis_instance.orchestrator.host : var.redis_host}"
   redis_port = "${var.create_redis == "true" ? google_redis_instance.orchestrator.port : var.redis_port}"

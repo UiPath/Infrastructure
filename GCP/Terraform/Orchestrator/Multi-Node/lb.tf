@@ -1,6 +1,5 @@
 resource "google_compute_global_forwarding_rule" "http" {
   provider = google-beta
-  # region = "${var.region}"
 
   name = "orchestrator-http"
 
@@ -9,12 +8,10 @@ resource "google_compute_global_forwarding_rule" "http" {
   load_balancing_scheme = "EXTERNAL"
   port_range            = "80-80"
   target                = google_compute_target_http_proxy.orchestrator.self_link
-  # network_tier          = "PREMIUM"
 }
 
 resource "google_compute_global_forwarding_rule" "https" {
   provider = google-beta
-  # region = "${var.region}"
 
   name = "orchestrator-https"
 
@@ -23,12 +20,10 @@ resource "google_compute_global_forwarding_rule" "https" {
   load_balancing_scheme = "EXTERNAL"
   port_range            = "443-443"
   target                = google_compute_target_https_proxy.orchestrator.self_link
-  # network_tier          = "PREMIUM"
 }
 
 resource "google_compute_target_http_proxy" "orchestrator" {
   provider = google-beta
-  # region  = "${var.region}"
 
   name    = "orchestrator-http"
   url_map = google_compute_url_map.orchestrator.self_link
@@ -46,9 +41,7 @@ resource "google_compute_managed_ssl_certificate" "orchestrator" {
 
 resource "google_compute_target_https_proxy" "orchestrator" {
   provider = google-beta
-  # region  = "${var.region}"
 
-  # ssl_certificates = ["https://www.googleapis.com/compute/v1/projects/cloudservices-poc/global/sslCertificates/gcp-li-ga"]
   ssl_certificates = [google_compute_managed_ssl_certificate.orchestrator.self_link]
   name             = "orchestrator-https"
   url_map          = google_compute_url_map.orchestrator.self_link
@@ -56,7 +49,6 @@ resource "google_compute_target_https_proxy" "orchestrator" {
 
 resource "google_compute_url_map" "orchestrator" {
   provider = google-beta
-  # region          = "${var.region}"
 
   name            = "uipath-orchestrator"
   default_service = google_compute_backend_service.orchestrator.self_link
@@ -64,7 +56,6 @@ resource "google_compute_url_map" "orchestrator" {
 
 resource "google_compute_backend_service" "orchestrator" {
   provider = google-beta
-  # region      = "${var.region}"
 
   load_balancing_scheme = "EXTERNAL"
 

@@ -127,3 +127,7 @@ variable "create_sql" {
   description = "Create managed SQLServer instance?"
   default     = "false"
 }
+
+variable "sql_root_pass" {
+  description = "Root password for SQLServer; Required to create instance"
+}
