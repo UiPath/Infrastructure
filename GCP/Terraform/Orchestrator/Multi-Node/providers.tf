@@ -5,7 +5,7 @@ provider "google" {
   version = "~> 3.7"
   project = var.project
   region  = var.region
-  zone    = "${var.region}-b"
+  zone    = var.az
 }
 
 provider "google-beta" {
@@ -14,6 +14,6 @@ provider "google-beta" {
   version = "~> 3.7"
   project = var.project
   region  = var.region
-  zone    = "${var.region}-b"
+  zone    = var.az
 }
 

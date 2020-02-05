@@ -14,7 +14,7 @@ variable "az" {
 }
 
 variable "image" {
-  default = "windows-server-2016-dc-v20190620"
+  default = "windows-server-2019-dc-v20200114"
 }
 
 variable "vm_type" {
@@ -63,7 +63,7 @@ variable "vm_password" {
 
 #orchestrator version
 variable "orchestrator_version" {
-  default = "19.4.4"
+  default = "19.10.15"
 }
 
 #orchestrator passphrase
@@ -130,4 +130,9 @@ variable "create_sql" {
 
 variable "sql_root_pass" {
   description = "Root password for SQLServer; Required to create instance"
+}
+
+variable "deploy_id" {
+  description = "Suffix to resource names - to avoid collisions"
+  default     = "dev"
 }

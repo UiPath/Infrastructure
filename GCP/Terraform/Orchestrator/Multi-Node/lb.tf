@@ -1,7 +1,7 @@
 resource "google_compute_global_forwarding_rule" "http" {
   provider = google-beta
 
-  name = "orchestrator-http"
+  name = "http-${var.deploy_id}"
 
   ip_address            = google_compute_global_address.address.address
   ip_protocol           = "TCP"
@@ -13,7 +13,7 @@ resource "google_compute_global_forwarding_rule" "http" {
 resource "google_compute_global_forwarding_rule" "https" {
   provider = google-beta
 
-  name = "orchestrator-https"
+  name = "https-${var.deploy_id}"
 
   ip_address            = google_compute_global_address.address.address
   ip_protocol           = "TCP"
@@ -25,14 +25,14 @@ resource "google_compute_global_forwarding_rule" "https" {
 resource "google_compute_target_http_proxy" "orchestrator" {
   provider = google-beta
 
-  name    = "orchestrator-http"
+  name    = "http-${var.deploy_id}"
   url_map = google_compute_url_map.orchestrator.self_link
 }
 
 resource "google_compute_managed_ssl_certificate" "orchestrator" {
   provider = google-beta
 
-  name = "uipath-orchestrator"
+  name = "orchestrator-${var.deploy_id}"
 
   managed {
     domains = ["${var.orchestrator_domain}"]
@@ -43,14 +43,14 @@ resource "google_compute_target_https_proxy" "orchestrator" {
   provider = google-beta
 
   ssl_certificates = [google_compute_managed_ssl_certificate.orchestrator.self_link]
-  name             = "orchestrator-https"
+  name             = "https-${var.deploy_id}"
   url_map          = google_compute_url_map.orchestrator.self_link
 }
 
 resource "google_compute_url_map" "orchestrator" {
   provider = google-beta
 
-  name            = "uipath-orchestrator"
+  name            = "orchestrator-${var.deploy_id}"
   default_service = google_compute_backend_service.orchestrator.self_link
 }
 
@@ -64,9 +64,9 @@ resource "google_compute_backend_service" "orchestrator" {
     balancing_mode = "UTILIZATION"
   }
 
-  name        = "uipath-orchestrator"
+  name        = "orchestrator-${var.deploy_id}"
   protocol    = "HTTP"
-  timeout_sec = 10
+  timeout_sec = 60
 
   health_checks = [google_compute_health_check.orchestrator.self_link]
 }

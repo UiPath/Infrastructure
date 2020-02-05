@@ -1,7 +1,7 @@
 resource "google_compute_autoscaler" "orchestrator" {
   provider = google-beta
 
-  name   = "orchestrator"
+  name   = "orchestrator-${var.deploy_id}"
   target = google_compute_instance_group_manager.orchestrator.self_link
 
   autoscaling_policy {
@@ -18,7 +18,7 @@ resource "google_compute_autoscaler" "orchestrator" {
 resource "google_compute_instance_template" "orchestrator" {
   provider = google-beta
 
-  name           = "orchestrator"
+  name           = "orchestrator-${var.deploy_id}"
   machine_type   = var.vm_type
   can_ip_forward = false
 
@@ -28,7 +28,8 @@ resource "google_compute_instance_template" "orchestrator" {
   }
 
   network_interface {
-    network = "default"
+    network    = google_compute_network.orchestrator.name
+    subnetwork = google_compute_subnetwork.orchestrator.name
     access_config {
       network_tier = "PREMIUM"
     }
@@ -60,7 +61,7 @@ resource "google_compute_instance_group_manager" "orchestrator" {
 
   depends_on = [google_sql_database_instance.sqlserver.0]
 
-  name = "orchestrator"
+  name = "orchestrator-${var.deploy_id}"
 
   auto_healing_policies {
     health_check      = google_compute_health_check.orchestrator.self_link
@@ -72,16 +73,17 @@ resource "google_compute_instance_group_manager" "orchestrator" {
     name              = "primary"
   }
 
-  base_instance_name = "orchestrator"
+  base_instance_name = "orchestrator-${var.deploy_id}"
 }
 
 resource "google_compute_health_check" "orchestrator" {
   provider = google-beta
 
   unhealthy_threshold = 3
+  healthy_threshold   = 5
   check_interval_sec  = 10
 
-  name = "orchestrator-api-status"
+  name = "api-status-${var.deploy_id}"
   http_health_check {
     port_specification = "USE_SERVING_PORT"
     request_path       = "/api/status"

@@ -1,5 +1,5 @@
-data "google_compute_network" "default" {
-  name = "default"
+resource "random_id" "db_name_suffix" {
+  byte_length = 4
 }
 
 resource "google_compute_global_address" "private_ip_address" {
@@ -7,11 +7,11 @@ resource "google_compute_global_address" "private_ip_address" {
 
   count = var.create_sql == "true" ? 1 : 0
 
-  name          = "private-ip-address"
+  name          = "private-ip-address-${var.deploy_id}"
   purpose       = "VPC_PEERING"
   address_type  = "INTERNAL"
   prefix_length = 16
-  network       = data.google_compute_network.default.self_link
+  network       = google_compute_network.orchestrator.self_link
 }
 
 resource "google_service_networking_connection" "private_vpc_connection" {
@@ -19,7 +19,7 @@ resource "google_service_networking_connection" "private_vpc_connection" {
 
   count = var.create_sql == "true" ? 1 : 0
 
-  network                 = data.google_compute_network.default.self_link
+  network                 = google_compute_network.orchestrator.self_link
   service                 = "servicenetworking.googleapis.com"
   reserved_peering_ranges = [google_compute_global_address.private_ip_address.0.name]
 }
@@ -32,7 +32,7 @@ resource "google_sql_database_instance" "sqlserver" {
 
   depends_on = [google_service_networking_connection.private_vpc_connection]
 
-  name             = "sqlserver"
+  name             = "sqlserver-${var.deploy_id}-${random_id.db_name_suffix.hex}"
   database_version = "SQLSERVER_2017_ENTERPRISE"
   root_password    = var.sql_root_pass
 
@@ -41,7 +41,7 @@ resource "google_sql_database_instance" "sqlserver" {
 
     ip_configuration {
       ipv4_enabled    = "true"
-      private_network = data.google_compute_network.default.self_link
+      private_network = google_compute_network.orchestrator.self_link
 
       authorized_networks {
         name  = "sqlstudio"
