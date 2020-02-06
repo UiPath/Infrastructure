@@ -1,7 +1,7 @@
 # We'll choose - use existing SQL and Redis or use provided ones
 locals {
-  redis_host = "${var.create_redis == "true" ? google_redis_instance.orchestrator.host : var.redis_host}"
-  redis_port = "${var.create_redis == "true" ? google_redis_instance.orchestrator.port : var.redis_port}"
+  redis_host = "${var.create_redis == "true" ? google_redis_instance.orchestrator.0.host : var.redis_host}"
+  redis_port = "${var.create_redis == "true" ? google_redis_instance.orchestrator.0.port : var.redis_port}"
 
   orchestrator_databaseservername   = "${var.create_sql == "true" ? google_sql_database_instance.sqlserver.0.private_ip_address : var.orchestrator_databaseservername}"
   orchestrator_databasename         = "${var.create_sql == "true" ? google_sql_database.uipath.0.name : var.orchestrator_databasename}"
