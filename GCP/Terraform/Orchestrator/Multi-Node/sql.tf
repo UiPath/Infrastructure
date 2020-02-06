@@ -53,6 +53,7 @@ resource "google_sql_database_instance" "sqlserver" {
 
 resource "google_sql_database" "uipath" {
   count = var.create_sql == "true" ? 1 : 0
+  depends_on = [google_sql_database_instance.sqlserver]
 
   name     = var.orchestrator_databasename
   instance = google_sql_database_instance.sqlserver.0.name
@@ -60,6 +61,7 @@ resource "google_sql_database" "uipath" {
 
 resource "google_sql_user" "sqlserver" {
   count = var.create_sql == "true" ? 1 : 0
+  depends_on = [google_sql_database_instance.sqlserver]
 
   name     = var.orchestrator_databaseusername
   password = var.orchestrator_databaseuserpassword
