@@ -58,8 +58,8 @@
 param(
 
     [Parameter()]
-    [ValidateSet('19.4.4', '19.4.3', '19.4.2', '18.4.6', '18.4.5', '18.4.4', '18.4.3', '18.4.2', '18.4.1')]
-    [string] $orchestratorVersion = "19.4.4",
+    [ValidateSet('19.10.15','19.4.4', '19.4.3', '19.4.2', '18.4.6', '18.4.5', '18.4.4', '18.4.3', '18.4.2', '18.4.1')]
+    [string] $orchestratorVersion = "19.10.15",
 
     [Parameter()]
     [string] $orchestratorFolder = "${env:ProgramFiles(x86)}\Uipath\Orchestrator",
@@ -116,6 +116,8 @@ param(
     [string] $orchestratorLicenseCode
 
 )
+#Enable TLS12
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 # Set Error Action to Silently Continue
 $ErrorActionPreference = "SilentlyContinue"
@@ -139,7 +141,7 @@ function Main {
         $source = @()
         $source += "https://download.uipath.com/versions/$orchestratorVersion/UiPathOrchestrator.msi"
         $source += "https://download.microsoft.com/download/C/9/E/C9E8180D-4E51-40A6-A9BF-776990D8BCA9/rewrite_amd64.msi"
-
+        $source += "https://download.microsoft.com/download/6/E/4/6E48E8AB-DC00-419E-9704-06DD46E5F81D/NDP472-KB4054530-x86-x64-AllOS-ENU.exe"
         $tries = 5
         while ($tries -ge 1) {
             try {
@@ -204,6 +206,8 @@ function Main {
     #install URLrewrite
     Install-UrlRewrite -urlRWpath "$tempDirectory\rewrite_amd64.msi"
 
+    # install .Net 4.7.2
+    & "$tempDirectory\NDP472-KB4054530-x86-x64-AllOS-ENU.exe" /q /norestart
 
     # ((Invoke-WebRequest -Uri http://169.254.169.254/latest/meta-data/public-hostname -UseBasicParsing).RawContent -split "`n")[-1]
 

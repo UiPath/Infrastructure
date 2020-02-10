@@ -27,7 +27,6 @@ resource "aws_instance" "gateway" {
 }
 
 resource "aws_storagegateway_gateway" "nfs_file_gateway" {
- # depends_on         = ["aws_instance.gateway"]
   gateway_ip_address = "${aws_instance.gateway.public_ip}"
   gateway_name       = "${var.application}-${var.environment}-GW"
   gateway_timezone   = "GMT"
@@ -35,14 +34,12 @@ resource "aws_storagegateway_gateway" "nfs_file_gateway" {
 }
 
 data "aws_storagegateway_local_disk" "cache" {
-# depends_on         = ["aws_storagegateway_gateway.nfs_file_gateway"]
   disk_path   = "/dev/xvdf"
   #node_path  = "/dev/xvdf"
   gateway_arn = "${aws_storagegateway_gateway.nfs_file_gateway.id}"
 }
 
 resource "aws_storagegateway_cache" "nfs_cache_volume" {
-#    depends_on         = ["aws_storagegateway_cache.nfs_cache_volume"]
   disk_id     = "${data.aws_storagegateway_local_disk.cache.id}"
   gateway_arn = "${aws_storagegateway_gateway.nfs_file_gateway.id}"
 }
@@ -57,7 +54,6 @@ resource "aws_s3_bucket" "s3bucket_orchestrator" {
 }
 
 resource "aws_storagegateway_nfs_file_share" "same_account" {
-#  depends_on   = ["aws_s3_bucket.s3bucket_orchestrator"]
   client_list  = ["0.0.0.0/0"]
   gateway_arn  = "${aws_storagegateway_gateway.nfs_file_gateway.id}"
   location_arn = "${aws_s3_bucket.s3bucket_orchestrator.arn}"
