@@ -15,13 +15,13 @@ Param (
   [string] $machinePassword,
   [Parameter(Mandatory = $true)]
   [ValidateSet("Standard", "Floating")]
-  [string] $HostingType,
+  [string] $HostingType = "Standard",
   [Parameter(Mandatory = $true)]
   [ValidateSet("Unattended", "Attended", "Development", "Nonproduction")]
   [string] $RobotType,
   [Parameter()]
   [AllowEmptyString()]
-  [string] $credType,
+  [string] $credType = "Default",
 		[Parameter()]
   [AllowEmptyString()]
   [string] $robotArtifact = "https://download.uipath.com/UiPathStudio.msi",
