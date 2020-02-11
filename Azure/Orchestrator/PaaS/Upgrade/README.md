@@ -11,7 +11,7 @@ This ARM template will upgrade UiPath Orchestrator (WebApp - single/multi). You 
 * Web App name </br>
 * Service plan name </br>
 * Version to upgrade </br>
-* Passphrase </br>
+* Passphrase (If you do not have a passphrase from the previous deployment you need to copy the rows with Encryption key and Machine Key + validation key and paste them after the upgrade in the web.config. Please stop the webApp before upgrade.) </br>
 
 ---
 **Any additional settings (like elastic search) specified in the web config will be removed and you should manually add them after the upgrade one by one, NOT REPLACING THE WEB CONFIG**
