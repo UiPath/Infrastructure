@@ -2,25 +2,24 @@
 ## Provider Variables ##
 ### AWS Region ###
 variable "aws_region" {
-  description = "The region for UiPath Orchestrator deployment."
+  description = "The region for deployment"
   default     = "eu-west-2"
 }
 ### AWS Access Key ###
 variable "access_key" {
-  description = "AWS Access Key."
-  default = "SAGFGDGVGDBXCVER"
+  default = "SAGHGFDDSAFASFGFDGFA"
 }
 ### AWS Secret Access Key ###
 variable "secret_key" {
-  description = "AWS Secret Access Key."
-  default = "+SAGFGDGVGDBXCVERSAGFGDGVGDBXCVER=="
+  default = "+FSAFDGDFSAFGFDFASFFSAFGWEQEWQR+23432EFFG"
 }
 ### AWS SSH KEY ###
 variable "key_name" {
   description = "Name of the SSH keypair to use in AWS."
+
   default = {
-    "us-east-1" = "AWS_Existing_key"
-    "eu-west-2" = "AWS_Existing_key"
+    "us-east-1" = "ssh_key"
+    "eu-west-2" = "ssh_key"
   }
 }
 
@@ -28,33 +27,31 @@ variable "key_name" {
 
 #### Orchestrator Instance type ####
 variable "aws_app_instance_type" {
-  description = "Orchestrator Instance type."
   default = "m4.large"
 }
 
 ## Set Initial Windows Administrator Password ##
 variable "admin_password" {
-  description = "Windows Administrator password used to login in the provisioned VMs. In the data-templates.tf you can remove the blocks which set the custom password (check for ### remove this if you don't want to setup a password for local admin account ###)"
-  default     = "WinP@55!"
+  description = "Windows Administrator password to login as."
+  default     = "Q123!w3s0m3Orch35tr4t0r"
 }
 
 variable "orchestrator_password" {
-  description = "Orchestrator Administrator password to login in Default and Host Tennant."
-  default     = "0rCh35Tr@tor!"
+  description = "Orchestrator Administrator password to login as."
+  default     = "123456@4dmin"
 }
 
 variable "orchestrator_passphrase" {
   description = "Orchestrator Passphrase in order to generate NuGet API keys, App encryption key and machine keys."
-  default     = "2Custom5P@ssPh@se"
+  default     = "Aw3s0m3Orch35tr4t0r"
 }
 
 variable "orchestrator_license" {
-  description = "Orchestrator license code. The license created with regutil."
-  default     = "TheLicenseCreatedwithRegUtil"
+  description = "Orchestrator license code"
+  default     = "DSGFSFGAGEHTERSEGW$%^%YHFDHDFHTTYJTKDGVXCFHGDSFSHJHMHKDGDFHYHFDHDFHTTYJTKDGVXCFHGDSFSHJHMHKDGDFHYHFDHDFHTTYJTKDGVXCFHGDSFSHJHMHKDGDFH+ADAAdwBvACEAJwAgADAAKAA="
 }
 
 variable "orchestrator_versions" {
-  description = "Orchestrator Version."
   # "19.4.4" 
   # "19.4.3" 
   # "19.4.2"
@@ -70,73 +67,69 @@ variable "orchestrator_versions" {
 
 ######## High Availability Add-on ######
 variable "haa-user" {
-  description = "AWS Access Key."
+  description = "High Availability Add-on username. Type email."
   default = "test@corp.com"
 }
 
 variable "haa-password" {
-  description = "AWS Access Key."
+  description = "High Availability Add-on username password."
   default = "123456"
 }
 
 variable "haa-license" {
-  description = "AWS Access Key."
-  default = ""
+  description = "High Availability Add-on license key."
+  default = "2353tgewsdfweg34t342rftg23g2g23t2r32r2353tgewsdfweg34t342rftg23g2g23t2r32r2353tgewsdfweg34t342rftg23g2g23t2r32r2353tgewsdfweg34t342rftg23g2g23t2r32r"
 }
 
 ########  RDS DB #########
 # Change default value to yes if you don't have an existing SQL server or if you want to create a RDS DB
 variable "newSQL" {
-  description = "Provision new RDS DB. Change default value from no to yes if you don't have an existing SQL server and you want to create a new RDS DB."
+  description = "Provision new RDS DB"
   default     = "no"
 }
 
 # Database username
 variable "db_username" {
-  description = "RDS master user name or username of the existing database."
-  default     = "devawsdb"
+  description = "RDS master user name"
+  default     = "devtestaws"
 }
 
 # Database username password, avoid using '/', '\"', or '@' 
 variable "db_password" {
-  description = "Existing Database username password or create a password for the RDS. RDS Master Password must be at least eight characters long, as in 'mypassword'. Can be any printable ASCII character except '/', '\"', or '@'."
-  default     = "!vfdgva%gsd"
+  description = "RDS Master Password must be at least eight characters long, as in 'mypassword'. Can be any printable ASCII character except '/', '\"', or '@' "
+  default     = "!Aw3s0m3Orch35tr4t0r"
 }
 
 # Database name
 variable "db_name" {
-  description = "RDS database name or the name of an existing database."
+  description = "RDS database name"
   default     = "awstest"
 }
 
 # If you have an existing SQL and want to use it for Orchestrator DB, then change to the FQDN of that SQL. Example on Azure : sqlserver.database.windows.net
 variable "sql_srv" {
-  description = "SQL Server FQDN if you have an existing SQL server."
-  default     = "amazontest.database.windows.net"
+  description = "SQL Server"
+  default     = "awdevstest.database.com"
 }
 
 
 # The allocated storage in gigabytes.
 variable "rds_allocated_storage" {
-  description = "Allocated storage (in GB) for the RDS instance."
   default = "100"
 }
 
-# The instance size type of the RDS instance.
+# The instance type of the RDS instance.
 variable "rds_instance_class" {
-  description = "Instance size type of the RDS instance."
   default = "db.m4.large"
 }
 
-# True if the RDS instance is multi-AZ.
+# Specifies if the RDS instance is multi-AZ.
 variable "rds_multi_az" {
-  description = "True if the RDS instance is multi-AZ."
   default = "false"
 }
 
 # Determines whether a final DB snapshot is created before the DB instance is deleted.
 variable "skip_final_snapshot" {
-  description = "Determines whether a final DB snapshot is created before the DB instance is deleted."
   type    = "string"
   default = "true"
 }
@@ -148,7 +141,6 @@ variable "skip_final_snapshot" {
 
 #  Availability zones for each region
 variable "aws_availability_zones" {
-  description = "Availability zones for each region."
   default = {
     #  N. Virginia
     us-east-1 = [
@@ -251,32 +243,27 @@ variable "aws_availability_zones" {
 
 # Environment name, used as prefix to name resources.
 variable "environment" {
-  description = "Environment name, used as prefix to tag Name of the resources."
   default = "dev"
 }
 
 ### FileGateWay Vars ###
 variable "application" {
-  description = "Application stack name, used as prefix to tag Name of the resources."
   default = "UiPath_OrchestratorStack"
 }
 
 variable "role" {
-  description = "Role name for S3 Bucket."
-  default = "s3"
+  default = "s3pol"
 }
 
 ### S3 Bucket ###
 
 variable "s3BucketName" {
-  default = "New S3 Bucket Name."
-  default = "tftestorchestrator"
+  default = "tftestbucketorchestrator"
 }
 
 ## Server Instances ##
 # The count of Orchestrator instances in the ASG
 variable "instance_count" {
-  description = "The desired count of the Orchestrator instances in the ASG."
   default = 1
 }
 
@@ -284,25 +271,24 @@ variable "instance_count" {
 ### Certificate vars ###
 # Existing domain in route53
 variable "domain" {
-  description = "The domain to use to host the project. This should exist as a hosted zone in Route 53."
-  default     = "existing-domain-in-r53.com"
+  description = "The domain to use to host the project. This should already exist as a hosted zone in Route 53."
+  default     = "corp.com"
 }
 
-# New subdomain used for ALB.
+# Subdomain will be created
 variable "subdomain" {
-  description = "New subdomain used for ALB."
-  default     = "alb-orchestrator"
+  description = "The subdomain to use to host the project."
+  default     = "elb"
 }
 
 # If you have an existing Certificate for the domain used in ALB (wildcard certificate), you can use that.
 variable "certificate_arn" {
-  description = "Certificate ARN in case you have an existing certificate (wildcard certificate)."
+  description = "Certificate ARN in case you have an existing certificate."
   default     = ""
 }
 
 ### Associate public IP to EC2 instances ###
 variable "associate_public_ip_address" {
-  description = "Associate public IP to EC2 Orchestrator instances."
   default = "false"
 }
 
@@ -330,6 +316,6 @@ variable "cidr_block" {
 ### Only 80 and 443 must have access to the internet if you want to access the Orchestrator via the Internet. 
 variable "security_cidr_block" {
   type        = "string"
-  description = "Security Group cidr block. Example: 10.10.0.0/16. Also you can modify security.tf as per your needs, but for the port 80 you must whitelist your CIDR in order to create the FileGateway. Only 80 and 443 must have access to the internet if you want to access the Orchestrator via the Internet."
+  description = "Security Group cidr block. Example: 10.10.0.0/16"
   default     = "0.0.0.0/0"
 }

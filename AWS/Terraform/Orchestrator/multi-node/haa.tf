@@ -1,7 +1,7 @@
 resource "aws_instance" "haa-master" {
   ami           = "${data.aws_ami.haa.image_id}"
   instance_type = "m4.xlarge"
-  subnet_id     = "${aws_subnet.private[0].id}"
+  subnet_id     = "${aws_subnet.public[0].id}"
   vpc_security_group_ids = [
     "${aws_security_group.uipath_stack.id}",
   ]
@@ -20,9 +20,10 @@ output "haa_master_ip" {
 }
 
 resource "aws_instance" "haa-slave" {
+  depends_on = ["aws_instance.haa-master"]
   ami           = "${data.aws_ami.haa.image_id}"
   instance_type = "m4.xlarge"
-  subnet_id     = "${aws_subnet.private[0].id}"
+  subnet_id     = "${aws_subnet.public[0].id}"
   vpc_security_group_ids = [
     "${aws_security_group.uipath_stack.id}",
   ]
