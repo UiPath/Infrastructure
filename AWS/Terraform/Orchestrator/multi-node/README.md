@@ -24,9 +24,10 @@ Terraform v0.12.3
 | orchestrator\_password | Orchestrator administrator password to login in Default and Host Tennant. | string | `"0rCh35Tr@tor!"` | yes |
 | orchestrator\_passphrase | Orchestrator Passphrase in order to generate NuGet API keys, App encryption key and machine keys. | string | `"2Custom5P@ssPh@se"` | yes |
 | orchestrator\_license | Orchestrator license code. The license created with regutil. | string | `"TheLicenseCreate dwithRegUtil"` | yes |
-| orchestrator\_versions | Orchestrator Version. | string | `"19.4.4"` | yes |
-| redis\_instance\_type | ElastiCache - Redis instance type size. | string | `"cache.m4.large"` | yes |
-| elasticache | Tag name of the ElastiCache - Redis. | string | `"UiPath-Redis"` | yes |
+| orchestrator\_versions | Orchestrator Version. | string | `"19.10.15"` | yes |
+| haa-user | High Availability Add-on username. Type email. | string | `"test@corp.com"` | yes |
+| haa-password | High Availability Add-on username password. | string | `"123456"` | yes |
+| haa-license | High Availability Add-on license key. | string | `"353tgewsdfweg34t342rftg23g2g23t2r32r2353tgewsdfweg34t34"` | yes |
 | newSQL | Provision new RDS DB. Change default value from no to yes if you want to create a new RDS DB. | string | `"no"` | yes |
 | db\_username | RDS master user name or username of the existing database. | string | `"devawsdb"` | yes |
 | db\_password | Existing Database username password or create a password for the RDS.| string | `"!vfdgva%gsd"` | yes |
@@ -44,7 +45,7 @@ Terraform v0.12.3
 | instance\_count | The desired count of the Orchestrator instances in the ASG. | string | `"1"` | yes |
 | domain | The domain to use to host the project. This should exist as a hosted zone in Route 53. | string | `"existingdomain.com"` | yes |
 | subdomain | New subdomain used for ALB. | string | `"alb-orch"` | yes |
-| certificate\_arn | Certificate ARN in case you have an existing certificate (wildcard certificate). | string | `""` | yes |
+| certificate\_arn | Certificate ARN of an existing certificate (wildcard certificate). | string | `""` | yes |
 | associate\_public\_ip\_address | Associate public IP to EC2 Orchestrator instances. | string | `"false"` | yes |
 | cidr\_block | VPC cidr block. | string | `"10.0.0.0/16"` | yes |
 | security\_cidr\_block | Security Group cidr block. Only 80 and 443 must have access to the internet if you want to access the Orchestrator via the Internet. | string | `"0.0.0.0/0"` | yes |
@@ -53,6 +54,7 @@ Terraform v0.12.3
 
 | Name | Description |
 |------|-------------|
-| bastion\_public\_ip | Public IP of the Bastion Host (Jumbox host) |
-| lb\_dns\_name | Load balancer FQDN |
-
+| bastion\_public\_ip | Public IP of the Bastion Host (Jumbox host). |
+| lb\_dns\_name | Load balancer FQDN. |
+| haa\_master\_ip | Private IP of the HAA master node. |
+| haa\_slave\_ip |  Private IP of the HAA slave nodes.|

@@ -17,13 +17,6 @@ resource "aws_security_group" "uipath_stack" {
     cidr_blocks = ["${var.cidr_block}", "${var.security_cidr_block}"]
   }
 
-  # ingress {
-  #   from_port   = 0
-  #   to_port     = 0
-  #   protocol    = "-1"
-  #   cidr_blocks = ["${var.cidr_block}", "${var.security_cidr_block}"]
-  #   self        = "true"
-  # }
 
   ingress {
     from_port   = 443
@@ -35,6 +28,13 @@ resource "aws_security_group" "uipath_stack" {
   ingress {
     from_port   = 6379
     to_port     = 6379
+    protocol    = "tcp"
+    cidr_blocks = ["${var.cidr_block}", "${var.security_cidr_block}"]
+  }
+
+  ingress {
+    from_port   = 10000
+    to_port     = 10000
     protocol    = "tcp"
     cidr_blocks = ["${var.cidr_block}", "${var.security_cidr_block}"]
   }
@@ -81,14 +81,6 @@ resource "aws_security_group" "uipath_stack" {
     cidr_blocks = ["${var.cidr_block}", "${var.security_cidr_block}"]
   }
 
-  # outbound internet access
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["${var.cidr_block}", "${var.security_cidr_block}"]
-  }
-
   egress {
     from_port   = 80
     to_port     = 80
@@ -106,6 +98,13 @@ resource "aws_security_group" "uipath_stack" {
   egress {
     from_port   = 6379
     to_port     = 6379
+    protocol    = "tcp"
+    cidr_blocks = ["${var.cidr_block}", "${var.security_cidr_block}"]
+  }
+
+  egress {
+    from_port   = 10000
+    to_port     = 10000
     protocol    = "tcp"
     cidr_blocks = ["${var.cidr_block}", "${var.security_cidr_block}"]
   }
@@ -184,4 +183,21 @@ resource "aws_security_group" "uipath_stack" {
     cidr_blocks = ["${var.cidr_block}", "${var.security_cidr_block}"]
     self        = "true"
   }
+
+  ingress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = -1
+    cidr_blocks = ["${var.cidr_block}", "${var.security_cidr_block}"]
+    self        = "true"
+  }
+
+  # outbound internet access
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["${var.cidr_block}", "${var.security_cidr_block}"]
+  }
+
 }

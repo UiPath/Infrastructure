@@ -141,7 +141,7 @@ function Main {
         $source = @()
         $source += "https://download.uipath.com/versions/$orchestratorVersion/UiPathOrchestrator.msi"
         $source += "https://download.microsoft.com/download/C/9/E/C9E8180D-4E51-40A6-A9BF-776990D8BCA9/rewrite_amd64.msi"
-
+        $source += "https://download.microsoft.com/download/6/E/4/6E48E8AB-DC00-419E-9704-06DD46E5F81D/NDP472-KB4054530-x86-x64-AllOS-ENU.exe"
         $tries = 5
         while ($tries -ge 1) {
             try {
@@ -206,6 +206,8 @@ function Main {
     #install URLrewrite
     Install-UrlRewrite -urlRWpath "$tempDirectory\rewrite_amd64.msi"
 
+    # install .Net 4.7.2
+    & "$tempDirectory\NDP472-KB4054530-x86-x64-AllOS-ENU.exe" /q /norestart
 
     # ((Invoke-WebRequest -Uri http://169.254.169.254/latest/meta-data/public-hostname -UseBasicParsing).RawContent -split "`n")[-1]
 
