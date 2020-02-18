@@ -223,7 +223,7 @@ resource "aws_instance" "uipath_app_server" {
   ]
 
   tags = {
-    Name = ${var.application}-${var.environment}"
+    Name = "${var.application}-${var.environment}"
   }
 }
 
