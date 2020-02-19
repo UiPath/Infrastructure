@@ -1,11 +1,11 @@
 resource "aws_instance" "haa-master" {
+  depends_on         = ["aws_nat_gateway.main","aws_route_table_association.private_subnet_association"]
   ami           = "${data.aws_ami.haa.image_id}"
   instance_type = "m4.xlarge"
-  subnet_id     = "${aws_subnet.public[0].id}"
+  subnet_id     = "${aws_subnet.private[0].id}"
   vpc_security_group_ids = [
     "${aws_security_group.uipath_stack.id}",
   ]
-  associate_public_ip_address = true
   key_name                    = "${lookup(var.key_name, var.aws_region)}"
 
   user_data = "${data.template_file.haa-master.rendered}"
@@ -23,12 +23,11 @@ resource "aws_instance" "haa-slave" {
   depends_on = ["aws_instance.haa-master"]
   ami           = "${data.aws_ami.haa.image_id}"
   instance_type = "m4.xlarge"
-  subnet_id     = "${aws_subnet.public[0].id}"
+  subnet_id     = "${aws_subnet.private[0].id}"
   vpc_security_group_ids = [
     "${aws_security_group.uipath_stack.id}",
   ]
   count = "2"
-  associate_public_ip_address = true
   key_name                    = "${lookup(var.key_name, var.aws_region)}"
 
   user_data = "${element(data.template_file.haa-slave.*.rendered, count.index)}"

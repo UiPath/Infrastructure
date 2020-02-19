@@ -203,8 +203,8 @@ variable "orchestrator_url" {
   default = "https://my-licensed-orchestrator.net"
 }
 
-variable "tennant" {
-  description = "Orchestrator Tennant."
+variable "tenant" {
+  description = "Orchestrator Tenant."
   default = "default"  
 }
 
