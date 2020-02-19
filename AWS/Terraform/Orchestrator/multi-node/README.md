@@ -21,7 +21,7 @@ Terraform v0.12.3
 | key\_name | Name of the SSH keypair to use in AWS. | map | `aws_ssh_key` | yes |
 | aws\_app\_instance\_type | Orchestrator Instance type. | string | `"m4.large"` | yes |
 | admin\_password | Windows Administrator password used to login in the provisioned VMs. | string | `"WinP@55!"` | yes |
-| orchestrator\_password | Orchestrator administrator password to login in Default and Host Tennant. | string | `"0rCh35Tr@tor!"` | yes |
+| orchestrator\_password | Orchestrator administrator password to login in Default and Host Tenant. | string | `"0rCh35Tr@tor!"` | yes |
 | orchestrator\_passphrase | Orchestrator Passphrase in order to generate NuGet API keys, App encryption key and machine keys. | string | `"2Custom5P@ssPh@se"` | yes |
 | orchestrator\_license | Orchestrator license code. The license created with regutil. | string | `"TheLicenseCreate dwithRegUtil"` | yes |
 | orchestrator\_versions | Orchestrator Version. | string | `"19.10.15"` | yes |
