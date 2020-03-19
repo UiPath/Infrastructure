@@ -93,18 +93,18 @@ variable "aws_availability_zones" {
   default = {
     //  N. Virginia
     us-east-1 = [
-      "eu-east-1a",
-      "eu-east-1b",
-      "eu-east-1c",
-      "eu-east-1d",
-      "eu-east-1e",
-      "eu-east-1f",
+      "us-east-1a",
+      "us-east-1b",
+      "us-east-1c",
+      "us-east-1d",
+      "us-east-1e",
+      "us-east-1f",
     ]
     //  Ohio
     us-east-2 = [
-      "eu-east-2a",
-      "eu-east-2b",
-      "eu-east-2c",
+      "us-east-2a",
+      "us-east-2b",
+      "us-east-2c",
     ]
     //  N. California
     us-west-1 = [
@@ -208,7 +208,7 @@ variable "orchestrator_version" {
   # "18.4.3"
   # "18.4.2"
   # "18.4.1"
-  default = "19.4.4"
+  default = "19.10.15"
 }
 
 ## Set Initial Windows Administrator Password ##

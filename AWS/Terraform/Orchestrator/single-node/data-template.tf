@@ -28,7 +28,7 @@ data "aws_ami" "server_ami" {
 
   filter {
     name = "name"
-    values = ["Windows_Server-2016-English-Full-Base-*"]
+    values = ["Windows_Server-2019-English-Full-Base-*"]
   }
 }
 
