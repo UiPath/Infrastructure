@@ -127,7 +127,7 @@
          "name":"unit-price",
          "color":"#d4cc6f",
          "hotkey":"u",
-         "type":"unit-price",
+         "type":"number",
          "split_items":true,
          "section":"items"
       },
