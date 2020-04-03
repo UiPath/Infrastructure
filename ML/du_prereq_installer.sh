@@ -237,10 +237,8 @@ install_docker() {
 Main() {
 
     if [[ "$AIF_ENV" == "serving" ]]; then
-        checking_nvidia_gpu
         install_docker
         install_uipath_davfs
-        install_nvidia_docker
 
     elif [[ "$AIF_ENV" == "training" ]]; then
 
