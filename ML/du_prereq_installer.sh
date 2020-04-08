@@ -126,7 +126,17 @@ install_nvidia_driver() {
             sudo yum -y update 1> /dev/null && \
             sudo yum group install -y "Development Tools" 1> /dev/null && \
             sudo yum install -y kernel-devel epel-release dkms 1> /dev/null && \
-            sudo yum install -y kmod-nvidia.x86_64 nvidia-x11-drv.x86_64 nvidia-detect.x86_64 1> /dev/null && \
+            if [[ "$distribution"  = "rhel8"* ]]; then 
+                sudo dnf config-manager --add-repo http://developer.download.nvidia.com/compute/cuda/repos/rhel8/x86_64/cuda-rhel8.repo
+                sudo dnf clean all
+                sudo dnf -y install cuda -y
+            elif [[ "$distribution"  = "rhel7"* ]] || [[ "$distribution"  = "centos7"* ]] || [[ "$distribution"  = "amzn"* ]]; then 
+                sudo yum-config-manager --add-repo http://developer.download.nvidia.com/compute/cuda/repos/rhel7/x86_64/cuda-rhel7.repo
+                sudo yum clean all
+                sudo yum install cuda -y
+            else
+                sudo yum install -y kmod-nvidia.x86_64 nvidia-x11-drv.x86_64 nvidia-detect.x86_64 1> /dev/null
+            fi  && \
             echo -e "\e[32m**************NVIDIA DRIVERS install SUCCESS! **************" || echo -e "\e[31m--------------NVIDIA DRIVERS install FAILED! --------------"
             tput sgr0
 
@@ -152,7 +162,7 @@ dockerify_VM() {
         sudo usermod -a -G docker $USER  > /dev/null 2>&1  && \
         echo -e "\e[32m**************DOCKER install SUCCESS! **************" || echo -e "\e[31m--------------DOCKER install FAILED! --------------"
         tput sgr0
-        systemctl restart docker && systemctl enable docker && systemctl daemon-reload 
+        systemctl start docker && systemctl enable docker && systemctl daemon-reload 
 
     elif [[ "$distribution"  = "rhel"* ]] || [[ "$distribution"  = "centos"* ]] || [[ "$distribution"  = "amzn"* ]]; then
 
@@ -161,14 +171,14 @@ dockerify_VM() {
         sudo yum install -y selinux-policy container-selinux   > /dev/null 2>&1 && \
         sudo yum install -y yum-utils device-mapper-persistent-data lvm2  > /dev/null 2>&1  && \
         sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo  > /dev/null 2>&1  && \
-        if [[ "$distribution"  = "rhel8"* ]]; then 
+        # if [[ "$distribution"  = "rhel8"* ]]; then 
                 sudo yum install -y ${CONTAINERD_IO}   > /dev/null 2>&1 
-        fi  && \
+        # fi  && \
         sudo yum install -y docker-ce docker-ce-cli containerd.io   > /dev/null 2>&1 && \
         sudo usermod -a -G docker $USER   > /dev/null 2>&1 && \
         echo -e "\e[32m**************DOCKER install SUCCESS! **************" || echo -e "\e[31m--------------DOCKER install FAILED! --------------"
         tput sgr0
-        systemctl restart docker && systemctl enable docker && systemctl daemon-reload > /dev/null 2>&1 
+        systemctl start docker && systemctl enable docker && systemctl daemon-reload > /dev/null 2>&1 
 
     else
 
@@ -181,7 +191,11 @@ dockerify_VM() {
 }
 
 install_docker_davfs() {
-
+    if `docker plugin ls  2>&1 | grep -q "uipath/davfs" `;then
+            echo -e "\e[32m**************Docker plugin davfs already installed. **************"
+            tput sgr0
+            return
+    fi
     echo -e "\e[32mInstalling Docker plugin: davfs"
     sudo docker plugin disable "uipath/davfs"  > /dev/null 2>&1 && \
     sudo docker plugin rm "uipath/davfs"  > /dev/null 2>&1
@@ -193,7 +207,11 @@ install_docker_davfs() {
 test_nvidia_docker() {
 
         echo -e "\e[32mTEST NVIDIA DOCKER"
-        docker run --gpus all nvidia/cuda:9.0-base nvidia-smi   && \
+        if `docker run --gpus all nvidia/cuda:9.0-base nvidia-smi  2>&1 | grep -q "error waiting for container" `;then
+            echo -e "\e[32m**************Please reboot the VM. **************"
+            tput sgr0
+            exit 1
+        fi
         echo -e "\e[32m**************TEST NVIDIA DOCKER install SUCCESS! **************" || echo -e "\e[31m--------------TEST NVIDIA DOCKER install FAILED! --------------"
         tput sgr0
         
@@ -215,7 +233,7 @@ install_nvidia_docker() {
         # Update repo keys for Debian-based distros
         curl -s -L https://nvidia.github.io/nvidia-container-runtime/gpgkey | sudo apt-key add - > /dev/null 2>&1  && \
         # curl -s -L https://nvidia.github.io/nvidia-docker/gpgkey | sudo apt-key add -   > /dev/null 2>&1  && \
-        #curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list | sudo tee /etc/apt/sources.list.d/nvidia-docker.list   && \
+        # curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list | sudo tee /etc/apt/sources.list.d/nvidia-docker.list   && \
         curl -s -L https://nvidia.github.io/nvidia-container-runtime/$distribution/nvidia-container-runtime.list | sudo tee /etc/apt/sources.list.d/nvidia-container-runtime.list  > /dev/null 2>&1 && \
         sudo apt-get update && sudo apt-get install -y nvidia-container-runtime  > /dev/null 2>&1   && \
         sudo systemctl restart docker   > /dev/null 2>&1  && \
@@ -235,8 +253,8 @@ install_nvidia_docker() {
         sudo gpg --homedir /var/lib/yum/repos/$(uname -m)/$DIST/nvidia-container-runtime/gpgdir --delete-key f796ecb0 > /dev/null 2>&1
         sudo yum makecache > /dev/null 2>&1
         curl -s -L https://nvidia.github.io/nvidia-container-runtime/$distribution/nvidia-container-runtime.repo | sudo tee /etc/yum.repos.d/nvidia-container-runtime.repo  > /dev/null 2>&1 && \
-        sudo yum install -y nvidia-container-runtime
-        sudo systemctl restart docker
+        sudo yum install -y nvidia-container-runtime  > /dev/null 2>&1 && \
+        sudo systemctl restart docker  > /dev/null 2>&1 && \
         echo -e "\e[32m**************NVIDIA Container runtime install SUCCESS! **************" || echo -e "\e[31m--------------NVIDIA Container runtime install FAILED! --------------"
         tput sgr0
 
