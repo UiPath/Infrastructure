@@ -38,7 +38,7 @@ data "template_file" "init" {
     if(![System.IO.File]::Exists("C:\Program Files\Google\Compute Engine\metadata_scripts\installRobot")){
     Set-ExecutionPolicy Unrestricted -force 
     Invoke-WebRequest https://raw.githubusercontent.com/hteo1337/UiRobot/master/Setup/Install-UiRobot.ps1 -OutFile "C:\Program Files\Google\Compute Engine\metadata_scripts\Install-UiRobot.ps1"
-    powershell.exe -ExecutionPolicy Bypass -File "C:\Program Files\Google\Compute Engine\metadata_scripts\Install-UiRobot.ps1"  -orchestratorUrl "${var.orchestrator_url}" -Tennant "${var.orchestrator_tennant}" -orchAdmin "${var.orchestrator_admin}" -orchPassword "${var.orchestrator_adminpw}" -adminUsername "${var.vm_username}" -machinePassword "${var.vm_password}" -RobotType "${var.robot_type}"
+    powershell.exe -ExecutionPolicy Bypass -File "C:\Program Files\Google\Compute Engine\metadata_scripts\Install-UiRobot.ps1"  -orchestratorUrl "${var.orchestrator_url}" -Tennant "${var.orchestrator_tennant}" -orchAdmin "${var.orchestrator_admin}" -orchPassword "${var.orchestrator_adminpw}" -adminUsername "${var.vm_username}" -machinePassword "${var.vm_password}" -RobotType "${var.robot_type}" -HostingType "Standard"
     New-Item "C:\Program Files\Google\Compute Engine\metadata_scripts\installRobot" -type file
     Remove-Item -Path  "C:\Program Files\Google\Compute Engine\metadata_scripts\Install-UiRobot.ps1" -Force
     #Start-Sleep -Seconds 10 ; Restart-Computer -Force
