@@ -47,7 +47,7 @@ data "template_file" "init" {
     Set-Location -Path $temp
     Set-ExecutionPolicy Unrestricted -force
     Invoke-WebRequest -Uri $link -OutFile $file
-    & "C:\scripts\Install-UiRobot.ps1" -orchestratorUrl "${var.orchestrator_url}" -Tennant "${var.tenant}" -orchAdmin "${var.api_user}" -orchPassword "${var.api_user_password}" -adminUsername "${var.robot_local_account}" -machinePassword "${var.robot_local_account_password}" -RobotType "${var.robot_type}" -HostingType "Standard" 
+    & "C:\scripts\Install-UiRobot.ps1" -orchestratorUrl "${var.orchestrator_url}" -Tennant "${var.tenant}" -orchAdmin "${var.api_user}" -orchPassword "${var.api_user_password}" -adminUsername "${var.robot_local_account}" -machinePassword "${var.robot_local_account_password}" -machineName "$newMachineName" -HostingType "Standard" -RobotType "${var.robot_type}" -credType "Default" 
     Remove-Item -LiteralPath "C:\scripts" -Force -Recurse
     shutdown /r /f /t 5 /c "forced reboot"
     </powershell>
