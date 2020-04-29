@@ -311,12 +311,58 @@ install_docker() {
 
 }
 
+change_mount_docker() {
+
+            read -p "Configuring root directory of persistent Docker state. Please type yes to configure the directory or no to exit: " cm_docker
+
+                case $cm_docker in
+
+                    yes|Yes)  echo "Configuring root directory of persistent Docker state."
+
+                        read -p "Enter an empty root directory path (ex. /home/user/): " cm_docker_path
+                        while [[ ! "$cm_docker_path" =~ ^(.+)\/([^/]+)$ ]]; do
+                            read -p "$cm_docker_path is not valid root directory path: " cm_docker_path
+                        done
+                        if [ ! -d "$cm_docker_path" ]; then
+                            sudo mkdir -p "$cm_docker_path"
+                        fi
+                        if [ "$(ls -A $cm_docker_path)" ]; then
+                            echo "$cm_docker_path is not Empty."
+                            change_mount_docker
+                                
+                        else
+                            tee /etc/docker/daemon.json <<EOF 1> /dev/null 
+{
+"data-root": "$cm_docker_path"
+}
+EOF
+                        echo -e "\e[32mStarting Docker.."
+                        systemctl restart docker  1> /dev/null
+                        echo -e "\e[32mPlease reboot..."
+                        fi
+                        ;;
+
+                    no|No) echo "Exit"
+                            exit 0
+
+                        ;;
+
+                    *) echo "You need to type yes or no"
+
+                           change_mount_docker
+
+                        ;; esac
+
+                    
+}
+
 Main() {
 
     if [[ "$AIF_ENV" == "serving" ]]; then
         base_prereqs
         install_docker
         install_docker_davfs
+        change_mount_docker
 
     elif [[ "$AIF_ENV" == "training" ]]; then
         base_prereqs
@@ -324,6 +370,7 @@ Main() {
         install_nvidia_driver
         install_docker
         install_docker_davfs
+        change_mount_docker
         install_nvidia_docker
         
     else
