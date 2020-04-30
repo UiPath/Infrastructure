@@ -362,7 +362,7 @@ Main() {
         base_prereqs
         install_docker
         install_docker_davfs
-        change_mount_docker
+        # change_mount_docker
 
     elif [[ "$AIF_ENV" == "training" ]]; then
         base_prereqs
@@ -370,7 +370,7 @@ Main() {
         install_nvidia_driver
         install_docker
         install_docker_davfs
-        change_mount_docker
+        # change_mount_docker
         install_nvidia_docker
         
     else
