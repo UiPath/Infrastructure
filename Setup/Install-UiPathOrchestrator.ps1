@@ -188,7 +188,10 @@ function Main {
         'IIS-HttpErrors',
         'IIS-StaticContent',
         'IIS-RequestFiltering',
+        'IIS-CertProvider',
+        'IIS-IPSecurity',
         'IIS-URLAuthorization',
+        'IIS-ApplicationInit',
         'IIS-WindowsAuthentication',
         'IIS-NetFxExtensibility45',
         'IIS-ASPNET45',
@@ -199,13 +202,22 @@ function Main {
         'IIS-ManagementScriptingTools',
         'ClientForNFS-Infrastructure'
     )
-    Install-UiPathOrchestratorFeatures -features $features
+    
+    try {
+    
+      Install-UiPathOrchestratorFeatures -features $features
 
-    $checkFeature = Get-WindowsFeature "IIS-DirectoryBrowsing"
-    if ( $checkFeature.Installed -eq $true) {
-        Disable-WindowsOptionalFeature -FeatureName IIS-DirectoryBrowsing -Remove -NoRestart -Online
-        Log-Write -LogPath $sLogPath -LineValue "Feature IIS-DirectoryBrowsing is removed"
     }
+    catch {
+        Write-Error $_.exception.message
+        Log-Error -LogPath $sLogFile -ErrorDesc "$($_.exception.message) installing $feature" -ExitGracefully $True
+    }
+
+    # $checkFeature = Get-WindowsFeature "IIS-DirectoryBrowsing"
+    # if ( $checkFeature.Installed -eq $true) {
+    #     Disable-WindowsOptionalFeature -FeatureName IIS-DirectoryBrowsing -Remove -NoRestart -Online
+    #     Log-Write -LogPath $sLogPath -LineValue "Feature IIS-DirectoryBrowsing is removed"
+    # }
 
     #install URLrewrite
     Install-UrlRewrite -urlRWpath "$tempDirectory\rewrite_amd64.msi"

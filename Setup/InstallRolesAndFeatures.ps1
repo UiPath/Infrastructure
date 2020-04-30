@@ -1,68 +1,17 @@
 [CmdletBinding()]
 
-param(
-
-    [Parameter()]
-    [ValidateSet('19.4.3', '19.4.2', '18.4.6', '18.4.5', '18.4.4', '18.4.3', '18.4.2', '18.4.1')]
-    [string]
-    $orchestratorVersion = "19.4.3"
-
-)
 
 # Set Error Action to Silently Continue
 $ErrorActionPreference = "SilentlyContinue"
 # Script Version
 $sScriptVersion = "1.0"
 # Log File Info
-$sLogPath = "C:\temp\"
+$sLogPath = ".\"
 $sLogName = "Install-OrchestratorFeatures.log"
 $sLogFile = Join-Path -Path $sLogPath -ChildPath $sLogName
 
 function Main {
     
-    try {
-        # Setup temp dir in %appdata%\Local\Temp
-        $tempDirectory = (Join-Path 'C:\temp\' "UiPath-$(Get-Date -f "yyyyMMddhhmmssfff")")
-        New-Item -ItemType Directory -Path $tempDirectory -Force
-
-        $source = @()
-        $source += "https://download.uipath.com/versions/$orchestratorVersion/UiPathOrchestrator.msi"
-        $source += "https://download.microsoft.com/download/C/9/E/C9E8180D-4E51-40A6-A9BF-776990D8BCA9/rewrite_amd64.msi"
-
-        $tries = 5
-        while ($tries -ge 1) {
-            try {
-                foreach ($item in $source) {
-
-                    $package = $item.Substring($item.LastIndexOf("/") + 1)
-
-                    Download-File -url "$item " -outputFile "$tempDirectory\$package"
-
-                    # Start-BitsTransfer -Source $item -Destination "$tempDirectory" -ErrorAction Stop
-
-                }
-                break
-            }
-            catch {
-                $tries--
-                Write-Verbose "Exception:"
-                Write-Verbose "$_"
-                if ($tries -lt 1) {
-                    throw $_
-                }
-                else {
-                    Write-Verbose
-                    Log-Write -LogPath $sLogFile -LineValue "Failed download. Retrying again in 5 seconds"
-                    Start-Sleep 5
-                }
-            }
-        }
-    }
-    catch {
-
-        Log-Error -LogPath $sLogFile -ErrorDesc "$($_.exception.message) on $(Get-Date)" -ExitGracefully $True
-
-    }
 
     $features = @(
         'IIS-DefaultDocument',
@@ -72,6 +21,7 @@ function Main {
         'IIS-CertProvider',
         'IIS-IPSecurity',
         'IIS-URLAuthorization',
+        'IIS-ApplicationInit',
         'IIS-WindowsAuthentication',
         'IIS-NetFxExtensibility45',
         'IIS-ASPNET45',
@@ -87,14 +37,6 @@ function Main {
     
         Install-UiPathOrchestratorFeatures -features $features
 
-        $checkFeature = Get-WindowsFeature "IIS-DirectoryBrowsing"
-        if ( $checkFeature.Installed -eq $true) {
-            Disable-WindowsOptionalFeature -FeatureName IIS-DirectoryBrowsing -Remove -NoRestart -Online
-            Log-Write -LogPath $sLogPath -LineValue "Feature IIS-DirectoryBrowsing is removed" 
-        }
-
-        Install-UrlRewrite -urlRWpath "$tempDirectory\rewrite_amd64.msi"
-
     }
     catch {
         Write-Error $_.exception.message
@@ -103,58 +45,6 @@ function Main {
 
     Write-Host "Features installed" -ForegroundColor Green
 
-}
-
-<#
-    .SYNOPSIS
-      Install URL Rewrite necessary for UiPath Orchestrator.
-
-    .PARAMETER urlRWpath
-      Mandatory. String. Path to URL Rewrite package. Example: $urlRWpath = "C:\temp\rewrite_amd64.msi"
-
-    .INPUTS
-      Parameters above.
-
-    .OUTPUTS
-      None
-    
-    .Example
-      Install-UrlRewrite -urlRWpath "C:\temp\rewrite_amd64.msi"
-#>
-function Install-UrlRewrite {
-  
-    param(
-
-        [Parameter(Mandatory = $true)]
-        [string]
-        $urlRWpath
-
-    )
-
-    # Do nothing if URL Rewrite module is already installed
-    $rewriteDllPath = Join-Path $Env:SystemRoot 'System32\inetsrv\rewrite.dll'
-
-    if (Test-Path -Path $rewriteDllPath) {
-        Log-Write -LogPath $sLogFile -LineValue  "IIS URL Rewrite 2.0 Module is already installed"
-
-        return
-    }
-
-    $installer = $urlRWpath
-
-    $exitCode = 0
-    $argumentList = "/i `"$installer`" /q /norestart"
-
-    Log-Write -LogPath $sLogFile -LineValue  "Installing IIS URL Rewrite 2.0 Module"
-
-    $exitCode = (Start-Process -FilePath "msiexec.exe" -ArgumentList $argumentList -Wait -Passthru).ExitCode
-
-    if ($exitCode -ne 0 -and $exitCode -ne 1641 -and $exitCode -ne 3010) {
-        Log-Error -LogPath $sLogFile -ErrorDesc "Failed to install IIS URL Rewrite 2.0 Module (Exit code: $exitCode)" -ExitGracefully $False
-    }
-    else {
-        Log-Write -LogPath $sLogFile -LineValue  "IIS URL Rewrite 2.0 Module successfully installed"
-    }
 }
 
 <#
@@ -184,9 +74,14 @@ function Install-UiPathOrchestratorFeatures {
     foreach ($feature in $features) {
 
         try {
-            Log-Write -LogPath $sLogFile -LineValue "Installing feature $feature"
-            Write-Verbose "Installing feature $feature"
-            Enable-WindowsOptionalFeature -Online -FeatureName $feature -all -NoRestart
+            $state = (Get-WindowsOptionalFeature -FeatureName $feature -Online).State
+            Log-Write -LogPath $sLogFile -LineValue "Checking for feature $feature Enabled/Disabled => $state"
+            Write-Host "Checking for feature $feature Enabled/Disabled => $state"
+			if ($state -ne 'Enabled') {
+				Log-Write -LogPath $sLogFile -LineValue "Installing feature $feature"
+				Write-Host "Installing feature $feature"
+				Enable-WindowsOptionalFeature -Online -FeatureName $feature -all -NoRestart
+			}
         }
         catch {
             Log-Error -LogPath $sLogFile -ErrorDesc "$($_.exception.message) installing $($feature)" -ExitGracefully $True
@@ -196,41 +91,6 @@ function Install-UiPathOrchestratorFeatures {
 
 }
 
-<#
-  .DESCRIPTION
-  Downloads a file from a URL
-
-  .PARAMETER url
-  The URL to download from
-
-  .PARAMETER outputFile
-  The local path where the file will be downloaded
-#>
-function Download-File {
-
-    param (
-        [Parameter(Mandatory = $true)]
-        [string]$url,
-
-        [Parameter(Mandatory = $true)]
-        [string] $outputFile
-    )
-
-    Write-Verbose "Downloading file from $url to local path $outputFile"
-
-    Try {
-        $webClient = New-Object System.Net.WebClient
-    }
-    Catch {
-        Log-Error -LogPath $sLogFile -ErrorDesc "The following error occurred: $_" -ExitGracefully $True
-    }
-    Try {
-        $webClient.DownloadFile($url, $outputFile)
-    }
-    Catch {
-        Log-Error -LogPath $sLogFile -ErrorDesc "The following error occurred: $_" -ExitGracefully $True
-    }
-}
 
 <#
   .SYNOPSIS
