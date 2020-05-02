@@ -110,7 +110,6 @@ variable "aws_availability_zones" {
     #  N. California
     us-west-1 = [
       "us-west-1a",
-      "us-west-1b",
       "us-west-1c",
     ]
     #  Oregon
@@ -118,11 +117,13 @@ variable "aws_availability_zones" {
       "us-west-2a",
       "us-west-2b",
       "us-west-2c",
+      "us-west-2d",
     ]
     #  Mumbai
     ap-south-1 = [
       "ap-south-1a",
       "ap-south-1b",
+      "ap-south-1c",
     ]
     #  Seoul
     ap-northeast-2 = [
