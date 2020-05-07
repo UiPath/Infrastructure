@@ -20,6 +20,7 @@ usage: $0 options
 Examples: $0 --env training
 OPTIONS:
    --env                AIFabric Lite environment: training or serving.
+   --change-mount       Configuring root directory of persistent Docker state.Enter an empty root directory path (ex. /home/user/).
    --h                  Show this help
 EOF
 }
@@ -32,6 +33,9 @@ while getopts "$optspec" optchar; do
             case "${OPTARG}" in
                 env)
                     AIF_ENV="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
+                    ;;
+                change-mount)
+                    CHANGE_ROOT_PATH="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
                     ;;
                 *)
                     if [ "$OPTERR" = 1 ] && [ "${optspec:0:1}" != ":" ]; then
@@ -53,7 +57,7 @@ while getopts "$optspec" optchar; do
 done
 
 
-if [[ -z "$AIF_ENV" ]]; then
+if [[ -z "$AIF_ENV" ]] && [[ -z "$CHANGE_ROOT_PATH" ]]; then
     usage
     exit 1
 fi
@@ -362,17 +366,36 @@ Main() {
         base_prereqs
         install_docker
         install_docker_davfs
-        # change_mount_docker
-
     elif [[ "$AIF_ENV" == "training" ]]; then
         base_prereqs
         checking_nvidia_gpu
         install_nvidia_driver
         install_docker
         install_docker_davfs
-        # change_mount_docker
         install_nvidia_docker
-        
+    elif [[ ! -z "$CHANGE_ROOT_PATH" ]]; then
+        while [[ ! "$CHANGE_ROOT_PATH" =~ ^(.+)\/([^/]+)$ ]]; do
+            echo "$CHANGE_ROOT_PATH is not valid root directory path."
+            echo "Exiting..."
+            exit 1
+        done
+        if [ ! -d "$CHANGE_ROOT_PATH" ]; then
+            sudo mkdir -p "$CHANGE_ROOT_PATH"
+        fi
+        if [ "$(ls -A $CHANGE_ROOT_PATH)" ]; then
+            echo "$CHANGE_ROOT_PATH is not Empty."
+            echo "Exiting..."
+            exit 1
+        else
+            tee /etc/docker/daemon.json <<EOF 1> /dev/null 
+{
+"data-root": "$CHANGE_ROOT_PATH"
+}
+EOF
+                        echo -e "\e[32mStarting Docker.."
+                        systemctl restart docker  1> /dev/null
+                        echo -e "\e[32mPlease reboot..."
+                        fi
     else
         usage
         exit 1
