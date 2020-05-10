@@ -4,7 +4,8 @@
          "name":"name",
          "color":"#ff8585",
          "hotkey":"n",
-         "type":"string"
+         "type":"string",
+         "multi_line":true
       },
       {
          "name":"vendor-addr",
