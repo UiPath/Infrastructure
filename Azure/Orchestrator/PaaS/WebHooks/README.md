@@ -6,7 +6,7 @@ This ARM template will deploy UiPath Orchestrator WebHooks to an existing WebApp
 * Existing WebApp, SQL Server DB and licensed Orchestrator 20.x.
 
 ## Parameters
-* "servicePlanName":  "Existing name of the Azure Service PlanName"
+* "appName": "Name of the existing Azure WebApp"
 * "webHooksPackageURL": "Web hooks package URL"
 * "SQLServerName": "SQL Azure DB Server name"
 * "SQLServerDBName": "SQL Azure DB name"

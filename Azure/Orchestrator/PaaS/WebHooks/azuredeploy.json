@@ -5,7 +5,7 @@
         "appName": {
             "type": "string",
             "metadata": {
-                "description": "Existing name of the Azure WebApp"
+                "description": "Name of the existing Azure WebApp"
             }
         },
         "webHooksPackageURL": {
