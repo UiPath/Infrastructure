@@ -1,0 +1,126 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "appName": {
+            "type": "string",
+            "metadata": {
+                "description": "Existing name of the Azure WebApp"
+            }
+        },
+        "servicePlanName": {
+            "type": "string",
+            "metadata": {
+                "description": "Existing name of the Azure Service PlanName"
+            }
+        },
+        "webHooksPackageURL": {
+            "type": "string",
+            "metadata": {
+                "description": "Web hooks package URL"
+            }
+        },
+        "SQLServerName": {
+            "type": "string",
+            "metadata": {
+              "description": "SQL Azure DB Server name"
+            }
+          },
+          "SQLServerDBName": {
+            "type": "string",
+            "metadata": {
+              "description": "SQL Azure DB name"
+            }
+          },
+          "SQLServerAdminLogin": {
+            "type": "string",
+            "metadata": {
+              "description": "SQL Azure DB administrator  user login"
+            }
+          },
+          "SQLServerAdminPassword": {
+            "type": "securestring",
+            "metadata": {
+              "description": "Database admin user password"
+            }
+          }
+    },
+    "variables": {
+        "location": "[resourceGroup().location]",
+        "appName": "[parameters('appName')]",
+        "webHooksPackageURL": "[parameters('webHooksPackageURL')]",
+        "servicePlanName": "[parameters('servicePlanName')]",
+        "SQLServerName": "[trim(toLower(parameters('SQLServerName')))]",
+        "SQLServerDBName": "[ toLower(parameters('SQLServerDBName'))]",
+        "SQLServerAdminLogin": "[ toLower(parameters('SQLServerAdminLogin'))]",
+        "SQLServerAdminPassword": "[parameters('SQLServerAdminPassword')]"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2017-05-10",
+            "name": "[concat(variables('appName'),'-','WebHooks')]",
+            "properties": {
+                "mode": "Incremental",
+                "parameters": {},
+                "template": {
+                    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                    "contentVersion": "1.0.0.0",
+                    "parameters": {},
+                    "variables": {},
+                    "resources": [
+                        {
+                            "type": "Microsoft.Web/Sites",
+                            "name": "[variables('appName')]",
+                            "apiVersion": "2018-11-01",
+                            "location": "[variables('location')]",
+                            "properties": {
+                                "name": "[variables('appName')]",
+                                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms/',variables('servicePlanName'))]",
+                                "siteConfig": {
+                                    "connectionStrings": [
+                                        {
+                                          "name": "Default",
+                                          "ConnectionString": "",
+                                          "type": "SQLAzure"
+                                        }
+                                      ],
+                                      "appSettings": [
+                                        {
+                                            "name": "LedgerConfiguration:Subscribers:0:ConnectionString",
+                                            "value": "[concat('Data Source=tcp:', variables('SQLServerName'), ',1433;Initial Catalog=', variables('SQLServerDBName'), ';User Id=', variables('SQLServerAdminLogin'), '@', variables('SQLServerName'), ';Password=', parameters('SQLServerAdminPassword'), ';')]"
+                                          },
+                                          {
+                                            "name": "OrchestratorSqlClientSettings:ConnectionString",
+                                            "value": "[concat('Data Source=tcp:', variables('SQLServerName'), ',1433;Initial Catalog=', variables('SQLServerDBName'), ';User Id=', variables('SQLServerAdminLogin'), '@', variables('SQLServerName'), ';Password=', parameters('SQLServerAdminPassword'), ';')]"
+                                          }  
+                                      ]
+
+                                }
+                            },
+                            "resources": [
+                                {
+                                    "type": "Extensions",
+                                    "name": "MSDeploy",
+                                    "apiVersion": "2019-08-01",
+                                    "properties": {
+                                        "SkipAppData": true,
+                                        "AppOffline": true,
+                                        "addOnPackages": [
+                                            {
+                                                "packageUri": "[variables('webHooksPackageURL')]"
+                                            }
+                                        ]
+                                    },
+                                    "dependsOn": [
+                                        "[resourceId('Microsoft.Web/Sites/', variables('appName'))]"
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }
+        }
+    ]
+}
