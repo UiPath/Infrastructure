@@ -14,7 +14,7 @@ This ARM template will deploy UiPath Orchestrator WebHooks to an existing WebApp
 * "SQLServerAdminPassword": "Database admin user password"
 
 In addition to running the deployment ARM template, end user also needs to make the following changes in Azure Portal:
-    </br> On the Azure Web App that's hosting Orchestrator, update the web.config, adding "Webhooks.LedgerIntegration.Enabled" and setting it to true to turn on the new webhook service.
+    </br> * On the Azure Web App that's hosting Orchestrator, update the web.config, adding "Webhooks.LedgerIntegration.Enabled" and setting it to true to turn on the new webhook service.
 
 
 
