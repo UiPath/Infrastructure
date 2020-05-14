@@ -8,12 +8,6 @@
                 "description": "Existing name of the Azure WebApp"
             }
         },
-        "servicePlanName": {
-            "type": "string",
-            "metadata": {
-                "description": "Existing name of the Azure Service PlanName"
-            }
-        },
         "webHooksPackageURL": {
             "type": "string",
             "metadata": {
@@ -49,7 +43,6 @@
         "location": "[resourceGroup().location]",
         "appName": "[parameters('appName')]",
         "webHooksPackageURL": "[parameters('webHooksPackageURL')]",
-        "servicePlanName": "[parameters('servicePlanName')]",
         "SQLServerName": "[trim(toLower(parameters('SQLServerName')))]",
         "SQLServerDBName": "[ toLower(parameters('SQLServerDBName'))]",
         "SQLServerAdminLogin": "[ toLower(parameters('SQLServerAdminLogin'))]",
@@ -76,7 +69,6 @@
                             "location": "[variables('location')]",
                             "properties": {
                                 "name": "[variables('appName')]",
-                                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms/',variables('servicePlanName'))]",
                                 "siteConfig": {
                                     "connectionStrings": [
                                         {
