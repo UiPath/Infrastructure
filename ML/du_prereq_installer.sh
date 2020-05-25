@@ -17,9 +17,9 @@ tput sgr0
 usage() {
     cat <<EOF
 usage: $0 options
-Examples: $0 --env training
+Examples: $0 --env gpu
 OPTIONS:
-   --env                AIFabric Lite environment: training or serving.
+   --env                AIFabric Lite environment: gpu or cpu.
    --change-mount       Configuring root directory of persistent Docker state.Enter an empty root directory path (ex. /home/user/).
    --h                  Show this help
 EOF
@@ -362,11 +362,11 @@ EOF
 
 Main() {
 
-    if [[ "$AIF_ENV" == "serving" ]]; then
+    if [[ "$AIF_ENV" == "cpu" ]]; then
         base_prereqs
         install_docker
         install_docker_davfs
-    elif [[ "$AIF_ENV" == "training" ]]; then
+    elif [[ "$AIF_ENV" == "gpu" ]]; then
         base_prereqs
         checking_nvidia_gpu
         install_nvidia_driver
