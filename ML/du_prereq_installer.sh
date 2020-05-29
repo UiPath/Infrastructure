@@ -20,6 +20,7 @@ usage: $0 options
 Examples: $0 --env gpu
 OPTIONS:
    --env                AIFabric Lite environment: gpu or cpu.
+   --cloud              Configure which cloud provider you are using: azure
    --change-mount       Configuring root directory of persistent Docker state.Enter an empty root directory path (ex. /home/user/).
    --h                  Show this help
 EOF
@@ -36,6 +37,9 @@ while getopts "$optspec" optchar; do
                     ;;
                 change-mount)
                     CHANGE_ROOT_PATH="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
+                    ;;
+                cloud)
+                    CLOUD="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
                     ;;
                 *)
                     if [ "$OPTERR" = 1 ] && [ "${optspec:0:1}" != ":" ]; then
@@ -136,28 +140,36 @@ install_nvidia_driver() {
             # if nvidia-smi doesn't work, erase nvidia & cuda
             sudo yum erase nvidia cuda
 
-            sudo yum install -y  https://dl.fedoraproject.org/pub/epel/epel-release-latest-$(rpm -E '%{rhel}').noarch.rpm  1> /dev/null && \
-            sudo yum -y update 1> /dev/null && \
-            sudo yum group install -y "Development Tools" 1> /dev/null && \
-            sudo yum -y install epel-release && \
-            sudo yum install -y kernel-devel-$(uname -r) kernel-headers-$(uname -r) epel-release dkms 1> /dev/null && \
-            sudo yum -y install dkms && \
-            if [[ "$distribution"  = "rhel8"* ]]; then 
-                sudo dnf config-manager --add-repo http://developer.download.nvidia.com/compute/cuda/repos/rhel8/${ARCH}/cuda-rhel8.repo
-                sudo dnf clean all
-                sudo dnf -y module install nvidia-driver:latest-dkms
-                # sudo dnf -y install cuda -y
-                
-            elif [[ "$distribution"  = "rhel7"* ]] || [[ "$distribution"  = "centos7"* ]] || [[ "$distribution"  = "amzn"* ]]; then 
-                sudo yum-config-manager --add-repo http://developer.download.nvidia.com/compute/cuda/repos/rhel7/${ARCH}/cuda-rhel7.repo
-                sudo yum sudo yum clean expire-cache
-                sudo yum install -y nvidia-driver-latest-dkms
-                # sudo yum install cuda -y
-            else
+            if [[ "$CLOUD" = "azure" ]]; then
+                sudo yum -y update
+                sudo yum group install -y "Development Tools"
+                sudo yum install -y kernel-devel epel-release dkms
+                sudo yum install -y https://www.elrepo.org/elrepo-release-7.0-4.el7.elrepo.noarch.rpm
                 sudo yum install -y kmod-nvidia.x86_64 nvidia-x11-drv.x86_64 nvidia-detect.x86_64
-            fi  && \
-            echo -e "\e[32m**************NVIDIA DRIVERS install SUCCESS! **************" || echo -e "\e[31m--------------NVIDIA DRIVERS install FAILED! --------------"
-            tput sgr0
+            else
+                sudo yum install -y  https://dl.fedoraproject.org/pub/epel/epel-release-latest-$(rpm -E '%{rhel}').noarch.rpm  1> /dev/null && \
+                sudo yum -y update 1> /dev/null && \
+                sudo yum group install -y "Development Tools" 1> /dev/null && \
+                sudo yum -y install epel-release && \
+                sudo yum install -y kernel-devel-$(uname -r) kernel-headers-$(uname -r) epel-release dkms 1> /dev/null && \
+                sudo yum -y install dkms && \
+                if [[ "$distribution"  = "rhel8"* ]]; then 
+                    sudo dnf config-manager --add-repo http://developer.download.nvidia.com/compute/cuda/repos/rhel8/${ARCH}/cuda-rhel8.repo
+                    sudo dnf clean all
+                    sudo dnf -y module install nvidia-driver:latest-dkms
+                    # sudo dnf -y install cuda -y
+                    
+                elif [[ "$distribution"  = "rhel7"* ]] || [[ "$distribution"  = "centos7"* ]] || [[ "$distribution"  = "amzn"* ]]; then 
+                    sudo yum-config-manager --add-repo http://developer.download.nvidia.com/compute/cuda/repos/rhel7/${ARCH}/cuda-rhel7.repo
+                    sudo yum sudo yum clean expire-cache
+                    sudo yum install -y nvidia-driver-latest-dkms
+                    # sudo yum install cuda -y
+                else
+                    sudo yum install -y kmod-nvidia.x86_64 nvidia-x11-drv.x86_64 nvidia-detect.x86_64
+                fi  && \
+                echo -e "\e[32m**************NVIDIA DRIVERS install SUCCESS! **************" || echo -e "\e[31m--------------NVIDIA DRIVERS install FAILED! --------------"
+                tput sgr0
+            fi
 
     else
             echo  "Local OS is not supported. Please install latest version of Docker, NVIDIA DRIVERS v430 and Docker plugin davfs"
@@ -247,9 +259,14 @@ test_nvidia_docker() {
 
 
 install_nvidia_docker() {
-    # `whereis nvidia-container-toolkit > /dev/null 2>&1` || 
     if  `which nvidia-container-runtime > /dev/null 2>&1`; then
           echo -e "\e[32m**************NVIDIA Container runtime is present. **************"
+          tput sgr0
+          return
+    fi
+
+    if  ! `which nvidia-smi > /dev/null 2>&1`; then
+          echo -e "\e[32m**************NVIDIA DRIVERS are not present. Please reboot your machine. **************" 
           tput sgr0
           return
     fi
