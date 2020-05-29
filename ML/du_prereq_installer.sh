@@ -38,7 +38,7 @@ while getopts "$optspec" optchar; do
                 change-mount)
                     CHANGE_ROOT_PATH="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
                     ;;
-                azure)
+                cloud)
                     CLOUD="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
                     ;;
                 *)
