@@ -17,10 +17,10 @@ tput sgr0
 usage() {
     cat <<EOF
 usage: $0 options
-Examples: $0 --env training
+Examples: $0 --env gpu
 OPTIONS:
-   --env                AIFabric Lite environment: training or serving.
-   --azure              Toggle whether installing in Azure VM (For CentOS 7.0+ and RedHat 7.0+)
+   --env                AIFabric Lite environment: gpu or cpu.
+   --cloud              Configure which cloud provider you are using: azure
    --change-mount       Configuring root directory of persistent Docker state.Enter an empty root directory path (ex. /home/user/).
    --h                  Show this help
 EOF
@@ -39,7 +39,7 @@ while getopts "$optspec" optchar; do
                     CHANGE_ROOT_PATH="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
                     ;;
                 azure)
-                    AZURE=true
+                    CLOUD="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
                     ;;
                 *)
                     if [ "$OPTERR" = 1 ] && [ "${optspec:0:1}" != ":" ]; then
@@ -140,7 +140,7 @@ install_nvidia_driver() {
             # if nvidia-smi doesn't work, erase nvidia & cuda
             sudo yum erase nvidia cuda
 
-            if [[ "$AZURE" = true ]]; then
+            if [[ "$CLOUD" = "azure" ]]; then
                 sudo yum -y update
                 sudo yum group install -y "Development Tools"
                 sudo yum install -y kernel-devel epel-release dkms
@@ -379,11 +379,11 @@ EOF
 
 Main() {
 
-    if [[ "$AIF_ENV" == "serving" ]]; then
+    if [[ "$AIF_ENV" == "cpu" ]]; then
         base_prereqs
         install_docker
         install_docker_davfs
-    elif [[ "$AIF_ENV" == "training" ]]; then
+    elif [[ "$AIF_ENV" == "gpu" ]]; then
         base_prereqs
         checking_nvidia_gpu
         install_nvidia_driver
