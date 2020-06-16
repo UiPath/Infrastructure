@@ -6,50 +6,50 @@
       Install UiPath Orchestrator and configure web.config based on a passphrase.
 
     .PARAMETER orchestratorVersion
-      String. Allowed versions: FTS 19.x and LTS 18.4.x . Version of the Orchestrator which will be installed. Example: $orchestratorVersion = "19.4.3"
- 
+      String. Allowed versions: FTS 20.4.1 and FTS 19.10.5 Version of the Orchestrator which will be installed. Example: $orchestratorVersion = "19.4.3"
+
     .PARAMETER orchestratorFolder
       String. Path where Orchestrator will be installed. Example: $orchestratorFolder = "C:\Program Files\UiPath\Orchestrator"
- 
+
     .PARAMETER orchestratorHostname
       String. Orchestrator server name, public or private DNS of the server can also be used. Example: $orchestratorHostname = "serverName"
- 
+
     .PARAMETER databaseServerName
       String. Mandatory. SQL server name. Example: $databaseServerName = "SQLServerName.local"
- 
+
     .PARAMETER databaseName
       String. Mandatory. Database Name. Example: $databaseName = "devtestdb"
- 
+
     .PARAMETER databaseUserName
       String. Mandatory. Database Username. Example: $databaseUserName = "devtestdbuser"
- 
+
     .PARAMETER databaseUserPassword
       String. Mandatory. Database Password  Example: $databaseUserPassword = "d3vt3std@taB@s3!"
 
     .PARAMETER passphrase
       String. Mandatory. Passphrase is used to generate same AppEncryption key, Nuget API keys, Machine Validation and Decryption keys.  Example: $passphrase = "AnyPassPhrase!@#$"
- 
+
     .PARAMETER redisServerHost
       String. There is no need to use Redis if there is only one Orchestrator instance. Redis is mandatory in multi-node deployment.  Example: $redisServerHost = "redishostDNS"
- 
+
     .PARAMETER nuGetStoragePath
       String. Mandatory. Storage Path where the Nuget Packages are saved. Also you can use NFS or SMB share.  Example: $nuGetStoragePath = "\\nfs-share\NugetPackages"
 
     .PARAMETER orchestratorAdminPassword
       String. Mandatory. Orchestrator Admin password is necessary for a new installation and to change the Nuget API keys. Example: $orchestratorAdminPassword = "P@ssW05D!"
- 
+
     .PARAMETER orchestratorAdminUsername
       String. Orchestrator Admin username in order to change the Nuget API Keys.  Example: $orchestratorAdminUsername = "admin"
- 
+
     .PARAMETER orchestratorTennant
       String. Orchestrator Tennant in order to change the Nuget API Key.  Example: $orchestratorTennant = "Default"
- 
+
     .INPUTS
       Parameters above.
 
     .OUTPUTS
       None
-    
+
     .Example
       powershell.exe -ExecutionPolicy Bypass -File "\\fileLocation\Install-UiPathOrchestrator.ps1" -OrchestratorVersion "19.4.3" -orchestratorFolder "C:\Program Files\UiPath\Orchestrator" -passphrase "AnyPassPhrase!@#$" -databaseServerName  "SQLServerName.local"  -databaseName "devtestdb"  -databaseUserName "devtestdbuser" -databaseUserPassword "d3vt3std@taB@s3!" -orchestratorAdminPassword "P@ssW05D!" -redisServerHost "redishostDNS" -NuGetStoragePath "\\nfs-share\NugetPackages"
 #>
@@ -58,11 +58,11 @@
 param(
 
     [Parameter()]
-    [ValidateSet('19.10.15','19.4.4', '19.4.3', '19.4.2', '18.4.6', '18.4.5', '18.4.4', '18.4.3', '18.4.2', '18.4.1')]
-    [string] $orchestratorVersion = "19.10.15",
+    [ValidateSet('20.4.1','19.10.19','19.10.15','19.4.4', '19.4.3', '19.4.2', '18.4.6', '18.4.5', '18.4.4', '18.4.3', '18.4.2', '18.4.1')]
+    [string] $orchestratorVersion = "20.4.1",
 
     [Parameter()]
-    [string] $orchestratorFolder = "${env:ProgramFiles(x86)}\Uipath\Orchestrator",
+    [string] $orchestratorFolder = "${env:ProgramFiles(x86)}\UiPath\Orchestrator",
 
     [Parameter(Mandatory = $true)]
     [string]  $passphrase,
@@ -131,6 +131,8 @@ $sLogName = "Install-Orchestrator.ps1.log"
 $sLogFile = Join-Path -Path $sLogPath -ChildPath $sLogName
 
 function Main {
+	#Define TLS for Invoke-WebRequest
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12	 
     try {
         Start-Transcript -Path "$sLogPath\Install-UipathOrchestrator-Transcript.ps1.txt" -Append
 
@@ -142,6 +144,7 @@ function Main {
         $source += "https://download.uipath.com/versions/$orchestratorVersion/UiPathOrchestrator.msi"
         $source += "https://download.microsoft.com/download/C/9/E/C9E8180D-4E51-40A6-A9BF-776990D8BCA9/rewrite_amd64.msi"
         $source += "https://download.microsoft.com/download/6/E/4/6E48E8AB-DC00-419E-9704-06DD46E5F81D/NDP472-KB4054530-x86-x64-AllOS-ENU.exe"
+        $source += "https://download.visualstudio.microsoft.com/download/pr/ff658e5a-c017-4a63-9ffe-e53865963848/15875eef1f0b8e25974846e4a4518135/dotnet-hosting-3.1.3-win.exe"
         $tries = 5
         while ($tries -ge 1) {
             try {
@@ -184,7 +187,10 @@ function Main {
         'IIS-HttpErrors',
         'IIS-StaticContent',
         'IIS-RequestFiltering',
+        'IIS-CertProvider',
+        'IIS-IPSecurity',
         'IIS-URLAuthorization',
+        'IIS-ApplicationInit',
         'IIS-WindowsAuthentication',
         'IIS-NetFxExtensibility45',
         'IIS-ASPNET45',
@@ -195,19 +201,21 @@ function Main {
         'IIS-ManagementScriptingTools',
         'ClientForNFS-Infrastructure'
     )
-    Install-UiPathOrchestratorFeatures -features $features
+    try {
+    
+      Install-UiPathOrchestratorFeatures -features $features
 
-    $checkFeature = Get-WindowsFeature "IIS-DirectoryBrowsing"
-    if ( $checkFeature.Installed -eq $true) {
-        Disable-WindowsOptionalFeature -FeatureName IIS-DirectoryBrowsing -Remove -NoRestart -Online
-        Log-Write -LogPath $sLogPath -LineValue "Feature IIS-DirectoryBrowsing is removed" 
+    }
+    catch {
+        Write-Error $_.exception.message
+        Log-Error -LogPath $sLogFile -ErrorDesc "$($_.exception.message) installing $feature" -ExitGracefully $True
     }
 
     #install URLrewrite
     Install-UrlRewrite -urlRWpath "$tempDirectory\rewrite_amd64.msi"
 
     # install .Net 4.7.2
-    & "$tempDirectory\NDP472-KB4054530-x86-x64-AllOS-ENU.exe" /q /norestart
+    Install-DotNetFramework -dotNetFrameworkPath "$tempDirectory\NDP472-KB4054530-x86-x64-AllOS-ENU.exe"
 
     # ((Invoke-WebRequest -Uri http://169.254.169.254/latest/meta-data/public-hostname -UseBasicParsing).RawContent -split "`n")[-1]
 
@@ -224,13 +232,30 @@ function Main {
     $getEncryptionKey = Generate-Key -passphrase $passphrase
 
     $msiFeatures = @("OrchestratorFeature")
+
+    if ($orchestratorVersion.StartsWith("2")) {
+
+        $msiFeatures += @("IdentityFeature")
+        
+        try {
+          
+          Install-DotNetHostingBundle -DotNetHostingBundlePath "$tempDirectory\dotnet-hosting-3.1.3-win.exe"
+          
+        }
+        catch {
+          Write-Error $_.exception.message
+          Log-Error -LogPath $sLogFile -ErrorDesc "$($_.exception.message) installing Dotnet hosting" -ExitGracefully $True
+      }
+
+    }
+
     $msiProperties = @{ }
     $msiProperties += @{
         "ORCHESTRATORFOLDER"          = "`"$($orchestratorFolder)`"";
         "DB_SERVER_NAME"              = "$($databaseServerName)";
         "DB_DATABASE_NAME"            = "$($databaseName)";
-        "HOSTADMIN_PASSWORD"          = "$($orchestratorAdminPassword)";
-        "DEFAULTTENANTADMIN_PASSWORD" = "$($orchestratorAdminPassword)";
+		    "HOSTADMIN_PASSWORD"          = "$($orchestratorAdminPassword)";
+        "DEFAULTTENANTADMIN_PASSWORD" = "$($orchestratorAdminPassword)";										
         "APP_ENCRYPTION_KEY"          = "$($getEncryptionKey.encryptionKey)";
         "APP_NUGET_ACTIVITIES_KEY"    = "$($getEncryptionKey.nugetKey)";
         "APP_NUGET_PACKAGES_KEY"      = "$($getEncryptionKey.nugetKey)";
@@ -238,6 +263,7 @@ function Main {
         "APP_MACHINE_VALIDATION_KEY"  = "$($getEncryptionKey.Validationkey)";
         "TELEMETRY_ENABLED"           = "0";
     }
+
     if ($appPoolIdentityType -eq "USER") {
 
         $msiProperties += @{
@@ -305,7 +331,7 @@ function Main {
 
      #set storage path
     if ($nuGetStoragePath) {
-       
+
         if ($orchestratorVersion -lt "19.4.1") {
 
             $LBkey = @("NuGet.Packages.Path", "NuGet.Activities.Path" )
@@ -372,14 +398,14 @@ function Main {
     if ($orchestratorLicenseCode) {
 
         Try {
-      
+
             #Check if Orchestrator is already licensed
             $getLicenseURL = "localhost/odata/Settings/UiPath.Server.Configuration.OData.GetLicense()"
             $getOrchestratorLicense = Invoke-RestMethod -Uri $getLicenseURL -Method GET -ContentType "application/json" -UseBasicParsing -WebSession $websession
 
             if ( $getOrchestratorLicense.IsExpired -eq $true) {
                 # Create boundary
-                $boundary = [System.Guid]::NewGuid().ToString()	
+                $boundary = [System.Guid]::NewGuid().ToString()
 
                 # Create linefeed characters
                 $LF = "`r`n"
@@ -403,7 +429,7 @@ function Main {
         Catch {
             Log-Error -LogPath $sLogFile -ErrorDesc "The following error occurred: $($_.exception.message)" -ExitGracefully $False
         }
-      
+
     }
 
 }
@@ -425,7 +451,7 @@ function Invoke-MSIExec {
     param (
         [Parameter(Mandatory = $true)]
         [string] $msiPath,
-      
+
         [Parameter(Mandatory = $true)]
         [string] $logPath,
 
@@ -505,7 +531,7 @@ function Install-UiPathOrchestratorEnterprise {
     $process = Invoke-MSIExec -msiPath $msiPath -logPath $logPath -features $msiFeatures -properties $msiProperties
 
     Log-Write -LogPath $sLogFile -LineValue "Installing Features $($msiFeatures)"
- 
+
 
     return @{
         LogPath        = $logPath;
@@ -525,12 +551,12 @@ function Install-UiPathOrchestratorEnterprise {
 
     .OUTPUTS
       None
-    
+
     .Example
       Install-UrlRewrite -urlRWpath "C:\temp\rewrite_amd64.msi"
 #>
 function Install-UrlRewrite {
-  
+
     param(
 
         [Parameter(Mandatory = $true)]
@@ -567,6 +593,92 @@ function Install-UrlRewrite {
 
 <#
     .SYNOPSIS
+      Install .Net Framework 4.7.2 necessary for UiPath Orchestrator.
+
+    .PARAMETER dotNetFrameworkPath
+      Mandatory. String. Path to URL Rewrite package. Example: $dotNetFrameworkPath = "C:\temp\NDP472-KB4054530-x86-x64-AllOS-ENU.exe"
+
+    .INPUTS
+      Parameters above.
+
+    .OUTPUTS
+      None
+
+    .Example
+      Install-DotNetFramework -dotNetFrameworkPath "C:\temp\NDP472-KB4054530-x86-x64-AllOS-ENU.exe"
+#>
+function Install-DotNetFramework {
+
+  param(
+
+      [Parameter(Mandatory = $true)]
+      [string]
+      $dotNetFrameworkPath
+
+  )
+
+    $installer = $dotNetFrameworkPath
+
+  $exitCode = 0
+  $argumentList = "/q /norestart"
+
+  Log-Write -LogPath $sLogFile -LineValue  "Installing .Net Framework 4.7.2"
+
+  $exitCode = (Start-Process -FilePath $installer -ArgumentList $argumentList -Verb RunAs -Wait).ExitCode
+
+  if ($exitCode -ne 0) {
+      Log-Error -LogPath $sLogFile -ErrorDesc "Failed to install .Net Framework  4.7.2(Exit code: $exitCode)" -ExitGracefully $False
+  }
+  else {
+      Log-Write -LogPath $sLogFile -LineValue  ".Net Framework 4.7.2 successfully installed"
+  }
+}
+
+<#
+    .SYNOPSIS
+      Install ASP.NET Core Hosting Bundle necessary for UiPath Orchestrator.
+
+    .PARAMETER DotNetHostingBundlePath
+      Mandatory. String. Path to URL Rewrite package. Example: $DotNetHostingBundlePath = "C:\temp\dotnet-hosting-3.1.3-win.exe"
+
+    .INPUTS
+      Parameters above.
+
+    .OUTPUTS
+      None
+
+    .Example
+      Install-DotNetHostingBundle -DotNetHostingBundlePath "C:\temp\dotnet-hosting-3.1.3-win.exe"
+#>
+function Install-DotNetHostingBundle {
+
+  param(
+
+      [Parameter(Mandatory = $true)]
+      [string]
+      $DotNetHostingBundlePath
+
+  )
+
+    $installer = $DotNetHostingBundlePath
+
+  $exitCode = 0
+  $argumentList = "OPT_NO_SHARED_CONFIG_CHECK=1 /q /norestart"
+
+  Log-Write -LogPath $sLogFile -LineValue  "Installing ASP.NET Core Hosting Bundle"
+
+  $exitCode = (Start-Process -FilePath $installer -ArgumentList $argumentList -Verb RunAs -Wait).ExitCode
+
+  if ($exitCode -ne 0) {
+      Log-Error -LogPath $sLogFile -ErrorDesc "Failed to install ASP.NET Core Hosting Bundle(Exit code: $exitCode)" -ExitGracefully $False
+  }
+  else {
+      Log-Write -LogPath $sLogFile -LineValue  "ASP.NET Core Hosting Bundle successfully installed"
+  }
+}
+
+<#
+    .SYNOPSIS
       Generate web.config keys.
 
     .Description
@@ -580,7 +692,7 @@ function Install-UrlRewrite {
 
     .OUTPUTS
       Encyption key, Nuget API key, Machine Validation and Decryption keys.
-    
+
     .Example
       Generate-Key -passphrase "YourP@ssphr4s3!"
 #>
@@ -591,7 +703,7 @@ function Generate-Key {
         [Parameter(Mandatory = $true)]
         [string]
         $passphrase
-    
+
     )
     function KeyGenFromBuffer([int] $KeyLength, [byte[]] $Buffer) {
 
@@ -660,7 +772,7 @@ function Generate-Key {
 
     .OUTPUTS
       None
-    
+
     .Example
       SetMachineKey -webconfigPath "C:\UiPathOrchestrator\web.config" -validationKey "ValidationKey 128 bytes" -decryptionKey "DecryptionKey 64 bytes" -validation "SHA1" -decryption "AES"
 
@@ -710,7 +822,7 @@ function SetMachineKey {
         $system_web.SelectSingleNode("machineKey").SetAttribute("decryption", "$decryption")
         $a = $xml.Save($machineConfig)
     }
-    else { 
+    else {
         Write-Error -Message "Error: Webconfig does not exist in '$webconfigPath'"
         Log-Error -LogPath $sLogFile -ErrorDesc "Error: Webconfig does not exist '$webconfigPath'" -ExitGracefully $True
     }
@@ -737,7 +849,7 @@ function SetMachineKey {
 
     .OUTPUTS
       None
-    
+
     .Example
       Set-AppSettings -path "C:\UiPathOrchestrator" -key "NuGet.Packages.Path" -value "\\localhost\NugetPackagesFolder"
 #>
@@ -817,7 +929,7 @@ function Set-AppSettings {
 
     .OUTPUTS
       None
-    
+
     .Example
       TestOrchestratorConnection -orchestratorURL "https://$orchestratorHostname"
 #>
@@ -862,7 +974,7 @@ function TestOrchestratorConnection {
 
     .OUTPUTS
       None
-    
+
     .Example
       Install-UiPathOrchestratorFeatures -features  @('IIS-DefaultDocument','WCF-TCP-PortSharing45','ClientForNFS-Infrastructure')
 #>
@@ -877,11 +989,17 @@ function Install-UiPathOrchestratorFeatures {
     foreach ($feature in $features) {
 
         try {
-            Log-Write -LogPath $sLogFile -LineValue "Installing feature $feature"
-            Enable-WindowsOptionalFeature -Online -FeatureName $feature -all -NoRestart
+            $state = (Get-WindowsOptionalFeature -FeatureName $feature -Online).State
+            Log-Write -LogPath $sLogFile -LineValue "Checking for feature $feature Enabled/Disabled => $state"
+            Write-Host "Checking for feature $feature Enabled/Disabled => $state"
+			if ($state -ne 'Enabled') {
+				Log-Write -LogPath $sLogFile -LineValue "Installing feature $feature"
+				Write-Host "Installing feature $feature"
+				Enable-WindowsOptionalFeature -Online -FeatureName $feature -all -NoRestart
+			}
         }
         catch {
-            Log-Error -LogPath $sLogFile -ErrorDesc "$($_.exception.message) on installing $($feature)" -ExitGracefully $True
+            Log-Error -LogPath $sLogFile -ErrorDesc "$($_.exception.message) installing $($feature)" -ExitGracefully $True
         }
 
     }
@@ -1146,3 +1264,5 @@ function Log-Finish {
 Log-Start -LogPath $sLogPath -LogName $sLogName -ScriptVersion $sScriptVersion
 Main
 Log-Finish -LogPath $sLogFile
+
+#.\install-orchestrator.ps1 -OrchestratorVersion "19.4.3" -passphrase "AnyPassPhrase!@#$" -databaseServerName  "robot2orchsql-2bftlnpvxvywa.database.windows.net"  -databaseName "oracledb"  -databaseUserName "sqladmin" -databaseUserPassword "1qazXSW@3edc" -orchestratorAdminPassword "P@ssW05D!"
