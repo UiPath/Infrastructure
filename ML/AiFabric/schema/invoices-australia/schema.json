@@ -1,0 +1,208 @@
+{
+   "extraction": [
+      {
+         "name": "name",
+         "type": "string"
+      },
+      {
+         "name": "vendor-addr",
+         "type": "string",
+         "multi_line": true
+      },
+      {
+         "name": "billing-name",
+         "type": "string"
+      },
+      {
+         "name": "billing-addr",
+         "type": "string",
+         "multi_line": true
+      },
+      {
+         "name": "shipping-addr",
+         "type": "string",
+         "multi_line": true
+      },
+      {
+         "name": "invoice-no",
+         "type": "id-no"
+      },
+      {
+         "name": "po-no",
+         "type": "id-no"
+      },
+      {
+         "name": "vendor-vat-no",
+         "type": "id-no"
+      },
+      {
+         "name": "date",
+         "type": "date"
+      },
+      {
+         "name": "tax",
+         "type": "number"
+      },
+      {
+         "name": "total",
+         "type": "number",
+         "multi_line": true
+      },
+      {
+         "name": "payment-terms",
+         "type": "string",
+         "multi_line": true
+      },
+      {
+         "name": "net-amount",
+         "type": "number"
+      },
+      {
+         "name": "due-date",
+         "type": "date"
+      },
+      {
+         "name": "discount",
+         "type": "number"
+      },
+      {
+         "name": "shipping-charges",
+         "type": "number"
+      },
+      {
+         "name": "payment-addr",
+         "type": "string",
+         "multi_line": true
+      },
+      {
+         "name": "description",
+         "type": "string",
+         "section": "items"
+      },
+      {
+         "name": "quantity",
+         "type": "number",
+         "section": "items",
+         "split_items": true
+      },
+      {
+         "name": "unit-price",
+         "type": "number",
+         "section": "items",
+         "split_items": true
+      },
+      {
+         "name": "line-amount",
+         "type": "number",
+         "section": "items",
+         "split_items": true
+      },
+      {
+         "name": "item-po-no",
+         "type": "id-no",
+         "section": "items"
+      },
+      {
+         "name": "line-no",
+         "type": "id-no",
+         "section": "items"
+      },
+      {
+         "name": "part-no",
+         "type": "id-no",
+         "section": "items"
+      },
+      {
+         "name": "abn",
+         "type": "string"
+      },
+      {
+         "name": "bsb",
+         "type": "string"
+      },
+      {
+         "name": "account-name",
+         "type": "string"
+      },
+      {
+         "name": "account-number",
+         "type": "string"
+      }
+   ],
+   "classification": {
+      "currency": [
+         {
+            "name": "USD",
+            "description": "United States"
+         },
+         {
+            "name": "EUR",
+            "description": "Europe"
+         },
+         {
+            "name": "RON",
+            "description": "Romania"
+         },
+         {
+            "name": "GBP",
+            "description": "UK"
+         },
+         {
+            "name": "INR",
+            "description": "India"
+         },
+         {
+            "name": "CAD",
+            "description": "Canada"
+         },
+         {
+            "name": "AUD",
+            "description": "Australia"
+         },
+         {
+            "name": "MYR",
+            "description": "Malaysia"
+         },
+         {
+            "name": "BRL",
+            "description": "Brazil"
+         },
+         {
+            "name": "JPY",
+            "description": "Japan"
+         },
+         {
+            "name": "SGD",
+            "description": "Singapore"
+         },
+         {
+            "name": "HNL",
+            "description": "Honduras"
+         },
+         {
+            "name": "NIO",
+            "description": "Nicaragua"
+         },
+         {
+            "name": "AED",
+            "description": "United Arab Emirates"
+         },
+         {
+            "name": "HKD",
+            "description": "Hong Kong"
+         },
+         {
+            "name": "CHF",
+            "description": "Switzerland"
+         },
+         {
+            "name": "DZD",
+            "description": "Algeria"
+         },
+         {
+            "name": "SEK",
+            "description": "Sweden"
+         }
+      ]
+   }
+}
