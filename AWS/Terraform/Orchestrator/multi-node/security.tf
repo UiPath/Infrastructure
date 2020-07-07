@@ -128,7 +128,6 @@ resource "aws_security_group" "uipath_stack" {
     cidr_blocks = ["${var.cidr_block}", "${var.security_cidr_block}"]
   }
 
-
   egress {
     from_port   = 1433
     to_port     = 1433

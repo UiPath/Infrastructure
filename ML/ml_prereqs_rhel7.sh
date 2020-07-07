@@ -27,7 +27,7 @@ yum install -y  yum-utils dkms 1> /dev/null && \
 echo -e "\e[32m************** RHEL DKMS install SUCCESS! **************" || echo -e "\e[31m-------------- RHEL DKMS install FAILED! --------------"
 tput sgr0
 
-wget http://mirror.centos.org/centos/7/os/x86_64/Packages/${VULKAN_FS_REPO_PKG}  -O /tmp/${VULKAN_FS_REPO_PKG} 1> /dev/null
+wget ftp://ftp.pbone.net/mirror/ftp.scientificlinux.org/linux/scientific/7.0/x86_64/updates/security/${VULKAN_FS_REPO_PKG}  -O /tmp/${VULKAN_FS_REPO_PKG} 1> /dev/null
 wget https://developer.download.nvidia.com/compute/machine-learning/repos/rhel7/x86_64/${CUDNN_REPO_PKG}  -O /tmp/${CUDNN_REPO_PKG}  1> /dev/null
 
 sudo rpm -ivh /tmp/${VULKAN_FS_REPO_PKG} 1> /dev/null && \

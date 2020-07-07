@@ -6,3 +6,6 @@ Azure/Orchestrator/PaaS/delete/SingleNode/azuredeploy.json
 Azure/Orchestrator/PaaS/delete/SingleNode/README.md
 Redis/Redis for windows/.DS_Store
 .DS_Store
+.history
+Redis-removed/
+ML/du_prereq.sh

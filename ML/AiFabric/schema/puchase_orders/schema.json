@@ -1,0 +1,212 @@
+{
+   "extraction": [
+      {
+         "name": "po-number",
+         "type": "string"
+      },
+      {
+         "name": "date",
+         "type": "date"
+      },
+      {
+         "name": "client-name",
+         "type": "string"
+      },
+      {
+         "name": "client-address",
+         "type": "string",
+         "multi_line": true
+      },
+      {
+         "name": "vendor-name",
+         "type": "string"
+      },
+      {
+         "name": "vendor-address",
+         "type": "string",
+         "multi_line": true
+      },
+      {
+         "name": "shipping-name",
+         "type": "string"
+      },
+      {
+         "name": "shipping-address",
+         "type": "string",
+         "multi_line": true
+      },
+      {
+         "name": "billing-name",
+         "type": "string"
+      },
+      {
+         "name": "billing-address",
+         "type": "string",
+         "multi_line": true
+      },
+      {
+         "name": "payment-terms",
+         "type": "string",
+         "multi_line": true
+      },
+      {
+         "name": "delivery-by-date",
+         "type": "date"
+      },
+      {
+         "name": "discount",
+         "type": "number"
+      },
+      {
+         "name": "net-amount",
+         "type": "number"
+      },
+      {
+         "name": "tax-amount",
+         "type": "number"
+      },
+      {
+         "name": "tax-rate",
+         "type": "number"
+      },
+      {
+         "name": "total-amount",
+         "type": "number",
+         "post_processing": "largest_value"
+      },
+      {
+         "name": "line-number",
+         "type": "number",
+         "section": "items"
+      },
+      {
+         "name": "description",
+         "type": "string",
+         "section": "items"
+      },
+      {
+         "name": "product-code",
+         "type": "string",
+         "section": "items"
+      },
+      {
+         "name": "delivery-date",
+         "type": "date",
+         "section": "items"
+      },
+      {
+         "name": "unit-measure",
+         "type": "string",
+         "section": "items"
+      },
+      {
+         "name": "unit-price",
+         "type": "string",
+         "section": "items",
+         "split_items": true
+      },
+      {
+         "name": "quantity",
+         "type": "number",
+         "section": "items",
+         "split_items": true
+      },
+      {
+         "name": "line-net-amount",
+         "type": "number",
+         "section": "items"
+      },
+      {
+         "name": "line-tax-rate",
+         "type": "number",
+         "section": "items"
+      },
+      {
+         "name": "line-tax-amount",
+         "type": "number",
+         "section": "items"
+      },
+      {
+         "name": "line-amount",
+         "type": "number",
+         "section": "items",
+         "split_items": true
+      }
+   ],
+   "classification": {
+      "currency": [
+         {
+            "name": "USD",
+            "description": "United States"
+         },
+         {
+            "name": "EUR",
+            "description": "Europe"
+         },
+         {
+            "name": "RON",
+            "description": "Romania"
+         },
+         {
+            "name": "GBP",
+            "description": "UK"
+         },
+         {
+            "name": "INR",
+            "description": "India"
+         },
+         {
+            "name": "CAD",
+            "description": "Canada"
+         },
+         {
+            "name": "AUD",
+            "description": "Australia"
+         },
+         {
+            "name": "MYR",
+            "description": "Malaysia"
+         },
+         {
+            "name": "BRL",
+            "description": "Brazil"
+         },
+         {
+            "name": "JPY",
+            "description": "Japan"
+         },
+         {
+            "name": "SGD",
+            "description": "Singapore"
+         },
+         {
+            "name": "HNL",
+            "description": "Honduras"
+         },
+         {
+            "name": "NIO",
+            "description": "Nicaragua"
+         },
+         {
+            "name": "AED",
+            "description": "United Arab Emirates"
+         },
+         {
+            "name": "HKD",
+            "description": "Hong Kong"
+         },
+         {
+            "name": "CHF",
+            "description": "Switzerland"
+         },
+         {
+            "name": "DZD",
+            "description": "Algeria"
+         },
+         {
+            "name": "SEK",
+            "description": "Sweden"
+         }
+      ]
+   }
+}

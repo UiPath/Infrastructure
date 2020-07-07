@@ -86,7 +86,7 @@ resource "aws_vpc_dhcp_options" "dns_resolver" {
 resource "aws_route_table" "public" {
   vpc_id = "${aws_vpc.uipath.id}"
   route {
-    cidr_block = "0.0.0.0/0"
+    cidr_block = "${var.security_cidr_block}"
     gateway_id = "${aws_internet_gateway.main.id}"
   }
     tags = {
@@ -113,7 +113,7 @@ resource "aws_route_table" "private" {
 resource "aws_route" "private_route" {
   count                  = "${length(local.aws_region)}"
   route_table_id         = "${element(aws_route_table.private.*.id, count.index)}"
-  destination_cidr_block = "0.0.0.0/0"
+  destination_cidr_block = "${var.security_cidr_block}"
   nat_gateway_id         = "${element(aws_nat_gateway.main.*.id, count.index)}"
 }
 

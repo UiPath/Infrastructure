@@ -64,11 +64,6 @@ variable "db_name" {
   default     = "awstest"
 }
 
-// Environment name, used as prefix to name resources.
-variable "environment" {
-  default = "dev"
-}
-
 // The allocated storage in gigabytes.
 variable "rds_allocated_storage" {
   default = "100"
@@ -96,102 +91,103 @@ variable "skip_final_snapshot" {
 //  Availability zones for each region
 variable "aws_availability_zones" {
   default = {
-    //  N. Virginia
+    #  N. Virginia
     us-east-1 = [
-      "eu-east-1a",
-      "eu-east-1b",
-      "eu-east-1c",
-      "eu-east-1d",
-      "eu-east-1e",
-      "eu-east-1f",
+      "us-east-1a",
+      "us-east-1b",
+      "us-east-1c",
+      "us-east-1d",
+      "us-east-1e",
+      "us-east-1f"
     ]
-    //  Ohio
+    #  Ohio
     us-east-2 = [
-      "eu-east-2a",
-      "eu-east-2b",
-      "eu-east-2c",
+      "us-east-2a",
+      "us-east-2b",
+      "us-east-2c",
     ]
-    //  N. California
+    #  N. California
     us-west-1 = [
       "us-west-1a",
-      "us-west-1b",
       "us-west-1c",
     ]
-    //  Oregon
+    #  Oregon
     us-west-2 = [
       "us-west-2a",
       "us-west-2b",
       "us-west-2c",
+      "us-west-2d",
     ]
-    //  Mumbai
+    #  Mumbai
     ap-south-1 = [
       "ap-south-1a",
       "ap-south-1b",
+      "ap-south-1c",
     ]
-    //  Seoul
+    #  Seoul
     ap-northeast-2 = [
       "ap-northeast-2a",
       "ap-northeast-2b",
     ]
-    //  Singapore
+    #  Singapore
     ap-southeast-1 = [
       "ap-southeast-1a",
       "ap-southeast-1b",
       "ap-southeast-1c",
     ]
-    //  Sydney
+    #  Sydney
     ap-southeast-2 = [
       "ap-southeast-2a",
       "ap-southeast-2b",
       "ap-southeast-2c",
     ]
-    //  Tokyo (4)
+    #  Tokyo (4)
     ap-northeast-1 = [
       "ap-northeast-1a",
       "ap-northeast-1b",
       "ap-northeast-1c",
     ]
-    //  Osaka-Local (1)
-    //  Central
+    #  Osaka-Local (1)
+    #  Central
     ca-central-1 = [
       "ca-central-1a",
       "ca-central-1b",
     ]
-    //  Frankfurt (3)
+    #  Beijing (2)
+    #  Ningxia (2)
+
+    #  Frankfurt (3)
     eu-central-1 = [
       "eu-central-1a",
       "eu-central-1b",
       "eu-central-1c",
     ]
-    //  Ireland (3)
+    #  Ireland (3)
     eu-west-1 = [
       "eu-west-1a",
       "eu-west-1b",
       "eu-west-1c",
     ]
-    //  London (3)
+    #  London (3)
     eu-west-2 = [
       "eu-west-2a",
       "eu-west-2b",
       "eu-west-2c",
     ]
-    //  Paris (3)
+    #  Paris (3)
     eu-west-3 = [
       "eu-west-3a",
       "eu-west-3b",
       "eu-west-3c",
     ]
-    //  São Paulo (3)
+    #  São Paulo (3)
     sa-east-1 = [
       "sa-east-1a",
       "sa-east-1b",
       "sa-east-1c",
     ]
+    #  AWS GovCloud (US-West) (2)
   }
-  //  Beijing (2)
-  //  Ningxia (2)
-
-  //  AWS GovCloud (US-West) (2)
 }
 
 ## UiPath Variables ##
@@ -213,7 +209,7 @@ variable "orchestrator_version" {
   # "18.4.3"
   # "18.4.2"
   # "18.4.1"
-  default = "19.4.4"
+  default = "19.10.15"
 }
 
 ## Set Initial Windows Administrator Password ##

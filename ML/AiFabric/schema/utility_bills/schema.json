@@ -1,0 +1,77 @@
+{
+   "extraction": [
+      {
+         "name": "billing-name",
+         "type": "string"
+      },
+      {
+         "name": "billing-address",
+         "type": "string",
+         "multi_line": true
+      },
+      {
+         "name": "vendor-name",
+         "type": "string"
+      },
+      {
+         "name": "vendor-address",
+         "type": "string",
+         "multi_line": true
+      },
+      {
+         "name": "account-number",
+         "type": "id-no"
+      },
+      {
+         "name": "invoice-number",
+         "type": "id-no"
+      },
+      {
+         "name": "total-amount",
+         "type": "number",
+         "multi_line": true
+      },
+      {
+         "name": "invoice-date",
+         "type": "date"
+      },
+      {
+         "name": "due-date",
+         "type": "date"
+      },
+      {
+         "name": "payment-address",
+         "type": "string",
+         "multi_line": true
+      },
+      {
+         "name": "service-from-date",
+         "type": "date"
+      },
+      {
+         "name": "service-to-date",
+         "type": "date"
+      },
+      {
+         "name": "payment-terms",
+         "type": "string",
+         "multi_line": true
+      },
+      {
+         "name": "previous-balance",
+         "type": "number"
+      }
+   ],
+   "classification": {
+      "document_type": [
+         {
+            "name": "invoice",
+            "description": "invoice"
+         },
+         {
+            "name": "statement",
+            "description": "statement"
+         }
+      ]
+   }
+}

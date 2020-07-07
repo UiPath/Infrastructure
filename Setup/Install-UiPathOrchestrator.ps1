@@ -6,8 +6,9 @@
       Install UiPath Orchestrator and configure web.config based on a passphrase.
 
     .PARAMETER orchestratorVersion
-      String. Allowed versions: FTS 20.4.1 and FTS 19.10.5 Version of the Orchestrator which will be installed. Example: $orchestratorVersion = "19.4.3"
 
+      String. Allowed versions: FTS 20.4.1 and FTS 19.10.5 Version of the Orchestrator which will be installed. Example: $orchestratorVersion = "19.4.3"
+     
     .PARAMETER orchestratorFolder
       String. Path where Orchestrator will be installed. Example: $orchestratorFolder = "C:\Program Files\UiPath\Orchestrator"
 
@@ -131,8 +132,10 @@ $sLogName = "Install-Orchestrator.ps1.log"
 $sLogFile = Join-Path -Path $sLogPath -ChildPath $sLogName
 
 function Main {
-	#Define TLS for Invoke-WebRequest
-    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12	 
+
+    #Define TLS for Invoke-WebRequest
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
     try {
         Start-Transcript -Path "$sLogPath\Install-UipathOrchestrator-Transcript.ps1.txt" -Append
 
@@ -201,6 +204,8 @@ function Main {
         'IIS-ManagementScriptingTools',
         'ClientForNFS-Infrastructure'
     )
+   
+
     try {
     
       Install-UiPathOrchestratorFeatures -features $features
@@ -210,6 +215,7 @@ function Main {
         Write-Error $_.exception.message
         Log-Error -LogPath $sLogFile -ErrorDesc "$($_.exception.message) installing $feature" -ExitGracefully $True
     }
+
 
     #install URLrewrite
     Install-UrlRewrite -urlRWpath "$tempDirectory\rewrite_amd64.msi"
@@ -1264,5 +1270,3 @@ function Log-Finish {
 Log-Start -LogPath $sLogPath -LogName $sLogName -ScriptVersion $sScriptVersion
 Main
 Log-Finish -LogPath $sLogFile
-
-#.\install-orchestrator.ps1 -OrchestratorVersion "19.4.3" -passphrase "AnyPassPhrase!@#$" -databaseServerName  "robot2orchsql-2bftlnpvxvywa.database.windows.net"  -databaseName "oracledb"  -databaseUserName "sqladmin" -databaseUserPassword "1qazXSW@3edc" -orchestratorAdminPassword "P@ssW05D!"

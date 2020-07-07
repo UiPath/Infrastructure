@@ -1,4 +1,18 @@
-# ML-prereqs
+# AIFabric Lite - prereqs
+## Installation steps
+Run :
+
+```curl -fsSL https://raw.githubusercontent.com/UiPath/Infrastructure/master/ML/du_prereq_installer.sh | sudo bash -s -- --env cpu ```  for Serving environment </br>
+or </br>
+```curl -fsSL https://raw.githubusercontent.com/UiPath/Infrastructure/master/ML/du_prereq_installer.sh | sudo bash -s -- --env gpu ``` for Training environment
+
+
+# Distros supported on cloud
+## Ubuntu 18.x <br>
+## RHEL 7.x<br>
+## CentOS 7.x<br>
+
+# ML - prereqs
 ## Installation steps
 Run :
 
