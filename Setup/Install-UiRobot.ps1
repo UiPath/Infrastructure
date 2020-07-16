@@ -139,7 +139,7 @@ function Main {
 
             if ($orchWebResponse.success) {
 
-                $bearer = $result.result
+                $bearer = $orchWebResponse.result
 
                 $headers.Add('Authorization', "Bearer $bearer")
 
@@ -282,7 +282,7 @@ function Main {
                 $dataRobotEnv = @{
                     robotId = "$($botWebResponse.Id)"
                 } | ConvertTo-Json
-                
+
                 $botToEnvironment = Invoke-RestMethod -Method Post -Uri $roEnvURL -Headers $headers -Body $dataRobotEnv -ContentType "application/json"
 
             }
