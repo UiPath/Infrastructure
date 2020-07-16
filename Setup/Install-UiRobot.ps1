@@ -120,21 +120,30 @@ function Main {
             #End of the Robot installation
 
         }
-
+        
 
         Try {
-
+            $headers = @{
+                'Accept' = 'application/json'
+            }
             $dataLogin = @{
                 tenancyName            = $Tennant
                 usernameOrEmailAddress = $orchAdmin
                 password               = $orchPassword
             } | ConvertTo-Json
 
-            $orchUrl_login = "$orchestratorUrl/account/login"
+            $orchUrl_login = "$orchestratorUrl/api/Account/Authenticate"
 
             # login API call to get the login session used for all requests
-            $orchWebResponse = Invoke-RestMethod -Uri $orchUrl_login -Method Post -Body $dataLogin -ContentType "application/json" -UseBasicParsing -Session websession
+            $orchWebResponse = Invoke-RestMethod -Method Post -Uri $orchUrl_login -Headers $headers -ContentType 'application/json' -Body $dataLogin
 
+            if ($orchWebResponse.success) {
+
+                $bearer = $result.result
+
+                $headers.Add('Authorization', "Bearer $bearer")
+
+            }
             # log log log
             if ($sDebug) {
                 Log-Write -LogPath $sLogFile -LineValue "Logging Orchestrator Web Response"
@@ -179,7 +188,8 @@ function Main {
             }
 
             $orch_bot = "$orchestratorUrl/odata/Robots"
-            $botWebResponse = Invoke-RestMethod -Uri $orch_bot -Method Post -Body $dataRobot -ContentType "application/json" -UseBasicParsing -WebSession $websession
+
+            $botWebResponse = Invoke-RestMethod -Method Post -Uri $orch_bot -Headers $headers  -Body $dataRobot -ContentType "application/json"
 
             #Log log log
             if ($sDebug) {
@@ -193,6 +203,7 @@ function Main {
         Catch {
 
             $addExceptionMsg = $_.Exception.Message
+            Log-Write -LogPath $sLogFile -LineValue "An error occured: $_"
             Log-Error -LogPath $sLogFile -ErrorDesc $botWebResponse -ExitGracefully $True
             Break
         }
@@ -216,14 +227,14 @@ function Main {
 
                 $orchMachines = "$orchestratorUrl/odata/Machines"
 
-                $getbotWebResponse = Invoke-RestMethod -Uri $orchMachines -Method GET -ContentType "application/json" -UseBasicParsing -WebSession $websession
+                $getbotWebResponse = Invoke-RestMethod -Method GET -Uri $orchMachines -Headers $headers -ContentType "application/json"
 
 
                 $existingRobot = $getbotWebResponse.value | Where-Object { $_.Name -eq $machineName } | Select-Object -ExpandProperty id
 
                 $getMachineLicense = "$orchestratorUrl/odata/Machines($existingRobot)"
 
-                $getMachineLicenseWebResponse = Invoke-RestMethod -Uri $getMachineLicense -Method GET -ContentType "application/json" -UseBasicParsing -WebSession $websession
+                $getMachineLicenseWebResponse = Invoke-RestMethod -Method GET -Uri $getMachineLicense -Headers $headers -ContentType "application/json"
 
 
                 $key = $getMachineLicenseWebResponse.LicenseKey
@@ -262,7 +273,7 @@ function Main {
             #add Robot to existing Envs
             $getOdataEnv = "$orchestratorUrl/odata/Environments"
 
-            $getOdataEnvironment = Invoke-RestMethod -Uri $getOdataEnv -Method Get -ContentType "application/json" -UseBasicParsing -WebSession $websession
+            $getOdataEnvironment = Invoke-RestMethod -Method GET -Uri $getOdataEnv -Headers $headers -ContentType "application/json"
 
             foreach ($roEnv in $getOdataEnvironment.value.Id) {
 
@@ -271,8 +282,8 @@ function Main {
                 $dataRobotEnv = @{
                     robotId = "$($botWebResponse.Id)"
                 } | ConvertTo-Json
-
-                $botToEnvironment = Invoke-RestMethod -Uri $roEnvURL -Method Post -Body $dataRobotEnv -ContentType "application/json" -UseBasicParsing -WebSession $websession
+                
+                $botToEnvironment = Invoke-RestMethod -Method Post -Uri $roEnvURL -Headers $headers -Body $dataRobotEnv -ContentType "application/json"
 
             }
 
