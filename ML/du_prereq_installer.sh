@@ -167,6 +167,12 @@ install_nvidia_driver() {
 
 }
 
+docker_composer_install(){
+    sudo curl -L "https://github.com/docker/compose/releases/download/1.26.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+    sudo chmod +x /usr/local/bin/docker-compose
+    sudo ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
+}
+
 
 dockerify_VM() {
 
@@ -365,12 +371,14 @@ Main() {
     if [[ "$AIF_ENV" == "cpu" ]]; then
         base_prereqs
         install_docker
+        docker_composer_install
         install_docker_davfs
     elif [[ "$AIF_ENV" == "gpu" ]]; then
         base_prereqs
         checking_nvidia_gpu
         install_nvidia_driver
         install_docker
+        docker_composer_install
         install_docker_davfs
         install_nvidia_docker
     elif [[ ! -z "$CHANGE_ROOT_PATH" ]]; then
