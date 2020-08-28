@@ -59,8 +59,8 @@
 param(
 
     [Parameter()]
-    [ValidateSet('20.4.1','19.10.19','19.10.15','19.4.4', '19.4.3', '19.4.2', '18.4.6', '18.4.5', '18.4.4', '18.4.3', '18.4.2', '18.4.1')]
-    [string] $orchestratorVersion = "20.4.1",
+    [ValidateSet('19.10.19','19.10.15','19.4.4', '19.4.3', '19.4.2', '18.4.6', '18.4.5', '18.4.4', '18.4.3', '18.4.2', '18.4.1')]
+    [string] $orchestratorVersion = "19.10.19",
 
     [Parameter()]
     [string] $orchestratorFolder = "${env:ProgramFiles(x86)}\UiPath\Orchestrator",
@@ -145,7 +145,7 @@ function Main {
 
         $source = @()
         $source += "https://download.uipath.com/versions/$orchestratorVersion/UiPathOrchestrator.msi"
-        $source += "https://download.microsoft.com/download/C/9/E/C9E8180D-4E51-40A6-A9BF-776990D8BCA9/rewrite_amd64.msi"
+        $source += "https://download.microsoft.com/download/1/2/8/128E2E22-C1B9-44A4-BE2A-5859ED1D4592/rewrite_amd64_en-US.msi"
         $source += "https://download.microsoft.com/download/6/E/4/6E48E8AB-DC00-419E-9704-06DD46E5F81D/NDP472-KB4054530-x86-x64-AllOS-ENU.exe"
         $source += "https://download.visualstudio.microsoft.com/download/pr/ff658e5a-c017-4a63-9ffe-e53865963848/15875eef1f0b8e25974846e4a4518135/dotnet-hosting-3.1.3-win.exe"
         $tries = 5
@@ -218,7 +218,7 @@ function Main {
 
 
     #install URLrewrite
-    Install-UrlRewrite -urlRWpath "$tempDirectory\rewrite_amd64.msi"
+    Install-UrlRewrite -urlRWpath "$tempDirectory\rewrite_amd64_en-US.msi"
 
     # install .Net 4.7.2
     Install-DotNetFramework -dotNetFrameworkPath "$tempDirectory\NDP472-KB4054530-x86-x64-AllOS-ENU.exe"
