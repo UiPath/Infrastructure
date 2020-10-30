@@ -26,7 +26,6 @@ EOF
 }
 
 
-$CV_ENV="gpu"
 optspec=":h:-:"
 while getopts "$optspec" optchar; do
     case "${optchar}" in
