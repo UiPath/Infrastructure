@@ -16,7 +16,7 @@ or </br>
 ## Installation steps
 Run :
 
-```curl -fsSL https://raw.githubusercontent.com/UiPath/Infrastructure/master/ML/prereq_installer.sh | sudo sh ```
+```curl -fsSL https://raw.githubusercontent.com/UiPath/Infrastructure/ML/ml_prereq_all.sh | sudo bash -s -- --env gpu ```
 
 # Distros supported on cloud
 ## Ubuntu 16.04 <br>
