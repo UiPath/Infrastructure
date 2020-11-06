@@ -13,7 +13,7 @@ $admin = [ADSI]("WinNT://./administrator, user")
 $admin.SetPassword("${var.admin_password}")
 ### end of remove this if you don't want to setup a password for local admin account ###
 $temp = "C:\Temp"
-$link = "https://raw.githubusercontent.com/Mihai-CMM/Infrastructure/master/Setup/Install-UiPathOrchestrator.ps1"
+$link = "https://raw.githubusercontent.com/Mihai-CMM/Infrastructure/main/Setup/Install-UiPathOrchestrator.ps1"
 $file = "Install-UiPathOrchestrator.ps1"
 New-Item $temp -ItemType directory
 New-Item -Path "C:\Temp" -Name "log" -ItemType "directory"

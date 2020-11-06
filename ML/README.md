@@ -2,9 +2,9 @@
 ## Installation steps
 Run :
 
-```curl -fsSL https://raw.githubusercontent.com/UiPath/Infrastructure/master/ML/du_prereq_installer.sh | sudo bash -s -- --env cpu ```  for Serving environment </br>
+```curl -fsSL https://raw.githubusercontent.com/UiPath/Infrastructure/main/ML/du_prereq_installer.sh | sudo bash -s -- --env cpu ```  for Serving environment </br>
 or </br>
-```curl -fsSL https://raw.githubusercontent.com/UiPath/Infrastructure/master/ML/du_prereq_installer.sh | sudo bash -s -- --env gpu ``` for Training environment
+```curl -fsSL https://raw.githubusercontent.com/UiPath/Infrastructure/main/ML/du_prereq_installer.sh | sudo bash -s -- --env gpu ``` for Training environment
 
 
 # Distros supported on cloud

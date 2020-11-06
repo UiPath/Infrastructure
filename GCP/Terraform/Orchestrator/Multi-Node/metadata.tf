@@ -48,7 +48,7 @@ data "template_file" "init" {
 
     if(![System.IO.File]::Exists("C:\Program Files\Google\Compute Engine\metadata_scripts\orchinstall")){
     Set-ExecutionPolicy Unrestricted -force
-    Invoke-WebRequest https://raw.githubusercontent.com/UiPath/Infrastructure/master/Setup/Install-UiPathOrchestrator.ps1 -OutFile "C:\Program Files\Google\Compute Engine\metadata_scripts\Install-UiPathOrchestrator.ps1"
+    Invoke-WebRequest https://raw.githubusercontent.com/UiPath/Infrastructure/main/Setup/Install-UiPathOrchestrator.ps1 -OutFile "C:\Program Files\Google\Compute Engine\metadata_scripts\Install-UiPathOrchestrator.ps1"
     powershell.exe -ExecutionPolicy Bypass -File "C:\Program Files\Google\Compute Engine\metadata_scripts\Install-UiPathOrchestrator.ps1" -orchestratorversion "${var.orchestrator_version}" -passphrase "${var.orchestrator_passphrase}" -databaseservername "${local.orchestrator_databaseservername}" -databasename "${local.orchestrator_databasename}" -databaseusername "${local.orchestrator_databaseusername}" -databaseuserpassword "${local.orchestrator_databaseuserpassword}" -orchestratoradminpassword "${var.orchestrator_orchestratoradminpassword}" -redisServerHost "${local.redis_host}:${local.redis_port}"
     New-Item "C:\Program Files\Google\Compute Engine\metadata_scripts\orchinstall" -type file
     #Start-Sleep -Seconds 10 ; Restart-Computer -Force

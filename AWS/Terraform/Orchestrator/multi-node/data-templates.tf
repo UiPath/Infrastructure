@@ -14,7 +14,7 @@ if("${var.admin_password}"){
 
 
 $temp = "C:\ProgramData\Amazon\EC2-Windows\Launch\Scripts"
-$link = "https://raw.githubusercontent.com/UiPath/Infrastructure/master/Setup/Install-UiPathOrchestrator.ps1"
+$link = "https://raw.githubusercontent.com/UiPath/Infrastructure/main/Setup/Install-UiPathOrchestrator.ps1"
 $file = "Install-UiPathOrchestrator.ps1"
 New-Item $temp -ItemType directory
 Set-Location -Path $temp

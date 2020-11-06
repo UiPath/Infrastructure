@@ -25,10 +25,10 @@ https://docs.github.com/en/free-pro-team@latest/github/getting-started-with-gith
 ``` cmd
 git clone https://github.com/<github username>/Infrastructure.git
 ```
-4. Change directory to `Setup` and run script `Set-DeploymentConfiguration.ps1` with either -Robot or -Orchestrator, depending on what you need:
+4. Change directory to `Setup` and run script `Set-DeploymentConfiguration.ps1` with either -UiPathSolution Robot or -UiPathSolution Orchestrator, depending on what you need:
 ```powershell
 cd Setup
-./Set-DeploymentConfiguration.ps1 -Orchestrator #or -Robot
+./Set-DeploymentConfiguration.ps1 -UiPathSolution Orchestrator #or Robot
 ```
 5. Upload the files from the `Upload` folder to Azure blob storage (or any other storage solution from where it can be downloaded using an URL). Paths are printed in the command line also.
 ```bash
@@ -38,8 +38,8 @@ az storage blob upload --account-name <storage account name> --container-name <c
 az storage blob url --account-name <storage account name> --container-name <container name> --name <file name> --output tsv
 
 # Example
-az storage blob upload --account-name azmktstorcloudautomation --container-name iondinica --name file.txt --file "D:\UpiPath\Setup\Upload\file.txt"
-az storage blob url --account-name azmktstorcloudautomation --container-name iondinica --name file.txt --output tsv
+az storage blob upload --account-name azmktstorage --container-name container --name file.txt --file "D:\UpiPath\Setup\Upload\file.txt"
+az storage blob url --account-name azmktstorage --container-name container --name file.txt --output tsv
 ```
 6. Change URLs as follows (mainTemplate.json):
 ### Robot:
@@ -76,13 +76,32 @@ az storage blob url --account-name azmktstorcloudautomation --container-name ion
 | `UtilityArtifactsPaaS.CleanUpOrchestrationResources` | **Binary**: Copy the URL forked repository in the `raw` format for the `<orchestratorVersion>/CleanUpOrchestrationResources.ps1` file. See example below. |
 | `UtilityArtifactsPaaS.DeployOrchestratorMainScript` | **Binary**: Copy the URL forked repository in the `raw` format for the `<orchestratorVersion>/Deploy-UiPathOrchestratorPaaS.ps1` file. See example below. |
 
-Example for raw github files (text files):  
+Example (text files) for raw github files (you can `right-click` -> `copy link` on the `raw` button):  
 `https://raw.githubusercontent.com/<github username>/Infrastructure/main/Azure/<filename>.<text>`  
-Example for raw github files (binary files):  
+Example (binary files) for raw github files (you can `right-click` -> `copy link` on the `download` button):  
 `https://github.com/UiPath/<github username>/raw/main/<PathToFile>/<filename>.<binary>`
 
-7. Finally, run:
+7. Remove the following parameters from `mainTemplate.json`:
+```json
+"_artifactsLocation": {
+            "type": "string",
+            "metadata": {
+                "description": "The base URI where artifacts required by this template are located including a trailing '/'"
+            },
+            "defaultValue": "[deployment().properties.templateLink.uri]"
+        },
+        "_artifactsLocationSasToken": {
+            "type": "securestring",
+            "metadata": {
+                "description": "The sasToken required to access _artifactsLocation.  When the template is deployed using the accompanying scripts, a sasToken will be automatically generated. Use the defaultValue if the staging location is not secured."
+            },
+            "defaultValue": ""
+        },
+```
+
+8. Finally, run:
 ```bash
+# If running from powershell add ` before the @ symbol!
 az deployment group create --name <deployment name> --resource-group <resource group name> --template-file <path to mainTemplate.json> --parameters @<parameters file>
 ```
-8. You got yourself a new UiPath deployment, ENJOY!
+9. You got yourself a new UiPath deployment, ENJOY!

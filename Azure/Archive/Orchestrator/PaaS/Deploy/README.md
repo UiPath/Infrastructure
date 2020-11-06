@@ -1,7 +1,7 @@
 # UiPathOrchestrator
 [![HitCount](http://hits.dwyl.io/hteo1337/hteo1337/UiPathOrchestrator.svg)](http://hits.dwyl.io/hteo1337/hteo1337/UiPathOrchestrator)
 
-[![Build Status](https://dev.azure.com/hteo-dev/Orchestrator/_apis/build/status/hteo1337.UiPathOrchestrator?branchName=master)](https://dev.azure.com/hteo-dev/Orchestrator/_build/latest?definitionId=4&branchName=master)
+[![Build Status](https://dev.azure.com/hteo-dev/Orchestrator/_apis/build/status/hteo1337.UiPathOrchestrator?branchName=main)](https://dev.azure.com/hteo-dev/Orchestrator/_build/latest?definitionId=4&branchName=main)
 
 This ARM template will deploy UiPath Orchestrator (WebApp - single/multi node with scale out and scale in settings, depending on the number of instances) with following resources:</br>
 -App Service with UiPath Orchestrator </br>

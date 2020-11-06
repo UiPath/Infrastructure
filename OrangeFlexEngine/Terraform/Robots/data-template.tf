@@ -40,7 +40,7 @@ data "template_file" "init" {
     Rename-Computer -NewName $newMachineName -Force
 
     $temp = "C:\Temp"
-    $link = "https://raw.githubusercontent.com/UiPath/Infrastructure/master/Setup/Install-UiRobot.ps1"
+    $link = "https://raw.githubusercontent.com/UiPath/Infrastructure/main/Setup/Install-UiRobot.ps1"
     $file = "Install-UiRobot.ps1"
     New-Item $temp -ItemType directory
     New-Item -Path "C:\Temp" -Name "log" -ItemType "directory"

@@ -98,7 +98,7 @@
     }
   },
   "variables": {
-    "scriptUriBase": "https://raw.githubusercontent.com/UiPath/Infrastructure/master/Setup/Install-UiRobot.ps1",
+    "scriptUriBase": "https://raw.githubusercontent.com/UiPath/Infrastructure/main/Setup/Install-UiRobot.ps1",
     "HostingType": "Standard",
     "CredentialType": "Default",
     "scriptUriNamePieces": "[split(variables('scriptUriBase'), '/')]",
