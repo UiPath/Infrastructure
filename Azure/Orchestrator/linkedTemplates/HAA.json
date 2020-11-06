@@ -1,0 +1,533 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "location": {
+            "type": "string",
+            "metadata": {
+                "description": "Location for all resources."
+            }
+        },
+        "availabilitySetName": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "description": "Availability set name."
+            }
+        },
+        "HAAPort": {
+            "type": "int",
+            "defaultValue": "",
+            "metadata": {
+                "description": "HAA port."
+            }
+        },
+        "virtualNetworkNewOrExisting": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "description": "Virtual Network new or existing?"
+            }
+        },
+        "virtualNetworkName": {
+            "defaultValue": "newVnet",
+            "type": "String",
+            "metadata": {
+                "description": "Enter existing vnet name or type new name to create new VNET"
+            }
+        },
+        "addressPrefixes": {
+            "defaultValue": "[array('10.0.0.0/16')]",
+            "type": "array",
+            "metadata": {
+                "description": "Address prefix of the virtual network"
+            }
+        },
+        "subnetName": {
+            "defaultValue": "default",
+            "type": "String",
+            "metadata": {
+                "description": "Name of the virtual network subnet for HAA virtual machines."
+            }
+        },
+        "subnetPrefix": {
+            "defaultValue": "10.0.0.0/24",
+            "type": "String",
+            "metadata": {
+                "description": "Subnet prefix of the virtual network for HAA virtual machines."
+            }
+        },
+        "webAppsubnetName": {
+            "defaultValue": "default",
+            "type": "String",
+            "metadata": {
+                "description": "Name of the subnet"
+            }
+        },
+        "webAppsubnetPrefix": {
+            "defaultValue": "10.0.0.0/24",
+            "type": "String",
+            "metadata": {
+                "description": "Subnet prefix of the virtual network"
+            }
+        },
+        "HAANICNamePrefix": {
+            "type": "string",
+            "minLength": 4,
+            "maxLength": 80,
+            "metadata": {
+                "description": "High Availability Add-On Network Interface name prefix."
+            }
+        },
+        "HAAVMNamePrefix": {
+            "type": "string",
+            "minLength": 4,
+            "maxLength": 22,
+            "metadata": {
+                "description": "High Availability Add-On Virtual Machine name prefix."
+            }
+        },
+        "subnetRef": {
+            "defaultValue": "",
+            "type": "String",
+            "metadata": {
+                "description": "Subnet reference"
+            }
+        },
+        "numberOfInstances": {
+            "defaultValue": "",
+            "type": "int",
+            "metadata": {
+                "description": "Number of workers for HAA"
+            }
+        },
+        "virtualMachineSize": {
+            "defaultValue": "Standard_D2s_v3",
+            "type": "String"
+        },
+        "HAAVMAdminLogin": {
+            "type": "String",
+            "defaultValue": "",
+            "metadata": {
+                "description": "Admin username for VM"
+            }
+        },
+        "HAAVMAdminPassword": {
+            "defaultValue": "",
+            "type": "securestring",
+            "metadata": {
+                "description": "Admin password for VMs"
+            }
+        },
+        "imageReference": {
+            "defaultValue": "",
+            "type": "object",
+            "metadata": {
+                "description": "Admin password for VMs"
+            }
+        },
+        "installScriptUri": {
+            "type": "String",
+            "defaultValue": "",
+            "metadata": {
+                "description": "Install script URI"
+            }
+        },
+        "installPackageUri": {
+            "type": "String",
+            "defaultValue": "",
+            "metadata": {
+                "description": "Install sackage URI"
+            }
+        },
+        "installScriptFileName": {
+            "type": "String",
+            "defaultValue": "",
+            "metadata": {
+                "description": "Install sackage URI"
+            }
+        },
+        "HAAadminEmail": {
+            "type": "String",
+            "defaultValue": "",
+            "metadata": {
+                "description": "Admin email for haa"
+            }
+        },
+        "HAAAdminPassword": {
+            "type": "securestring",
+            "defaultValue": "",
+            "metadata": {
+                "description": "HA admin password"
+            }
+        },
+        "HAALicense": {
+            "defaultValue": "",
+            "type": "String",
+            "metadata": {
+                "description": "HA Addon license key"
+            }
+        },
+        "HAANSGName": {
+            "type": "string",
+            "minLength": 4,
+            "maxLength": 22,
+            "metadata": {
+                "description": "High Availability Add-On Network Security Group name."
+            }
+        },
+        "tagsByResource": {
+            "type": "object",
+            "defaultValue": {}
+        }
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Compute/availabilitySets",
+            "apiVersion": "2019-03-01",
+            "tags": "[ if(contains(parameters('tagsByResource'), 'Microsoft.Compute/availabilitySets'), parameters('tagsByResource')['Microsoft.Compute/availabilitySets'], json('{}')) ]",
+            "name": "[parameters('availabilitySetName')]",
+            "location": "[parameters('location')]",
+            "sku": {
+                "name": "Aligned"
+            },
+            "properties": {
+                "platformFaultDomainCount": 2,
+                "platformUpdateDomainCount": 2
+            }
+        },
+        {
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "apiVersion": "2019-08-01",
+            "tags": "[if(contains(parameters('tagsByResource'), 'Microsoft.Network/networkSecurityGroups'), parameters('tagsByResource')['Microsoft.Network/networkSecurityGroups'], json('{}')) ]",
+            "name": "[parameters('HAANsgName')]",
+            "location": "[parameters('location')]",
+            "properties": {
+                "securityRules": [
+                    {
+                        "name": "SSH",
+                        "properties": {
+                            "description": "Allows SSH traffic",
+                            "protocol": "Tcp",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "22",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 100,
+                            "direction": "Inbound"
+                        }
+                    },
+                    {
+                        "name": "haa",
+                        "properties": {
+                            "description": "Allows high availability addon traffic",
+                            "protocol": "Tcp",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "8443-9443",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 110,
+                            "direction": "Inbound"
+                        }
+                    },
+                    {
+                        "name": "haa-port",
+                        "properties": {
+                            "description": "Allows high availability addon traffic",
+                            "protocol": "Tcp",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "[parameters('HAAPort')]",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 120,
+                            "direction": "Inbound"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.Network/virtualNetworks",
+            "condition": "[equals(parameters('virtualNetworkNewOrExisting'),'new')]",
+            "tags": "[if(contains(parameters('tagsByResource'), 'Microsoft.Network/virtualNetworks'), parameters('tagsByResource')['Microsoft.Network/virtualNetworks'], json('{}'))]",
+            "apiVersion": "2020-05-01",
+            "name": "[parameters('virtualNetworkName')]",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups/', parameters('HAANSGName'))]"
+            ],
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": "[parameters('addressPrefixes')]"
+
+                },
+                "subnets": [
+                    {
+                        "name": "[parameters('subnetName')]",
+                        "properties": {
+                            "addressPrefix": "[parameters('subnetPrefix')]",
+                            "networkSecurityGroup": {
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups/', parameters('HAANSGName'))]"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.Network/virtualNetworks/subnets",
+            "apiVersion": "2019-11-01",
+            "name": "[concat(parameters('virtualNetworkName'),'/',parameters('webAppsubnetName'))]",
+            "condition": "[and(equals(parameters('virtualNetworkNewOrExisting'), 'new'), not(empty(parameters('webAppsubnetName'))))]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks/', parameters('virtualNetworkName'))]"
+            ],
+            "location": "[parameters('location')]",
+            "properties": {
+                "addressPrefix": "[parameters('webAppsubnetPrefix')]",
+                "serviceEndpoints": [
+                    {
+                        "service": "Microsoft.Storage"
+                    },
+                    {
+                        "service": "Microsoft.Web"
+                    }
+                ],
+                "delegations": [
+                    {
+                        "name": "[concat(parameters('webAppsubnetName'),'-delegation')]",
+                        "properties": {
+                            "serviceName": "Microsoft.Web/serverFarms",
+                            "actions": [
+                                "Microsoft.Network/virtualNetworks/subnets/action"
+                            ]
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.Network/networkInterfaces",
+            "apiVersion": "2019-04-01",
+            "tags": "[ if(contains(parameters('tagsByResource'), 'Microsoft.Network/networkInterfaces'), parameters('tagsByResource')['Microsoft.Network/networkInterfaces'], json('{}')) ]",
+            "name": "[concat(parameters('HAANICNamePrefix'), copyindex(1))]",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks/', parameters('virtualNetworkName'))]",
+                "[resourceId('Microsoft.Network/networkSecurityGroups/',parameters('HAANSGName'))]"
+            ],
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "privateIPAllocationMethod": "Dynamic",
+                            "subnet": {
+                                "id": "[parameters('subnetRef')]"
+                            }
+                        }
+                    }
+                ],
+                "networkSecurityGroup": {
+                    "id": "[resourceId('Microsoft.Network/networkSecurityGroups/', parameters('HAANSGName'))]"
+                }
+            },
+            "copy": {
+                "name": "nicLoop",
+                "count": "[parameters('numberOfInstances')]"
+            }
+        },
+        {
+            "type": "Microsoft.Compute/virtualMachines",
+            "apiVersion": "2020-06-01",
+            "tags": "[ if(contains(parameters('tagsByResource'), 'Microsoft.Compute/virtualMachines'), parameters('tagsByResource')['Microsoft.Compute/virtualMachines'], json('{}')) ]",
+            "name": "[concat(parameters('HAAVMNamePrefix'), copyIndex(1))]",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "nicLoop",
+                "[resourceId('Microsoft.Compute/virtualMachines/', concat(parameters('HAAVMNamePrefix'),'-master'))]",
+                "[resourceId('Microsoft.Compute/availabilitySets', parameters('availabilitySetName'))]"
+            ],
+            "properties": {
+                "availabilitySet": {
+                    "id": "[resourceId('Microsoft.Compute/availabilitySets', parameters('availabilitySetName'))]"
+                },
+                "hardwareProfile": {
+                    "vmSize": "[parameters('virtualMachineSize')]"
+                },
+                "osProfile": {
+                    "computerName": "[concat(parameters('HAAVMNamePrefix'), copyIndex(1))]",
+                    "adminUsername": "[parameters('HAAVMAdminLogin')]",
+                    "adminPassword": "[parameters('HAAVMAdminPassword')]"
+                },
+                "storageProfile": {
+                    "imageReference": "[parameters('imageReference')]",
+                    "osDisk": {
+                        "createOption": "FromImage"
+                    }
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces',concat(parameters('HAANICNamePrefix'), copyindex(1)))]"
+                        }
+                    ]
+                }
+            },
+            "resources": [
+                {
+                    "type": "extensions",
+                    "apiVersion": "2019-03-01",
+                    "name": "haa-CSE",
+                    "location": "[parameters('location')]",
+                    "dependsOn": [
+                        "[concat(parameters('HAAVMNamePrefix'), copyIndex(1))]",
+                        "master-cse"
+                    ],
+                    "tags": {
+                        "displayName": "haa-CSE"
+                    },
+                    "properties": {
+                        "publisher": "Microsoft.Azure.Extensions",
+                        "type": "CustomScript",
+                        "typeHandlerVersion": "2.0",
+                        "autoUpgradeMinorVersion": true,
+                        "settings": {
+                            "fileUris": [
+                                "[parameters('installScriptUri')]",
+                                "[parameters('installPackageUri')]"
+                            ]
+                        },
+                        "protectedSettings": {
+                            "commandToExecute": "[concat('sh ', parameters('installScriptFileName'),
+                                ' -u ', parameters('HAAadminEmail'),
+                                ' -p ',parameters('HAAAdminPassword'),
+                                ' -j ',reference(resourceId('Microsoft.Network/networkInterfaces/',concat(parameters('HAANICNamePrefix'),'-master')), '2019-04-01').ipConfigurations[0].properties.privateIPAddress
+                                )]"
+                        }
+                    }
+                }
+            ],
+            "copy": {
+                "name": "virtualMachineLoop",
+                "count": "[parameters('numberOfInstances')]"
+            }
+        },
+        {
+            "type": "Microsoft.Network/networkInterfaces",
+            "apiVersion": "2019-04-01",
+            "tags": "[ if(contains(parameters('tagsByResource'), 'Microsoft.Network/networkInterfaces'), parameters('tagsByResource')['Microsoft.Network/networkInterfaces'], json('{}')) ]",
+            "name": "[concat(parameters('HAANICNamePrefix'),'-master')]",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks/', parameters('virtualNetworkName'))]",
+                "[resourceId('Microsoft.Network/networkSecurityGroups/', parameters('HAANSGName'))]"
+            ],
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "privateIPAllocationMethod": "Dynamic",
+                            "subnet": {
+                                "id": "[parameters('subnetRef')]"
+                            }
+                        }
+                    }
+                ],
+                "networkSecurityGroup": {
+                    "id": "[resourceId('Microsoft.Network/networkSecurityGroups/', parameters('HAANSGName'))]"
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Compute/virtualMachines",
+            "apiVersion": "2020-06-01",
+            "tags": "[ if(contains(parameters('tagsByResource'), 'Microsoft.Compute/virtualMachines'), parameters('tagsByResource')['Microsoft.Compute/virtualMachines'], json('{}')) ]",
+            "name": "[concat(parameters('HAAVMNamePrefix'),'-master')]",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkInterfaces/',concat(parameters('HAANICNamePrefix'),'-master'))]",
+                "[resourceId('Microsoft.Network/networkSecurityGroups/', parameters('HAANSGName'))]",
+                "[resourceId('Microsoft.Compute/availabilitySets', parameters('availabilitySetName'))]"
+            ],
+            "properties": {
+                "availabilitySet": {
+                    "id": "[resourceId('Microsoft.Compute/availabilitySets', parameters('availabilitySetName'))]"
+                },
+                "hardwareProfile": {
+                    "vmSize": "[parameters('virtualMachineSize')]"
+                },
+                "osProfile": {
+                    "computerName": "[concat(parameters('HAAVMNamePrefix'),'-master')]",
+                    "adminUsername": "[parameters('HAAVMAdminLogin')]",
+                    "adminPassword": "[parameters('HAAVMAdminPassword')]"
+                },
+                "storageProfile": {
+                    "imageReference": "[parameters('imageReference')]",
+                    "osDisk": {
+                        "createOption": "FromImage"
+                    }
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces',concat(parameters('HAANICNamePrefix'),'-master'))]"
+                        }
+                    ]
+                }
+            },
+            "resources": [
+                {
+                    "type": "extensions",
+                    "apiVersion": "2020-06-01",
+                    "name": "master-cse",
+                    "location": "[parameters('location')]",
+                    "dependsOn": [
+                        "[concat(parameters('HAAVMNamePrefix'),'-master')]"
+                    ],
+                    "tags": {
+                        "displayName": "master-cse"
+                    },
+                    "properties": {
+                        "publisher": "Microsoft.Azure.Extensions",
+                        "type": "CustomScript",
+                        "typeHandlerVersion": "2.0",
+                        "autoUpgradeMinorVersion": true,
+                        "settings": {
+                            "fileUris": [
+                                "[parameters('installScriptUri')]",
+                                "[parameters('installPackageUri')]"
+                            ]
+                        },
+                        "protectedSettings": {
+                            "commandToExecute": "[concat('sh ', parameters('installScriptFileName'),
+                                ' -u ', parameters('HAAadminEmail'),
+                                ' -p ',parameters('HAAAdminPassword'),
+                                if(empty(parameters('HAALicense')),'',concat(' -l ',parameters('HAALicense')))
+                                )]"
+                        }
+                    }
+                }
+            ]
+        }
+    ],
+    "outputs": {
+        "masterNICPrivateIP": {
+            "type": "string",
+            "value": "[reference(resourceId('Microsoft.Network/networkInterfaces/',concat(parameters('HAANICNamePrefix'),'-master'))).ipConfigurations[0].properties.privateIPAddress]"
+        },
+        "worker1NICPrivateIP": {
+            "type": "string",
+            "value": "[reference(resourceId('Microsoft.Network/networkInterfaces/',concat(parameters('HAANICNamePrefix'), '1'))).ipConfigurations[0].properties.privateIPAddress]"
+        },
+        "worker2NICPrivateIP": {
+            "type": "string",
+            "value": "[reference(resourceId('Microsoft.Network/networkInterfaces/',concat(parameters('HAANICNamePrefix'), '2'))).ipConfigurations[0].properties.privateIPAddress]"
+        }
+    }
+
+}

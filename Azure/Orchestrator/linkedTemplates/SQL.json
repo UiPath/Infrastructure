@@ -1,0 +1,119 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "location": {
+            "type": "string",
+            "metadata": {
+                "description": "Location for all resources."
+            }
+        },
+        "SQLServerName": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "description": "SQL Azure DB Server name"
+            }
+        },
+        "SQLServerAdminLogin": {
+            "type": "string",
+            "defaultValue":"",
+            "metadata": {
+                "description": "SQL Azure DB administrator  user login"
+            }
+        },
+        "SQLServerAdminPassword": {
+            "type": "securestring",
+            "defaultValue":"",
+            "metadata": {
+                "description": "Database admin user password"
+            }
+        },
+        "dbName": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "description": "Azure SQL DB name"
+            }
+        },
+        "dbEdition": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "description": "Azure SQL DB Edition"
+            }
+        },
+        "dbPerformanceLevel": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "description": "Azure SQL DB Performance Level"
+            }
+        },
+        "tagsByResource": {
+            "type": "object",
+            "defaultValue": {}
+        }
+    },
+    "variables": {
+        "collation": "SQL_Latin1_General_CP1_CI_AS",
+        "databaseMaxSizeBytes": "21474836480"
+    },
+    "resources": [
+        {
+            "name": "[parameters('SQLServerName')]",
+            "type": "Microsoft.Sql/servers",
+            "tags": "[ if(contains(parameters('tagsByResource'), 'Microsoft.Sql/servers'), parameters('tagsByResource')['Microsoft.Sql/servers'], json('{}')) ]",
+            "location": "[parameters('location')]",
+            "apiVersion": "2019-06-01-preview",
+            "properties": {
+                "administratorLogin": "[parameters('SQLServerAdminLogin')]",
+                "administratorLoginPassword": "[parameters('SQLServerAdminPassword')]",
+                "version": "12.0"
+            },
+            "resources": [
+                {
+                    "apiVersion": "2019-06-01-preview",
+                    "name": "[parameters('dbName')]",
+                    "type": "databases",
+                    "tags": "[ if(contains(parameters('tagsByResource'), 'Microsoft.Sql/servers/databases'), parameters('tagsByResource')['Microsoft.Sql/servers/databases'], json('{}')) ]",                    
+                    "location": "[parameters('location')]",
+                    "dependsOn": [
+                        "[parameters('SQLServerName')]"
+                    ],
+                    "sku": {
+                        "name": "[parameters('dbPerformanceLevel')]",
+                        "tier": "[parameters('dbEdition')]"
+                    },
+                    "kind": "v12.0,user",
+                    "properties": {
+                        "maxSizeBytes": "[variables('databaseMaxSizeBytes')]",
+                        "collation": "[variables('collation')]",
+                        "catalogCollation": "[variables('collation')]",
+                        "zoneRedundant": false,
+                        "minCapacity": "50"
+                    }
+                },
+                {
+                    "apiVersion": "2019-06-01-preview",
+                    "name": "AllowAllWindowsAzureIps",
+                    "type": "firewallrules",
+                    "location": "[parameters('location')]",
+                    "dependsOn": [
+                        "[resourceId('Microsoft.Sql/servers/', parameters('SQLServerName'))]"
+                    ],
+                    "properties": {
+                        "endIpAddress": "0.0.0.0",
+                        "startIpAddress": "0.0.0.0"
+                    }
+                }
+            ]
+        }
+    ],
+    "outputs":{
+        "SQLFQDN": {
+        "type": "string",
+        "value": "[reference(resourceId('Microsoft.Sql/servers/', parameters('SQLServerName'))).fullyQualifiedDomainName]"
+        }
+    }
+}

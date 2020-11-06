@@ -1,0 +1,761 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "appName": {
+            "type": "string",
+            "minLength": 4,
+            "maxLength": 22,
+            "metadata": {
+                "description": "Orchestrator name will have a random suffix appended."
+            }
+        },
+        "OrchStorageAccountName": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 24,
+            "defaultValue": "[if(greaterOrEquals(length(parameters('appName')), 22), concat(substring(toLower(replace(parameters('appName'),'-','')),22),'st'), concat(toLower(replace(parameters('appName'),'-','')),'st'))]",
+            "metadata": {
+                "description": "The Orchestrator Storage Account Name."
+            }
+        },
+        "OrchAppServicePlan": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 40,
+            "defaultValue": "[if(greaterOrEquals(length(parameters('appName')),36),concat(substring(parameters('appName'),0,36),'-asp'),concat(parameters('appName'),'-asp'))]",
+            "metadata": {
+                "description": "The Orchestrator App Service Plan Name."
+            }
+        },
+        "OrchAppInsights": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 225,
+            "defaultValue": "[concat(parameters('appName'),'-appins')]",
+            "metadata": {
+                "description": "The Orchestrator AppInsights Name."
+            }
+        },
+        "orchestratorAdminPassword": {
+            "type": "securestring",
+            "metadata": {
+                "description": "Define the password that will be used for the host administrator and the default tenant administrator account (admin)."
+            }
+        },
+        "OrchIdentityAppServiceName": {
+            "type": "string",
+            "minLength": 4,
+            "maxLength": 60,
+            "defaultValue": "[concat(parameters('appName'),'-is')]",
+            "metadata": {
+                "description": "Orchestrator Identity name."
+            }
+        },
+        "OrchWebhooksAppServiceName": {
+            "type": "string",
+            "minLength": 4,
+            "maxLength": 60,
+            "defaultValue": "[concat(parameters('appName'),'-wh')]",
+            "metadata": {
+                "description": "Orchestrator Webhooks name."
+            }
+        },
+        "OrchCertificate": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 30,
+            "defaultValue": "[if(greaterOrEquals(length(parameters('appName')),25),concat(substring(parameters('appName'),0,25),'-cert'),concat(parameters('appName'),'-cert'))]",
+            "metadata": {
+                "description": "Orchestrator Certificate name."
+            }
+        },
+        "OrchMSIName": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 128,
+            "defaultValue": "[concat(parameters('appName'),'-msi')]",
+            "metadata": {
+                "description": "Orchestrator Managed Service Identity name."
+            }
+        },
+        "OrchDatabaseName": {
+            "type": "string",
+            "minLength": 4,
+            "maxLength": 128,
+            "defaultValue": "[concat(parameters('appName'),'-db')]",
+            "metadata": {
+                "description": "Orchestrator Database name."
+            }
+        },
+        "orchestratorVersion": {
+            "type": "string",
+            "defaultValue": "20.10.1",
+            "allowedValues": [
+                "20.10.1"
+            ],
+            "metadata": {
+                "description": "Version of the Orchestrator"
+            }
+        },
+        "orchestratorSize": {
+            "type": "string",
+            "defaultValue": "Small",
+            "allowedValues": [
+                "Small",
+                "Medium",
+                "Large"
+            ],
+            "metadata": {
+                "description": "Size of the Orchestrator based on no. of total robots connected : Small size is for maximum 100 robots, Medium size for total no. of Robots between 100 and 500, Large size is for over 500 Robots"
+            }
+        },
+        "orchestratorInstances": {
+            "type": "int",
+            "defaultValue": 2,
+            "minValue": 1,
+            "maxValue": 30,
+            "metadata": {
+                "description": "Number of Orchestrator instances to be created. This relates to the number of Azure App Service instances or the Virtual Machine Scales set that will be deployed. Can be scaled after."
+            }
+        },
+        "SQLServerName": {
+            "type": "string",
+            "defaultValue": "[concat(parameters('appName'),'sql')]",
+            "metadata": {
+                "description": "SQL Azure DB Server name"
+            }
+        },
+        "SQLServerAdminLogin": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "description": "SQL Azure DB administrator  user login"
+            }
+        },
+        "SQLServerAdminPassword": {
+            "type": "securestring",
+            "defaultValue": "",
+            "metadata": {
+                "description": "Database admin user password"
+            }
+        },
+        "location": {
+            "type": "string",
+            "defaultValue": "[resourceGroup().location]",
+            "metadata": {
+                "description": "Location for all resources."
+            }
+        },
+        "EnableHAA": {
+            "type": "Bool",
+            "metadata": {
+                "description": "Is HAA Enabled?"
+            }
+        },
+        "HAAVMAdminLogin": {
+            "type": "String",
+            "defaultValue": "",
+            "metadata": {
+                "description": "Admin username for VM"
+            }
+        },
+        "HAAVMAdminPassword": {
+            "defaultValue": "",
+            "type": "securestring",
+            "metadata": {
+                "description": "Admin password for VMs"
+            }
+        },
+        "HAAadminEmail": {
+            "type": "String",
+            "defaultValue": "",
+            "metadata": {
+                "description": "Admin email for haa"
+            }
+        },
+        "HAAAdminPassword": {
+            "type": "securestring",
+            "defaultValue": "",
+            "metadata": {
+                "description": "HA admin password"
+            }
+        },
+        "HAALicense": {
+            "defaultValue": "",
+            "type": "String",
+            "metadata": {
+                "description": "HA Addon license key"
+            }
+        },
+        "HAAvirtualNetworkNewOrExistingPaaS": {
+            "type": "String",
+            "defaultValue": "",
+            "metadata": {
+                "description": "Virtual Network new or existing"
+            }
+        },
+        "HAAaddressPrefixesPaaS": {
+            "defaultValue": "[array('10.0.0.0/16')]",
+            "type": "array",
+            "metadata": {
+                "description": "Address prefix of the virtual network"
+            }
+        },
+        "HAAsubnetPrefixPaaS": {
+            "defaultValue": "10.0.0.0/24",
+            "type": "String",
+            "metadata": {
+                "description": "Subnet prefix of the virtual network"
+            }
+        },
+        "HAAwebAppsubnetPrefixPaaS": {
+            "defaultValue": "10.0.0.0/24",
+            "type": "String",
+            "metadata": {
+                "description": "Subnet prefix of the virtual network"
+            }
+        },
+        "HAAvirtualNetworkResourceGroupNamePaaS": {
+            "defaultValue": "[resourceGroup().name]",
+            "type": "String",
+            "metadata": {
+                "description": "Name of the resource group for the existing virtual network"
+            }
+        },
+        "HAAvirtualMachineSize": {
+            "defaultValue": "Standard_D2s_v3",
+            "type": "String"
+        },
+        "HAAAvailabilitySetName": {
+            "type": "string",
+            "minLength": 4,
+            "maxLength": 80,
+            "defaultValue": "[concat(parameters('appName'),'-haa-as')]",
+            "metadata": {
+                "description": "High Availability Add-On Availability Set name."
+            }
+        },
+        "HAANSGName": {
+            "type": "string",
+            "minLength": 4,
+            "maxLength": 80,
+            "defaultValue": "[concat(parameters('appName'),'-haa-nsg')]",
+            "metadata": {
+                "description": "High Availability Add-On Network Security Group name."
+            }
+        },
+        "HAAVnetName": {
+            "type": "string",
+            "minLength": 4,
+            "maxLength": 80,
+            "defaultValue": "[concat(parameters('appName'),'-haa-vnet')]",
+            "metadata": {
+                "description": "High Availability Add-On Virtual Network name."
+            }
+        },
+        "HAASubnetName": {
+            "type": "string",
+            "minLength": 4,
+            "maxLength": 80,
+            "defaultValue": "[concat(parameters('appName'),'-haa-subnet')]",
+            "metadata": {
+                "description": "High Availability Add-On Subnet name."
+            }
+        },
+        "HAAWASubnetName": {
+            "type": "string",
+            "minLength": 4,
+            "maxLength": 80,
+            "defaultValue": "[concat(parameters('appName'),'-haa-wasubnet')]",
+            "metadata": {
+                "description": "High Availability Add-On Web App Subnet name."
+            }
+        },
+        "HAANICNamePrefix": {
+            "type": "string",
+            "minLength": 4,
+            "maxLength": 80,
+            "defaultValue": "[concat(parameters('appName'),'-haa-nic')]",
+            "metadata": {
+                "description": "High Availability Add-On Network Interface name prefix."
+            }
+        },
+        "HAAVMNamePrefix": {
+            "type": "string",
+            "minLength": 4,
+            "maxLength": 64,
+            "defaultValue": "[concat(parameters('appName'),'-haa-vm')]",
+            "metadata": {
+                "description": "High Availability Add-On Virtual Machine name prefix."
+            }
+        },
+        "TokenCertificate": {
+            "defaultValue": "",
+            "type": "String"
+        },
+        "TokenCertificatePass": {
+            "defaultValue": "",
+            "type": "securestring"
+        },
+        "_artifactsLocation": {
+            "type": "string",
+            "metadata": {
+                "description": "The base URI where artifacts required by this template are located including a trailing '/'"
+            },
+            "defaultValue": "[deployment().properties.templateLink.uri]"
+        },
+        "_artifactsLocationSasToken": {
+            "type": "securestring",
+            "metadata": {
+                "description": "The sasToken required to access _artifactsLocation.  When the template is deployed using the accompanying scripts, a sasToken will be automatically generated. Use the defaultValue if the staging location is not secured."
+            },
+            "defaultValue": ""
+        },
+        "tagsByResource": {
+            "type": "object",
+            "defaultValue": {}
+        }
+    },
+    "variables": {
+        "SQLServerName": "[trim(toLower(concat(parameters('SQLServerName'),'-', uniqueString(resourceGroup().id) )))]",
+        "dbName": "[parameters('OrchDatabaseName')]",
+        "dbEdition": "[if(contains(parameters('orchestratorSize'), 'Small'), 'Standard', if(contains(parameters('orchestratorSize'), 'Medium'), 'Standard', 'Premium'))]",
+        "dbPerformanceLevel": "[if(contains(parameters('orchestratorSize'), 'Small'), 'S1', if(contains(parameters('orchestratorSize'), 'Medium'), 'S3', 'P4'))]",
+        "appInsight": "[parameters('OrchAppInsights')]",
+        "azureLocationMap": {
+            "eastasia": "southeastasia",
+            "southeastasia": "southeastasia",
+            "centralus": "westus2",
+            "westus": "westus2",
+            "westus2": "westus2",
+            "northcentralus": "westus2",
+            "eastus": "eastus",
+            "eastus2": "eastus",
+            "canadacentral": "canadacentral",
+            "canadaeast": "canadacentral",
+            "chinanorth": "southeastasia",
+            "chinaeast": "southeastasia",
+            "chinanorth2": "southeastasia",
+            "chinaeast2": "southeastasia",
+            "uaenorth": "southeastasia",
+            "uaecentral": "southeastasia",
+            "southafricanorth": "southeastasia",
+            "southafricawest": "southeastasia",
+            "northeurope": "westeurope",
+            "westeurope": "westeurope",
+            "francecentral": "westeurope",
+            "francesouth": "westeurope",
+            "germanycentral": "westeurope",
+            "germanynNortheast": "westeurope",
+            "japanwest": "japaneast",
+            "japaneast": "japaneast",
+            "australiaeast": "australiaeast",
+            "australiasoutheast": "australiaeast",
+            "australiacentral": "australiaeast",
+            "australiacentral2": "australiaeast",
+            "brazilsouth": "southcentralus",
+            "southcentralus": "southcentralus",
+            "southindia": "centralindia",
+            "centralindia": "centralindia",
+            "westindia": "centralindia",
+            "ukwest": "uksouth",
+            "uksouth": "uksouth",
+            "westcentralus": "westus2",
+            "koreasouth": "koreacentral",
+            "koreacentral": "koreacentral",
+            "eastus2euap": "eastus",
+            "usdodcentral": "usgovvirginia",
+            "usdodeast": "usgovvirginia",
+            "usgovarizona": "usgovvirginia",
+            "usgoviowa": "usgovvirginia",
+            "usgovtexas": "usgovvirginia",
+            "usgovvirginia": "usgovvirginia"
+        },
+        "appInsightsRegion": "[variables('azureLocationMap')[parameters('location')]]",
+        "storageAccountName": "[parameters('OrchStorageAccountName')]",
+        "appServicePlanName": "[parameters('OrchAppServicePlan')]",
+        "enableNonSslPort": "false",
+        "HAAPort": 10000,
+        "numberOfInstances": 2,
+        "HAANICNamePrefix": "[parameters('HAANICNamePrefix')]",
+        "HAAVMNamePrefix": "[parameters('HAAVMNamePrefix')]",
+        "availabilitySetName": "[parameters('HAAAvailabilitySetName')]",
+        "RHEL": {
+            "publisher": "RedHat",
+            "offer": "RHEL",
+            "sku": "7-LVM",
+            "version": "latest"
+        },
+        "imageReference": "[variables('RHEL')]",
+        "subnetRef": "[if(equals(parameters('HAAvirtualNetworkNewOrExistingPaaS'),'new'), resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('HAAVnetName'), parameters('HAAsubnetName')), resourceId(parameters('HAAvirtualNetworkResourceGroupNamePaaS'),'Microsoft.Network/virtualNetworks/subnets', parameters('HAAVnetName'), parameters('HAAsubnetName')))]",
+        "webSubnetRef": "[if(equals(parameters('HAAvirtualNetworkNewOrExistingPaaS'),'new'), resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('HAAVnetName'), parameters('HAAWASubnetName')), resourceId(parameters('HAAvirtualNetworkResourceGroupNamePaaS'),'Microsoft.Network/virtualNetworks/subnets', parameters('HAAVnetName'), parameters('HAAWASubnetName')))]",
+        "installScriptFileName": "install-haa.sh",
+        "installPackage": "haa-2.0.0.tar.gz",
+        "installPackageUri": "[uri(parameters('_artifactsLocation'),concat(variables('installPackage'),parameters('_artifactsLocationSasToken')))]",
+        "installScriptUri": "[uri(parameters('_artifactsLocation'),concat(variables('installScriptFileName'),parameters('_artifactsLocationSasToken')))]",
+        "SQLTemplateUri": "[uri(parameters('_artifactsLocation'),concat('linkedTemplates/SQL.json', parameters('_artifactsLocationSasToken')))]",
+        "HAATemplateUri": "[uri(parameters('_artifactsLocation'),concat('linkedTemplates/HAA.json', parameters('_artifactsLocationSasToken')))]",
+        "PaaSWithIdentityTemplateUri": "[uri(parameters('_artifactsLocation'),concat('linkedTemplates/PaaSWithIdentity.json', parameters('_artifactsLocationSasToken')))]",
+        "OrchestrationVMUri": "[uri(parameters('_artifactsLocation'),concat('linkedTemplates/OrchestrationVM.json', parameters('_artifactsLocationSasToken')))]",
+        "CleanUpOrchestrationScriptUri": "[uri(parameters('_artifactsLocation'),concat('linkedTemplates/CleanUpScriptsTemplate.json', parameters('_artifactsLocationSasToken')))]",
+        "OrchestratorArtifactsPaaS": {
+            "OrchestratorArtifact": "[uri(parameters('_artifactsLocation'),concat(parameters('orchestratorVersion'),'/UiPath.Orchestrator.Web.zip',parameters('_artifactsLocationSasToken')))]",
+            "PublishOrchestratorScript": "[uri(parameters('_artifactsLocation'),concat(parameters('orchestratorVersion'),'/Publish-Orchestrator.ps1',parameters('_artifactsLocationSasToken')))]",
+            "WebDeployPackage": "[uri(parameters('_artifactsLocation'),concat(parameters('orchestratorVersion'),'/WebDeploy_amd64_en-US.msi',parameters('_artifactsLocationSasToken')))]"
+        },
+        "IdentityArtifactsPaaS": {
+            "IdentityPackage": "[uri(parameters('_artifactsLocation'),concat(parameters('orchestratorVersion'), '/UiPath.IdentityServer.Web.zip',parameters('_artifactsLocationSasToken')))]",
+            "IdentityCliMigrator": "[uri(parameters('_artifactsLocation'),concat(parameters('orchestratorVersion'), '/UiPath.IdentityServer.Migrator.Cli.zip',parameters('_artifactsLocationSasToken')))]",
+            "PublishIdentityScript": "[uri(parameters('_artifactsLocation'),concat(parameters('orchestratorVersion'), '/Publish-IdentityServer.ps1',parameters('_artifactsLocationSasToken')))]",
+            "MigrateToIdentityScript": "[uri(parameters('_artifactsLocation'),concat(parameters('orchestratorVersion'), '/MigrateTo-IdentityServer.ps1',parameters('_artifactsLocationSasToken')))]"
+        },
+        "WebhooksArtifactsPaaS": {
+            "PublishWebhooksScript": "[uri(parameters('_artifactsLocation'),concat(parameters('orchestratorVersion'), '/Publish-Webhooks.ps1',parameters('_artifactsLocationSasToken')))]",
+            "MigrateToWebhooksScript": "[uri(parameters('_artifactsLocation'),concat(parameters('orchestratorVersion'), '/MigrateTo-Webhooks.ps1',parameters('_artifactsLocationSasToken')))]",
+            "WebhookServicePackage": "[uri(parameters('_artifactsLocation'),concat(parameters('orchestratorVersion'), '/UiPath.WebhookService.Web.zip',parameters('_artifactsLocationSasToken')))]",
+            "WebhookMigratePackage": "[uri(parameters('_artifactsLocation'),concat(parameters('orchestratorVersion'), '/UiPath.WebhookService.Migrator.Cli.zip',parameters('_artifactsLocationSasToken')))]"
+        },
+        "UtilityArtifactsPaaS": {
+            "PSUtilsZip": "[uri(parameters('_artifactsLocation'),concat(parameters('orchestratorVersion'), '/ps_utils.zip',parameters('_artifactsLocationSasToken')))]",
+            "AzModulesZip": "[uri(parameters('_artifactsLocation'),concat(parameters('orchestratorVersion'), '/AzModules.zip',parameters('_artifactsLocationSasToken')))]",
+            "CleanUpOrchestrationResources": "[uri(parameters('_artifactsLocation'),concat(parameters('orchestratorVersion'),'/CleanUpOrchestrationResources.ps1',parameters('_artifactsLocationSasToken')))]",
+            "DeployOrchestratorMainScript": "[uri(parameters('_artifactsLocation'),concat(parameters('orchestratorVersion'),'/Deploy-UiPathOrchestratorPaaS.ps1',parameters('_artifactsLocationSasToken')))]"
+        }
+    },
+    "resources": [
+        {
+            "apiVersion": "2019-10-01",
+            "name": "pid-5b5efb37-e388-4862-add1-0be0d6d0d45b",
+            "tags": "[ if(contains(parameters('tagsByResource'), 'Microsoft.Resources/deployments'), parameters('tagsByResource')['Microsoft.Resources/deployments'], json('{}')) ]",
+            "type": "Microsoft.Resources/deployments",
+            "properties": {
+                "mode": "Incremental",
+                "template": {
+                    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                    "contentVersion": "1.0.0.0",
+                    "resources": [
+                    ]
+                }
+            }
+        },
+        {
+            "name": "SQLTemplate",
+            "type": "Microsoft.Resources/deployments",
+            "tags": "[ if(contains(parameters('tagsByResource'), 'Microsoft.Resources/deployments'), parameters('tagsByResource')['Microsoft.Resources/deployments'], json('{}')) ]",
+            "apiVersion": "2019-10-01",
+            "condition": true,
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('SQLTemplateUri')]"
+                },
+                "parameters": {
+                    "location": {
+                        "value": "[parameters('location')]"
+                    },
+                    "SQLServerName": {
+                        "value": "[variables('SQLServerName')]"
+                    },
+                    "SQLServerAdminLogin": {
+                        "value": "[parameters('SQLServerAdminLogin')]"
+                    },
+                    "SQLServerAdminPassword": {
+                        "value": "[parameters('SQLServerAdminPassword')]"
+                    },
+                    "dbName": {
+                        "value": "[variables('dbName')]"
+                    },
+                    "dbEdition": {
+                        "value": "[variables('dbEdition')]"
+                    },
+                    "dbPerformanceLevel": {
+                        "value": "[variables('dbPerformanceLevel')]"
+                    },
+                    "tagsByResource": {
+                        "value": "[parameters('tagsByResource')]"
+                    }
+                }
+            }
+        },
+        {
+            "name": "HAATemplate",
+            "type": "Microsoft.Resources/deployments",
+            "tags": "[ if(contains(parameters('tagsByResource'), 'Microsoft.Resources/deployments'), parameters('tagsByResource')['Microsoft.Resources/deployments'], json('{}')) ]",
+            "apiVersion": "2019-10-01",
+            "condition": "[parameters('EnableHAA')]",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('HAATemplateUri')]"
+                },
+                "parameters": {
+                    "location": {
+                        "value": "[parameters('location')]"
+                    },
+                    "availabilitySetName": {
+                        "value": "[variables('availabilitySetName')]"
+                    },
+                    "HAAPort": {
+                        "value": "[variables('HAAPort')]"
+                    },
+                    "virtualNetworkNewOrExisting": {
+                        "value": "[parameters('HAAvirtualNetworkNewOrExistingPaaS')]"
+                    },
+                    "virtualNetworkName": {
+                        "value": "[parameters('HAAVnetName')]"
+                    },
+                    "addressPrefixes": {
+                        "value": "[parameters('HAAaddressPrefixesPaaS')]"
+                    },
+                    "subnetName": {
+                        "value": "[parameters('HAAsubnetName')]"
+                    },
+                    "subnetPrefix": {
+                        "value": "[parameters('HAAsubnetPrefixPaaS')]"
+                    },
+                    "webAppsubnetName": {
+                        "value": "[parameters('HAAWASubnetName')]"
+                    },
+                    "webAppsubnetPrefix": {
+                        "value": "[parameters('HAAwebAppsubnetPrefixPaaS')]"
+                    },
+                    "HAANICNamePrefix": {
+                        "value": "[variables('HAANICNamePrefix')]"
+                    },
+                    "HAAVMNamePrefix": {
+                        "value": "[variables('HAAVMNamePrefix')]"
+                    },
+                    "subnetRef": {
+                        "value": "[variables('subnetRef')]"
+                    },
+                    "numberOfInstances": {
+                        "value": "[variables('numberOfInstances')]"
+                    },
+                    "virtualMachineSize": {
+                        "value": "[parameters('HAAvirtualMachineSize')]"
+                    },
+                    "HAAVMAdminLogin": {
+                        "value": "[parameters('HAAVMAdminLogin')]"
+                    },
+                    "HAAVMAdminPassword": {
+                        "value": "[parameters('HAAVMAdminPassword')]"
+                    },
+                    "HAANSGName": {
+                        "value": "[parameters('HAANSGName')]"
+                    },
+                    "imageReference": {
+                        "value": "[variables('imageReference')]"
+                    },
+                    "installScriptUri": {
+                        "value": "[variables('installScriptUri')]"
+                    },
+                    "installPackageUri": {
+                        "value": "[variables('installPackageUri')]"
+                    },
+                    "installScriptFileName": {
+                        "value": "[variables('installScriptFileName')]"
+                    },
+                    "HAAadminEmail": {
+                        "value": "[parameters('HAAadminEmail')]"
+                    },
+                    "HAAAdminPassword": {
+                        "value": "[parameters('HAAAdminPassword')]"
+                    },
+                    "HAALicense": {
+                        "value": "[parameters('HAALicense')]"
+                    },
+                    "tagsByResource": {
+                        "value": "[parameters('tagsByResource')]"
+                    }
+                }
+            }
+        },
+        {
+            "name": "PaaSWithIdentityTemplate",
+            "type": "Microsoft.Resources/deployments",
+            "tags": "[ if(contains(parameters('tagsByResource'), 'Microsoft.Resources/deployments'), parameters('tagsByResource')['Microsoft.Resources/deployments'], json('{}')) ]",
+            "apiVersion": "2019-10-01",
+            "condition": "[startsWith(parameters('orchestratorVersion'),'20')]",
+            "dependsOn": [
+                "SQLTemplate",
+                "HAATemplate"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('PaaSWithIdentityTemplateUri')]"
+                },
+                "parameters": {
+                    "location": {
+                        "value": "[parameters('location')]"
+                    },
+                    "storageAccountName": {
+                        "value": "[variables('storageAccountName')]"
+                    },
+                    "appServicePlanName": {
+                        "value": "[variables('appServicePlanName')]"
+                    },
+                    "appName": {
+                        "value": "[parameters('appName')]"
+                    },
+                    "identityAppName": {
+                        "value": "[parameters('OrchIdentityAppServiceName')]"
+                    },
+                    "webhookAppName": {
+                        "value": "[parameters('OrchWebhooksAppServiceName')]"
+                    },
+                    "certificateName": {
+                        "value": "[parameters('OrchCertificate')]"
+                    },
+                    "msiName": {
+                        "value": "[parameters('OrchMSIName')]"
+                    },
+                    "appInsight": {
+                        "value": "[variables('appInsight')]"
+                    },
+                    "SQLconnectionString": {
+                        "value": "[concat('Data Source=tcp:', reference('SQLTemplate').outputs.SQLFQDN.value, ',1433;Initial Catalog=', variables('dbName'), ';User Id=', parameters('SQLServerAdminLogin'), '@', variables('SQLServerName'), ';Password=', parameters('SQLServerAdminPassword'), ';')]"
+                    },
+                    "SQLconnectionType": {
+                        "value": "SQLAzure"
+                    },
+                    "EnableHAA": {
+                        "value": "[parameters('EnableHAA')]"
+                    },
+                    "orchestratorVersion": {
+                        "value": "[parameters('orchestratorVersion')]"
+                    },
+                    "virtualNetworkName": {
+                        "value": "[parameters('HAAVnetName')]"
+                    },
+                    "webSubnetRef": {
+                        "value": "[variables('webSubnetRef')]"
+                    },
+                    "appInsightsRegion": {
+                        "value": "[variables('appInsightsRegion')]"
+                    },
+                    "orchestratorInstances": {
+                        "value": "[parameters('orchestratorInstances')]"
+                    },
+                    "TokenCertificate": {
+                        "value": "[parameters('TokenCertificate')]"
+                    },
+                    "TokenCertificatePass": {
+                        "value": "[parameters('TokenCertificatePass')]"
+                    },
+                    "tagsByResource": {
+                        "value": "[parameters('tagsByResource')]"
+                    }
+                }
+            }
+        },
+        {
+            "name": "OrchestrationVM",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2019-10-01",
+            "dependsOn": [
+                "PaaSWithIdentityTemplate"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('OrchestrationVMUri')]"
+                },
+                "parameters": {
+                    "location": {
+                        "value": "[parameters('location')]"
+                    },
+                    "appName": {
+                        "value": "[parameters('appName')]"
+                    },
+                    "OrchestratorArtifactsPaaS": {
+                        "value": "[variables('OrchestratorArtifactsPaaS')]"
+                    },
+                    "IdentityArtifactsPaaS": {
+                        "value": "[variables('IdentityArtifactsPaaS')]"
+                    },
+                    "WebhooksArtifactsPaaS": {
+                        "value": "[variables('WebhooksArtifactsPaaS')]"
+                    },
+                    "UtilityArtifactsPaaS": {
+                        "value": "[variables('UtilityArtifactsPaaS')]"
+                    },
+                    "OrchMSIName": {
+                        "value": "[parameters('OrchMSIName')]"
+                    },
+                    "orchestratorAdminPassword": {
+                        "value": "[parameters('orchestratorAdminPassword')]"
+                    },
+                    "mainStorageAccountName": {
+                        "value": "[variables('storageAccountName')]"
+                    },
+                    "mainStorageid": {
+                        "value": "[reference('PaaSWithIdentityTemplate').outputs.storageAccountId.value]"
+                    },
+                    "HAAconnectionString": {
+                        "value": "[if(parameters('EnableHAA'), concat(reference('HAATemplate').outputs.masterNICPrivateIP.value,':',variables('HAAPort'),',',reference('HAATemplate').outputs.worker1NICPrivateIP.value,':',variables('HAAPort'), ',', reference('HAATemplate').outputs.worker2NICPrivateIP.value,':',variables('HAAPort'), ',password=',parameters('HAAAdminPassword'),',ssl=',variables('enableNonSslPort'),',abortConnect=False'),'')]"
+                    },
+                    "InsightsKey": {
+                        "value": "[reference('PaaSWithIdentityTemplate').outputs.insightsKey.value]"
+                    },
+                    "OrchIdentityAppServiceName": { 
+                        "value": "[parameters('OrchIdentityAppServiceName')]" 
+                    },
+                    "OrchWebhooksAppServiceName": { 
+                        "value": "[parameters('OrchWebhooksAppServiceName')]" 
+                    },
+                    "tagsByResource": {
+                        "value": "[parameters('tagsByResource')]"
+                    }
+                }
+            }
+        },
+        {
+            "name": "CleanUpOrchestrationScript",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2019-10-01",
+            "dependsOn": [
+                "OrchestrationVM"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('CleanUpOrchestrationScriptUri')]"
+                },
+                "parameters": {
+                    "location": {
+                        "value": "[parameters('location')]"
+                    },
+                    "StorageAccountName": {
+                        "value": "[reference('OrchestrationVM').outputs.StorageAccountName.value]"
+                    },
+                    "NICName": {
+                        "value": "[reference('OrchestrationVM').outputs.NICName.value]"
+                    },
+                    "VnetName": {
+                        "value": "[reference('OrchestrationVM').outputs.VnetName.value]"
+                    },
+                    "NSGName": {
+                        "value": "[reference('OrchestrationVM').outputs.NSGName.value]"
+                    },
+                    "VMName": {
+                        "value": "[reference('OrchestrationVM').outputs.VMName.value]"
+                    },
+                    "MSIName": {
+                        "value": "[parameters('OrchMSIName')]"
+                    },
+                    "UtilityArtifactsPaaS": {
+                        "value": "[variables('UtilityArtifactsPaaS')]"
+                    },
+                    "InsightsKey": {
+                        "value": "[reference('PaaSWithIdentityTemplate').outputs.insightsKey.value]"
+                    },
+                    "tagsByResource": {
+                        "value": "[parameters('tagsByResource')]"
+                    }
+                }
+            }
+        }
+    ]
+}

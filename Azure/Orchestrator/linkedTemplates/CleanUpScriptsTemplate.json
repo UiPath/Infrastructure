@@ -1,0 +1,112 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "location": {
+            "type": "string",
+            "metadata": {
+                "description": "Location for all resources."
+            }
+        },
+        "StorageAccountName": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "description": "Storage account name to be removed"
+            }
+        },
+        "NICName": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "description": "NIC name to be removed"
+            }
+        },
+        "VnetName": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "description": "VNet name to be removed"
+            }
+        },
+        "NSGName": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "description": "NSG name to be removed"
+            }
+        },
+        "VMName": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "description": "VMName name to be removed"
+            }
+        },
+        "MSIName": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "description": "Managed service identity"
+            }
+        },
+        "UtilityArtifactsPaaS": {
+            "type": "object",
+            "metadata": {
+                "description": "UiPath utility artifacts (ps_utils, AzModules)"
+            }
+        },
+        "InsightsKey": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "description": "Instrumentation Key for application insights."
+            }
+        },
+        "tagsByResource": {
+            "type": "object",
+            "defaultValue": {}
+        }
+    },
+    "variables": {
+        "RGName": "[resourceGroup().name]",
+        "UniqueGuid": "[guid(resourceGroup().id)]"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Resources/deploymentScripts",
+            "apiVersion": "2019-10-01-preview",
+            "tags": "[if(contains(parameters('tagsByResource'), 'Microsoft.Resources/deploymentScripts'), parameters('tagsByResource')['Microsoft.Resources/deploymentScripts'], json('{}'))]",
+            "name": "CleanUpOrchResources",
+            "location": "[parameters('location')]",
+            "identity": {
+                "type": "UserAssigned",
+                "userAssignedIdentities": {
+                    "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('MSIName'))]": {
+                    }
+                }
+            },
+            "kind": "AzurePowerShell",
+            "properties": {
+                "forceUpdateTag": "[variables('UniqueGuid')]",
+                "azPowerShellVersion": "3.0",
+                "timeout": "PT30M",
+                "supportingScriptUris": [
+                    "[parameters('UtilityArtifactsPaaS').PSUtilsZip]"
+                ],
+                "primaryScriptUri": "[parameters('UtilityArtifactsPaaS').CleanUpOrchestrationResources]",
+                "arguments": "[concat(
+                    ' -RGName ', variables('RGName'),
+                    ' -StorageAccountName ', parameters('StorageAccountName'),
+                    ' -NICName ', parameters('NICName'),
+                    ' -VnetName ', parameters('VnetName'),
+                    ' -NSGName ', parameters('NSGName'),
+                    ' -VMName ', parameters('VMName'),
+                    ' -InsightsKey ', parameters('InsightsKey')
+                    )]",
+                "cleanupPreference": "OnSuccess",
+                "retentionInterval": "P1D"
+            }
+        }
+    ]
+}

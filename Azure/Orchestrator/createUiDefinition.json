@@ -1,0 +1,918 @@
+{
+	"$schema": "https://schema.management.azure.com/schemas/0.1.2-preview/CreateUIDefinition.ProviderControl.json#",
+	"handler": "Microsoft.Azure.CreateUIDef",
+	"version": "0.1.2-preview",
+	"parameters": {
+		"config": {
+			"isWizard": true,
+			"basics": {
+				"resourceGroup": {
+					"constraints": {
+						"validations": [
+							{
+								"permission": "Microsoft.Authorization/roleAssignments/write",
+								"message": "You do not have permissions to create role assignments (Microsoft.Authorization/roleAssignments/write)."
+							}
+						]
+					},
+					"allowExisting": true
+				}
+			}
+		},
+		"resourceTypes": [
+			"Microsoft.Resources/deployments",
+			"Microsoft.Sql/servers",
+			"Microsoft.Storage/storageAccounts",
+			"Microsoft.Web/serverFarms",
+			"Microsoft.Web/Sites",
+			"microsoft.insights/autoscalesettings",
+			"Microsoft.Web/certificates",
+			"microsoft.insights/autoscalesettings",
+			"Microsoft.ManagedIdentity/userAssignedIdentities",
+			"Microsoft.Authorization/roleAssignments",
+			"Microsoft.Resources/deploymentScripts"
+		],
+		"basics": [],
+		"steps": [
+			{
+				"name": "AdvancedConfig",
+				"label": "Resource Names",
+				"subLabel": {
+					"preValidation": "Advanced Configuration",
+					"postValidation": "Done"
+				},
+				"bladeTitle": "Advanced Configuration",
+				"bladeSubtitle": "Configure Advanced settings",
+				"elements": [
+					{
+						"name": "NamesOptionInfo",
+						"type": "Microsoft.Common.InfoBox",
+						"visible": true,
+						"options": {
+							"icon": "Info",
+							"text": "On this blade you can select your Orchestrator Base Web App name and chose whether you want to name your own resources or let us handle that for you. We will use the Orchestrator Base App name as a base for all resource names (eg: storage account name = `Base`st). If you chose to name your own resources, default (random) resource names will appear in the fields below and you can edit them to your liking."
+						}
+					},
+					{
+						"name": "OrchestratorNameCheck",
+						"type": "Microsoft.Solutions.ArmApiControl",
+						"request": {
+							"method": "POST",
+							"path": "[concat(subscription().id, '/providers/Microsoft.Web/checkNameAvailability?api-version=2019-08-01')]",
+							"body": "[parse(concat('{\"name\":\"',steps('AdvancedConfig').orchestratorName,'\",\"type\":\"Microsoft.Web/Sites\"}'))]"
+						}
+					},
+					{
+						"name": "OrchestratorBaseStorageAccountNameCheck",
+						"type": "Microsoft.Solutions.ArmApiControl",
+						"request": {
+							"method": "POST",
+							"path": "[concat(subscription().id, '/providers/Microsoft.Storage/checkNameAvailability?api-version=2019-06-01')]",
+							"body": "[parse(concat('{\"name\":\"',if(equals(steps('AdvancedConfig').AdvConfVisibility, 'Yes'), steps('AdvancedConfig').AdvancedConfigurationDetails.OrchStorageAccountName, concat(steps('AdvancedConfig').orchestratorName,'st')),'\",\"type\":\"Microsoft.Storage/storageAccounts\"}'))]"
+						}
+					},
+					{
+						"name": "OrchestratorBaseSQLNameCheck",
+						"type": "Microsoft.Solutions.ArmApiControl",
+						"request": {
+							"method": "POST",
+							"path": "[concat(subscription().id, '/providers/Microsoft.Sql/checkNameAvailability?api-version=2020-08-01-preview')]",
+							"body": "[parse(concat('{\"name\":\"',if(equals(steps('AdvancedConfig').AdvConfVisibility, 'Yes'), steps('AdvancedConfig').AdvancedConfigurationDetails.OrchestratorSQLServerName, concat(steps('AdvancedConfig').orchestratorName,'sql')),'\",\"type\":\"Microsoft.Sql/servers\"}'))]"
+						}
+					},
+					{
+						"name": "OrchestratorBaseIdentityNameCheck",
+						"type": "Microsoft.Solutions.ArmApiControl",
+						"request": {
+							"method": "POST",
+							"path": "[concat(subscription().id, '/providers/Microsoft.Web/checkNameAvailability?api-version=2019-08-01')]",
+							"body": "[parse(concat('{\"name\":\"',if(equals(steps('AdvancedConfig').AdvConfVisibility, 'Yes'), steps('AdvancedConfig').AdvancedConfigurationDetails.OrchIdentityAppServiceName, concat(steps('AdvancedConfig').orchestratorName,'-is')),'\",\"type\":\"Microsoft.Web/Sites\"}'))]"
+						}
+					},
+					{
+						"name": "OrchestratorBaseWebhooksNameCheck",
+						"type": "Microsoft.Solutions.ArmApiControl",
+						"request": {
+							"method": "POST",
+							"path": "[concat(subscription().id, '/providers/Microsoft.Web/checkNameAvailability?api-version=2019-08-01')]",
+							"body": "[parse(concat('{\"name\":\"',if(equals(steps('AdvancedConfig').AdvConfVisibility, 'Yes'), steps('AdvancedConfig').AdvancedConfigurationDetails.OrchWebhooksAppServiceName, concat(steps('AdvancedConfig').orchestratorName,'-wh')),'\",\"type\":\"Microsoft.Web/Sites\"}'))]"
+						}
+					},
+					{
+						"name": "orchestratorName",
+						"label": "Orchestrator Base App name",
+						"defaultValue": "",
+						"type": "Microsoft.Common.TextBox",
+						"constraints": {
+							"required": true,
+							"validations": [
+								{
+									"isValid": "[not(equals(steps('AdvancedConfig').OrchestratorNameCheck.nameAvailable, false))]",
+									"message": "[concat('Name Unavailable: ',steps('AdvancedConfig').orchestratorName)]"
+								},
+								{
+									"isValid": "[or(not(equals(steps('AdvancedConfig').OrchestratorBaseStorageAccountNameCheck.nameAvailable, false)),equals(steps('AdvancedConfig').AdvConfVisibility, 'Yes'))]",
+									"message": "[concat('Storage Account Name Unavailable: ',concat(steps('AdvancedConfig').orchestratorName,'st'), '. Please select I want to choose my own resource names and edit this resource name.')]"
+								},
+								{
+									"isValid": "[or(not(equals(steps('AdvancedConfig').OrchestratorBaseSQLNameCheck.available, false)),equals(steps('AdvancedConfig').AdvConfVisibility, 'Yes'))]",
+									"message": "[concat('Sql Server Name Unavailable: ',concat(steps('AdvancedConfig').orchestratorName,'sql'), '. Please select I want to choose my own resource names and edit this resource name.')]"
+								},
+								{
+									"isValid": "[or(not(equals(steps('AdvancedConfig').OrchestratorBaseIdentityNameCheck.nameAvailable, false)),equals(steps('AdvancedConfig').AdvConfVisibility, 'Yes'))]",
+									"message": "[concat('Identity Web App Name Unavailable: ',concat(steps('AdvancedConfig').orchestratorName,'-is'), '. Please select I want to choose my own resource names and edit this resource name.')]"
+								},
+								{
+									"isValid": "[or(not(equals(steps('AdvancedConfig').OrchestratorBaseWebhooksNameCheck.nameAvailable, false)),equals(steps('AdvancedConfig').AdvConfVisibility, 'Yes'))]",
+									"message": "[concat('Wehbhooks Web App Name Unavailable: ',concat(steps('AdvancedConfig').orchestratorName,'-wh'), '. Please select I want to choose my own resource names and edit this resource name.')]"
+								}
+							]
+						},
+						"toolTip": "The Orchestrator Web App resource name. This is also the base name from which most resource names will be constructed."
+					},
+					{
+						"name": "AdvConfVisibility",
+						"type": "Microsoft.Common.OptionsGroup",
+						"label": "I want to configure my own resource names",
+						"defaultValue": "No",
+						"toolTip": "Select yes if you want to configure your own resource names for the Azure resources in this deployment",
+						"constraints": {
+							"allowedValues": [
+								{
+									"label": "Yes",
+									"value": "Yes"
+								},
+								{
+									"label": "No",
+									"value": "No"
+								}
+							],
+							"required": true
+						},
+						"visible": true
+					},
+					{
+						"name": "AdvancedConfigurationDetails",
+						"type": "Microsoft.Common.Section",
+						"label": "Custom resource names:",
+						"visible": "[equals(steps('AdvancedConfig').AdvConfVisibility, 'Yes')]",
+						"elements": [
+							{
+								"name": "SQLServerNameCheck",
+								"type": "Microsoft.Solutions.ArmApiControl",
+								"request": {
+									"method": "POST",
+									"path": "[concat(subscription().id, '/providers/Microsoft.Sql/checkNameAvailability?api-version=2020-08-01-preview')]",
+									"body": "[parse(concat('{\"name\":\"',steps('AdvancedConfig').AdvancedConfigurationDetails.OrchestratorSQLServerName,'\",\"type\":\"Microsoft.Sql/servers\"}'))]"
+								}
+							},
+							{
+								"label": "Orchestrator SQL server",
+								"name": "OrchestratorSQLServerName",
+								"type": "Microsoft.Common.TextBox",
+								"defaultValue": "[concat('orch',substring(toLower(guid()),0,5),'sql')]",
+								"visible": true,
+								"constraints": {
+									"required": true,
+									"validations": [
+										{
+											"regex": "^[a-zA-Z][a-z0-9A-Z-]{4,63}$",
+											"message": "SQL Server Name must comply with the following name rules: At least 4 characters in length and a maximum of 63 characters. Make sure your name doesn't contain whitespace, unicode characters, or nonalphabetic characters, and that it doesn't begin with a number or symbol."
+										},
+										{
+											"isValid": "[not(equals(steps('AdvancedConfig').AdvancedConfigurationDetails.SQLServerNameCheck.available, false))]",
+											"message": "[concat('Name Unavailable: ',steps('AdvancedConfig').AdvancedConfigurationDetails.OrchestratorSQLServerName)]"
+										}
+									]
+								},
+								"toolTip": "The SQL Nerver name."
+							},
+							{
+								"name": "OrchStorageAccountNameCheck",
+								"type": "Microsoft.Solutions.ArmApiControl",
+								"request": {
+									"method": "POST",
+									"path": "[concat(subscription().id, '/providers/Microsoft.Storage/checkNameAvailability?api-version=2019-06-01')]",
+									"body": "[parse(concat('{\"name\":\"',steps('AdvancedConfig').AdvancedConfigurationDetails.OrchStorageAccountName,'\",\"type\":\"Microsoft.Storage/storageAccounts\"}'))]"
+								}
+							},
+							{
+								"label": "Orchestrator Storage Account",
+								"name": "OrchStorageAccountName",
+								"type": "Microsoft.Common.TextBox",
+								"defaultValue": "[concat('orch',substring(toLower(guid()),0,5),'st')]",
+								"visible": true,
+								"constraints": {
+									"required": true,
+									"validations": [
+										{
+											"isValid": "[not(equals(steps('AdvancedConfig').AdvancedConfigurationDetails.OrchStorageAccountNameCheck.nameAvailable, false))]",
+											"message": "[concat('Name Unavailable: ',steps('AdvancedConfig').AdvancedConfigurationDetails.OrchStorageAccountName)]"
+										},
+										{
+											"regex": "^[a-z0-9]{3,22}$",
+											"message": "Storage Account Name must comply with the following name rules: At least 3 characters in length and a maximum of 25 characters. Only lowercase characters and digits are allowed."
+										}
+									]
+								},
+								"toolTip": "The name of the Azure Storage Account resource which will be deployed. This is used to store NuGet packages."
+							},
+							{
+								"name": "OrchDatabaseName",
+								"label": "Orchestrator Database",
+								"type": "Microsoft.Common.TextBox",
+								"defaultValue": "[concat('orch',substring(toLower(guid()),0,5),'db')]",
+								"visible": true,
+								"constraints": {
+									"required": true,
+									"validations": [
+										{
+											"regex": "^[a-z0-9A-Z-]{1,128}$",
+											"message": "Database Name must comply with the following name rules: At least 1 characters in length and a maximum of 128 characters. Database names cannot contain any special words or any patterns and must be unique within a server."
+										}
+									]
+								},
+								"toolTip": "The name of the Azure SQL Database resource which will be deployed."
+							},
+							{
+								"name": "OrchAppServicePlan",
+								"label": "Orchestrator App Service Plan",
+								"type": "Microsoft.Common.TextBox",
+								"defaultValue": "[concat('orch',substring(toLower(guid()),0,5),'asp')]",
+								"visible": true,
+								"constraints": {
+									"required": true,
+									"validations": [
+										{
+											"regex": "^[a-z0-9A-Z-]{1,40}$",
+											"message": "App Service Plan Name must comply with the following name rules: At least 1 characters in length and a maximum of 40 characters. Must be unique within the resource group."
+										}
+									]
+								},
+								"toolTip": "The name of the Azure App Service Plan resource which will be deployed."
+							},
+							{
+								"name": "OrchAppInsights",
+								"label": "Orchestrator AppInsights",
+								"type": "Microsoft.Common.TextBox",
+								"defaultValue": "[concat('orch',substring(toLower(guid()),0,5),'appins')]",
+								"visible": true,
+								"constraints": {
+									"required": true,
+									"validations": [
+										{
+											"regex": "^[a-z0-9A-Z-]{1,255}$",
+											"message": "AppInsights Name must comply with the following name rules: At least 1 characters in length and a maximum of 255 characters. Must be unique within the resource group."
+										}
+									]
+								},
+								"toolTip": "The name of the Azure Insights resource which will be deployed."
+							},
+							{
+								"name": "OrchIdentityNameCheck",
+								"type": "Microsoft.Solutions.ArmApiControl",
+								"request": {
+									"method": "POST",
+									"path": "[concat(subscription().id, '/providers/Microsoft.Web/checkNameAvailability?api-version=2019-08-01')]",
+									"body": "[parse(concat('{\"name\":\"',steps('AdvancedConfig').AdvancedConfigurationDetails.OrchIdentityAppServiceName,'\",\"type\":\"Microsoft.Web/Sites\"}'))]"
+								}
+							},
+							{
+								"name": "OrchIdentityAppServiceName",
+								"label": "Orchestrator Identity App Service",
+								"defaultValue": "[concat('orch',substring(toLower(guid()),0,5),'is')]",
+								"type": "Microsoft.Common.TextBox",
+								"constraints": {
+									"required": true,
+									"validations": [
+										{
+											"regex": "^[a-z0-9A-Z-]{4,60}$",
+											"message": "Name length must be at least 4 and a maximum of 60 characters. Make sure your name doesn't contain whitespace, unicode characters, or nonalphabetic characters, and that it doesn't begin with a number or symbol."
+										},
+										{
+											"isValid": "[not(equals(steps('AdvancedConfig').AdvancedConfigurationDetails.OrchIdentityNameCheck.nameAvailable, false))]",
+											"message": "[concat('Name Unavailable: ',steps('AdvancedConfig').AdvancedConfigurationDetails.OrchIdentityAppServiceName)]"
+										}
+									]
+								},
+								"toolTip": "The name of the App Service resource where the Identity Service will be deployed."
+							},
+							{
+								"name": "OrchWebhooksNameCheck",
+								"type": "Microsoft.Solutions.ArmApiControl",
+								"request": {
+									"method": "POST",
+									"path": "[concat(subscription().id, '/providers/Microsoft.Web/checkNameAvailability?api-version=2019-08-01')]",
+									"body": "[parse(concat('{\"name\":\"',steps('AdvancedConfig').AdvancedConfigurationDetails.OrchWebhooksAppServiceName,'\",\"type\":\"Microsoft.Web/Sites\"}'))]"
+								}
+							},
+							{
+								"name": "OrchWebhooksAppServiceName",
+								"label": "Orchestrator Webhooks App Service",
+								"defaultValue": "[concat('orch',substring(toLower(guid()),0,5),'wh')]",
+								"type": "Microsoft.Common.TextBox",
+								"constraints": {
+									"required": true,
+									"validations": [
+										{
+											"regex": "^[a-z0-9A-Z-]{4,60}$",
+											"message": "Name length must be at least 4 and a maximum of 60 characters. Make sure your name doesn't contain whitespace, unicode characters, or nonalphabetic characters, and that it doesn't begin with a number or symbol."
+										},
+										{
+											"isValid": "[not(equals(steps('AdvancedConfig').AdvancedConfigurationDetails.OrchWebhooksNameCheck.nameAvailable, false))]",
+											"message": "[concat('Name Unavailable: ',steps('AdvancedConfig').AdvancedConfigurationDetails.OrchWebhooksAppServiceName)]"
+										}
+									]
+								},
+								"toolTip": "The name of the App Service resource where the Webhooks Service will be deployed."
+							},
+							{
+								"name": "OrchCertificate",
+								"label": "Orchestrator Certificate",
+								"type": "Microsoft.Common.TextBox",
+								"defaultValue": "[concat('orch',substring(toLower(guid()),0,5),'crt')]",
+								"visible": true,
+								"constraints": {
+									"required": true,
+									"validations": [
+										{
+											"regex": "^[a-z0-9A-Z-]{3,30}$",
+											"message": "Certificate Name must comply with the following name rules: At least 3 characters in length and a maximum of 30 characters. Must be unique within the resource group. Can only contain characters and digits."
+										}
+									]
+								},
+								"toolTip": "The name of the Certificate resource which will be deployed."
+							},
+							{
+								"name": "OrchMSIName",
+								"label": "Orchestrator User Assigned MI",
+								"type": "Microsoft.Common.TextBox",
+								"defaultValue": "[concat('orch',substring(toLower(guid()),0,5),'msi')]",
+								"visible": true,
+								"constraints": {
+									"required": true,
+									"validations": [
+										{
+											"regex": "^[a-z0-9A-Z-]{3,128}$",
+											"message": "User Assigned Managed Identity Name must comply with the following name rules: At least 3 characters in length and a maximum of 128 characters. Must be unique within the resource group. Can only contain characters and digits and the characters - and _."
+										}
+									]
+								},
+								"toolTip": "The name of the User Assigned Managed Identity resource which will be deployed."
+							},
+							{
+								"name": "HAAAvailabilitySetName",
+								"label": "High Availability Add-On Av. Set",
+								"type": "Microsoft.Common.TextBox",
+								"defaultValue": "[concat('orch',substring(toLower(guid()),0,5),'haaas')]",
+								"visible": "[or(greater(int(steps('OrchSetup').orchestratorInstances), 1),equals(steps('HAAServer').HighAvailabilityAddon, 'Yes'))]",
+								"constraints": {
+									"required": true,
+									"validations": [
+										{
+											"regex": "^[a-z0-9A-Z-]{1,80}$",
+											"message": "The Availability Set Name must comply with the following name rules: At least 1 character in length and a maximum of 80 characters. Must be unique within the resource group. The first character must be a letter or number. The last character must be a letter, number, or underscore. The remaining characters must be letters, numbers, periods, underscores, or dashes."
+										}
+									]
+								},
+								"toolTip": "The name of the Availability Set resource which will be deployed."
+							},
+							{
+								"name": "HAANSGName",
+								"label": "High Availability Add-On NSG",
+								"type": "Microsoft.Common.TextBox",
+								"defaultValue": "[concat('orch',substring(toLower(guid()),0,5),'haansg')]",
+								"visible": "[or(greater(int(steps('OrchSetup').orchestratorInstances), 1),equals(steps('HAAServer').HighAvailabilityAddon, 'Yes'))]",
+								"constraints": {
+									"required": true,
+									"validations": [
+										{
+											"regex": "^[a-z0-9A-Z-]{1,80}$",
+											"message": "The Network Security Group Name must comply with the following name rules: At least 1 character in length and a maximum of 80 characters. Must be unique within the resource group. The name must begin with a letter or number, end with a letter, number or underscore, and may contain only letters, numbers, underscores, periods, or hyphens."
+										}
+									]
+								},
+								"toolTip": "The name of the Network Security Group resource which will be deployed."
+							},
+							{
+								"name": "HAANICNamePrefix",
+								"label": "High Availability Add-On NIC",
+								"type": "Microsoft.Common.TextBox",
+								"defaultValue": "[concat('orch',substring(toLower(guid()),0,5),'haanic')]",
+								"visible": "[or(greater(int(steps('OrchSetup').orchestratorInstances), 1),equals(steps('HAAServer').HighAvailabilityAddon, 'Yes'))]",
+								"constraints": {
+									"required": true,
+									"validations": [
+										{
+											"regex": "^[a-z0-9A-Z-]{1,80}$",
+											"message": "The Network Interface Name must comply with the following name rules: At least 1 character in length and a maximum of 80 characters. Must be unique within the resource group. The name must begin with a letter or number, end with a letter, number or underscore, and may contain only letters, numbers, underscores, periods, or hyphens."
+										}
+									]
+								},
+								"toolTip": "The prefix for the names of the Network Interface resources which will be deployed."
+							},
+							{
+								"name": "HAAVMNamePrefix",
+								"label": "High Availability Add-On VM",
+								"type": "Microsoft.Common.TextBox",
+								"defaultValue": "[concat('orch',substring(toLower(guid()),0,5),'haavm')]",
+								"visible": "[or(greater(int(steps('OrchSetup').orchestratorInstances), 1),equals(steps('HAAServer').HighAvailabilityAddon, 'Yes'))]",
+								"constraints": {
+									"required": true,
+									"validations": [
+										{
+											"regex": "^[a-z0-9A-Z-]{1,64}$",
+											"message": "The Virtual Machine name must comply with the following name rules: At least 1 character in length and a maximum of 64 characters. Must be unique within the resource group. The name cannot contain special characters \/\"\"[]:|<>+=;,?*@&, whitespace, or begin with '_' or end with '.' or '-'."
+										}
+									]
+								},
+								"toolTip": "The prefix for the names of the Virtual Machine resources which will be deployed."
+							}
+						]
+					}
+				]
+			},
+			{
+				"name": "OrchSetup",
+				"label": "Orchestrator",
+				"subLabel": {
+					"preValidation": "Orchestrator settings",
+					"postValidation": "Done"
+				},
+				"bladeTitle": "Orchestrator Settings",
+				"bladeSubtitle": "Configure Orchestrator settings",
+				"elements": [
+					{
+						"name": "OrchestratorNameInfo",
+						"type": "Microsoft.Common.InfoBox",
+						"visible": true,
+						"options": {
+							"icon": "Info",
+							"text": "[concat('The Orchestrator Web App resource name was already chosen on the \"Resource Names\" step. The current value is ',steps('AdvancedConfig').orchestratorName)]"
+						}
+					},
+					{
+						"name": "orchestratorVersion",
+						"label": "Orchestrator version",
+						"type": "Microsoft.Common.DropDown",
+						"defaultValue": "20.10.1",
+						"constraints": {
+							"allowedValues": [
+								{
+									"label": "20.10.1",
+									"value": "20.10.1"
+								}
+							]
+						},
+						"toolTip": "Select the version of the UiPath Orchestrator you want to deploy."
+					},
+					{
+						"name": "orchestratorAdminPassword",
+						"type": "Microsoft.Compute.CredentialsCombo",
+						"visible": true,
+						"label": {
+							"password": "Password",
+							"confirmPassword": "Confirm password"
+						},
+						"constraints": {
+							"required": true,
+							"customPasswordRegex": "^(?=.*\\d)(?=.*[a-z])(?=.*[A-Z])[\\w~@#$%^&*+=|{}:;.?\\()\\[\\]-]{12,}$",
+							"customValidationMessage": "The password must be 12 to 35 characters long with at least 1 uppercase, 1 lowercase and 1 number. Can contain special characters with the exception of \\ or !."
+						},
+						"toolTip": {
+							"password": "Define the password that will be used for the host administrator and the default tenant administrator account (admin)."
+						},
+						"options": {
+							"hideConfirmation": false
+						},
+						"osPlatform": "Windows"
+					},
+					{
+						"name": "orchestratorInstances",
+						"label": "Number of Orchestrator instances",
+						"toolTip": "Number of Orchestrator instances to be created. Max 30 due to App Service limits.",
+						"type": "Microsoft.Common.TextBox",
+						"constraints": {
+							"required": true,
+							"regex": "\\b([1-9]|[12][0-9]|30)\\b",
+							"validationMessage": "The instance number must be between 1 and 30. Only numbers accepted."
+						}
+					},
+					{
+						"name": "orchestratorSize",
+						"label": "Orchestrator size based on total no. of connected robots",
+						"visible": true,
+						"type": "Microsoft.Common.DropDown",
+						"defaultValue": "small",
+						"constraints": {
+							"allowedValues": [
+								{
+									"label": "Small",
+									"value": "Small"
+								},
+								{
+									"label": "Medium",
+									"value": "Medium"
+								},
+								{
+									"label": "Large",
+									"value": "Large"
+								}
+							]
+						},
+						"toolTip": "This will deploy different versions of the SQL DataBase. Small: 0-100 robots (Standard S1) Medium: 100-500 robots (Standard S3) Large: 500 or more robots (Premium P4)"
+					}
+				]
+			},
+			{
+				"name": "HAAServer",
+				"label": "High Availability Addon",
+				"subLabel": {
+					"preValidation": "Configure HAA settings",
+					"postValidation": "Done"
+				},
+				"bladeTitle": "HAA Settings",
+				"bladeSubtitle": "Configure HAA settings",
+				"elements": [
+					{
+						"name": "HAAInfo",
+						"type": "Microsoft.Common.InfoBox",
+						"visible": true,
+						"options": {
+							"icon": "Info",
+							"text": "If you are using more than one instance of UiPath Orchestrator you will need to install the High Availability Addon, a mandatory in-memory cache.",
+							"uri": "https://docs.uipath.com/installation-and-upgrade/docs/orchestrator-hardware-requirements"
+						}
+					},
+					{
+						"name": "HighAvailabilityAddon",
+						"type": "Microsoft.Common.OptionsGroup",
+						"visible": "[less(int(steps('OrchSetup').orchestratorInstances), 2)]",
+						"label": "High Availability Add-on",
+						"defaultValue": "No",
+						"toolTip": "Enable the use of High Availability Add-on.",
+						"constraints": {
+							"allowedValues": [
+								{
+									"label": "Yes",
+									"value": "Yes"
+								},
+								{
+									"label": "No",
+									"value": "No"
+								}
+							],
+							"required": true
+						}
+					},
+					{
+						"name": "HAADetails",
+						"type": "Microsoft.Common.Section",
+						"label": "High Availability Addon details",
+						"visible": "[or(greater(int(steps('OrchSetup').orchestratorInstances), 1), equals(steps('HAAServer').HighAvailabilityAddon, 'Yes'))]",
+						"elements": [
+							{
+								"name": "HAAVMAdminLogin",
+								"toolTip": "Define the admin username for the High Availability Add-on virtual machines.",
+								"label": "HAA Servers (VM) Admin Login",
+								"type": "Microsoft.Common.TextBox",
+								"visible": "[or(greater(int(steps('OrchSetup').orchestratorInstances), 1), equals(steps('HAAServer').HighAvailabilityAddon, 'Yes'))]",
+								"constraints": {
+									"required": true,
+									"regex": "^(?!admin$|administrator$|sa$|root$|dbmanager$|loginmanager$|dbo$|guest$|information_schema$|sys$|db_accessadmin$|db_backupoperator$|db_datareader$|db_datawriter$|db_ddladmin$|db_denydatareader$|db_denydatawriter$|db_owner$|db_securityadmin$|public$)[a-zA-Z][a-zA-Z0-9]{4,35}$",
+									"validationMessage": "Make sure your login name meets the following requirements: Not a typical system username (like admin, administrator, sa, root, dbmanager, loginmanager, etc.), or a built-in user or role (like guest, public, etc.). Make sure your name doesn't contain whitespaces, unicode characters, or nonalphabetic characters, and that it doesn't begin with numbers or symbols. At least 4 characters in length and a maximum of 35 characters"
+								}
+							},
+							{
+								"name": "HAAVMAdminPassword",
+								"type": "Microsoft.Compute.CredentialsCombo",
+								"visible": "[or(greater(int(steps('OrchSetup').orchestratorInstances), 1), equals(steps('HAAServer').HighAvailabilityAddon, 'Yes'))]",
+								"label": {
+									"password": "Password",
+									"confirmPassword": "Confirm password"
+								},
+								"constraints": {
+									"required": true,
+									"customPasswordRegex": "^(?=.*\\d)(?=.*[a-z])(?=.*[A-Z])[\\w~@#$%^&*+=|{}:;.?\\()\\[\\]-]{12,}$",
+									"customValidationMessage": "The password must be 12 to 35 characters long with at least 1 uppercase, 1 lowercase and 1 number. Can contain special characters with the exception of \\ or !."
+								},
+								"toolTip": {
+									"password": "Define the admin password for the High Availability Add-on virtual machines."
+								},
+								"options": {
+									"hideConfirmation": false
+								},
+								"osPlatform": "Windows"
+							},
+							{
+								"name": "HAAadminEmail",
+								"toolTip": "Define the admin email for the High Availability Add-on.",
+								"label": "HAA admin email",
+								"type": "Microsoft.Common.TextBox",
+								"visible": "[or(greater(int(steps('OrchSetup').orchestratorInstances), 1), equals(steps('HAAServer').HighAvailabilityAddon, 'Yes'))]",
+								"constraints": {
+									"required": true,
+									"regex": "^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\\.[a-zA-Z0-9-.]+$",
+									"validationMessage": "Requires a valid email address."
+								}
+							},
+							{
+								"name": "HAAAdminPassword",
+								"type": "Microsoft.Compute.CredentialsCombo",
+								"visible": "[or(greater(int(steps('OrchSetup').orchestratorInstances), 1), equals(steps('HAAServer').HighAvailabilityAddon, 'Yes'))]",
+								"label": {
+									"password": "Password",
+									"confirmPassword": "Confirm password"
+								},
+								"constraints": {
+									"required": true,
+									"customPasswordRegex": "^(?=.*\\d)(?=.*[a-z])(?=.*[A-Z])[\\w~@%^&*+=|{}:;.?\\()\\[\\]-]{12,}$",
+									"customValidationMessage": "The password must be 12 to 35 characters long with at least 1 uppercase, 1 lowercase and 1 number. Can contain special characters with the exception of \\, $, #, or !."
+								},
+								"toolTip": {
+									"password": "Define the admin password for the High Availability Add-on."
+								},
+								"options": {
+									"hideConfirmation": false
+								},
+								"osPlatform": "Windows"
+							},
+							{
+								"name": "HAALicense",
+								"toolTip": "High Availability Add-on license. If not provided you will have to enter a license in 30 days.",
+								"type": "Microsoft.Common.TextBox",
+								"visible": "[or(greater(int(steps('OrchSetup').orchestratorInstances), 1), equals(steps('HAAServer').HighAvailabilityAddon, 'Yes'))]",
+								"label": "High Availability Add-on License",
+								"constraints": {
+									"required": false
+								}
+							},
+							{
+								"label": "Virtual machine size",
+								"name": "vmSize",
+								"type": "Microsoft.Compute.SizeSelector",
+								"visible": "[or(greater(int(steps('OrchSetup').orchestratorInstances), 1), equals(steps('HAAServer').HighAvailabilityAddon, 'Yes'))]",
+								"toolTip": "The size of the three RHEL (Red Hat Enterprise Linux) virtual machines to provision. We recommend 2-4 CPU and 8-16 GB RAM. ",
+								"constraints": {
+									"allowedSizes": [
+										"Standard_D2s_v3",
+										"Standard_D11",
+										"Standard_D11_v2",
+										"Standard_D2_v3",
+										"Standard_D2a_v4",
+										"Standard_D2as_v4",
+										"Standard_D3",
+										"Standard_D3_v2",
+										"Standard_D4_v3",
+										"Standard_D4a_v4",
+										"Standard_D4as_v4",
+										"Standard_D4s_v3",
+										"Standard_DS11",
+										"Standard_DS11_v2",
+										"Standard_DS3",
+										"Standard_DS3_v2",
+										"Standard_E2_v3",
+										"Standard_E2a_v4",
+										"Standard_E2as_v4",
+										"Standard_E2s_v3",
+										"Standard_F4",
+										"Standard_F4s",
+										"Standard_F4s_v2"
+									]
+								},
+								"recommendedSizes": [
+									"Standard_D2s_v3",
+									"Standard_D4s_v3"
+								],
+								"osPlatform": "Linux",
+								"count": "1"
+							},
+							{
+								"name": "HAAVirtualNetwork",
+								"type": "Microsoft.Network.VirtualNetworkCombo",
+								"visible": "[or(greater(int(steps('OrchSetup').orchestratorInstances), 1),equals(steps('HAAServer').HighAvailabilityAddon, 'Yes'))]",
+								"label": {
+									"virtualNetwork": "Virtual network for HAA",
+									"subnets": "Subnets"
+								},
+								"toolTip": {
+									"virtualNetwork": "Virtual network that will be used to deploy the High Availability Add-on virtual machines. They will be deployed in a subnet and another subnet is required for the WebApp virtual network integration (private connectivity).",
+									"subnets": "Two subnets required: Virtual network subnet that will be used to deploy the High Availability Add-on virtual machines. Virtual network subnet used for App Service/Web App integration (private connectivity). Must be empty, configured and only used for this purpose."
+								},
+								"defaultValue": {
+									"name": "haaVNet01",
+									"addressPrefixSize": "/16"
+								},
+								"constraints": {
+									"minAddressPrefixSize": "/24"
+								},
+								"options": {
+									"hideExisting": false
+								},
+								"subnets": {
+									"haa-subnet": {
+										"label": "HAA subnet",
+										"defaultValue": {
+											"name": "haa-subnet",
+											"addressPrefixSize": "/24"
+										},
+										"constraints": {
+											"minAddressPrefixSize": "/28",
+											"minAddressCount": 3,
+											"requireContiguousAddresses": true
+										}
+									},
+									"webApp-VNetIntegr": {
+										"label": "Subnet used for Orchestrator Web App VNet integration",
+										"defaultValue": {
+											"name": "haa-integration",
+											"addressPrefixSize": "/24"
+										},
+										"constraints": {
+											"minAddressPrefixSize": "/26",
+											"minAddressCount": 32,
+											"requireContiguousAddresses": true
+										}
+									}
+								}
+							}
+						]
+					}
+				]
+			},
+			{
+				"name": "OrchestratorSQLServer",
+				"label": "SQL",
+				"subLabel": {
+					"preValidation": "Configure Orchestrator SQL settings",
+					"postValidation": "Done"
+				},
+				"bladeTitle": "Orchestrator SQL settings",
+				"bladeSubtitle": "Configure Orchestrator SQL settings",
+				"elements": [
+					{
+						"name": "OrchestratorSQLNameInfo",
+						"type": "Microsoft.Common.InfoBox",
+						"visible": true,
+						"options": {
+							"icon": "Info",
+							"text": "[concat('The Orchestrator SQL Server resource name was already chosen on the \"Resource Names\" step. The current value is ',if(equals(steps('AdvancedConfig').AdvConfVisibility, 'Yes'),steps('AdvancedConfig').AdvancedConfigurationDetails.OrchestratorSQLServerName,concat(steps('AdvancedConfig').orchestratorName,'sql')), '. The current database name is ', if(equals(steps('AdvancedConfig').AdvConfVisibility, 'Yes'),steps('AdvancedConfig').AdvancedConfigurationDetails.OrchDatabaseName,concat(steps('AdvancedConfig').orchestratorName,'-db')))]"
+						}
+					},
+					{
+						"label": "Orchestrator SQL server admin login",
+						"type": "Microsoft.Common.TextBox",
+						"visible": true,
+						"constraints": {
+							"required": true,
+							"regex": "^(?!admin$|administrator$|sa$|root$|dbmanager$|loginmanager$|dbo$|guest$|information_schema$|sys$|db_accessadmin$|db_backupoperator$|db_datareader$|db_datawriter$|db_ddladmin$|db_denydatareader$|db_denydatawriter$|db_owner$|db_securityadmin$|public$)[a-zA-Z][a-zA-Z0-9]{4,35}$",
+							"validationMessage": "Make sure your login name meets the following requirements: It's a SQL Identifier, and not a typical system name (like admin, administrator, sa, root, dbmanager, loginmanager, etc.), or a built-in database user or role (like dbo, guest, public, etc.). Make sure your name doesn't contain whitespaces, unicode characters, or nonalphabetic characters, and that it doesn't begin with numbers or symbols. At least 4 characters in length and a maximum of 35 characters"
+						},
+						"name": "OrchestratorSQLServerAdminLogin",
+						"toolTip": "Define the admin username for the Orchestrator SQL server."
+					},
+					{
+						"name": "OrchestratorSQLServerAdminPassword",
+						"visible": true,
+						"type": "Microsoft.Compute.CredentialsCombo",
+						"label": {
+							"password": "Password",
+							"confirmPassword": "Confirm password"
+						},
+						"constraints": {
+							"required": true,
+							"customPasswordRegex": "^(?=.*\\d)(?=.*[a-z])(?=.*[A-Z])[\\w~@#$%^&*+=|{}:;.?\\()\\[\\]-]{12,}$",
+							"customValidationMessage": "The password must be 12 to 35 characters long with at least 1 uppercase, 1 lowercase and 1 number. Can contain special characters with the exception of \\ or !."
+						},
+						"toolTip": {
+							"password": "Define the admin password for the Orchestrator SQL server."
+						},
+						"options": {
+							"hideConfirmation": false
+						},
+						"osPlatform": "Windows"
+					}
+				]
+			},
+			{
+				"name": "CertificateConf",
+				"label": "Certificate",
+				"subLabel": {
+					"preValidation": "Configure Orchestrator certificates",
+					"postValidation": "Done"
+				},
+				"bladeTitle": "Certificate config",
+				"elements": [
+					{
+						"name": "TokenCertificate",
+						"type": "Microsoft.Common.FileUpload",
+						"label": "Token signing certificate (pfx)",
+						"toolTip": "Certificate used for token signing. The requirements for Microsoft App Service Certificates: https://docs.microsoft.com/en-us/azure/app-service/configure-ssl-certificate#private-certificate-requirements. The requirements for UiPath Token Signing Certificate are: https://docs.uipath.com/installation-and-upgrade/docs/orchestrator-is-prerequisites-for-installation",
+						"constraints": {
+							"required": true,
+							"accept": ".pfx"
+						},
+						"options": {
+							"multiple": false,
+							"uploadMode": "file",
+							"openMode": "binary"
+						},
+						"visible": true
+					},
+					{
+						"name": "TokenCertificatePass",
+						"type": "Microsoft.Common.PasswordBox",
+						"label": {
+							"password": "Password",
+							"confirmPassword": "Confirm password"
+						},
+						"toolTip": "Token signing certificate password",
+						"constraints": {
+							"required": true
+						},
+						"options": {
+							"hideConfirmation": false
+						},
+						"visible": true
+					}
+				]
+			},
+			{
+				"name": "ResourceTagsConfig",
+				"label": "Tags",
+				"subLabel": {
+					"preValidation": "Configure the Azure Resource Tags",
+					"postValidation": "Done"
+				},
+				"bladeTitle": "Resource Tags Configuration",
+				"elements": [
+					{
+						"name": "ResourceTags",
+						"type": "Microsoft.Common.TagsByResource",
+						"tooltip": "Configure resource tags.",
+						"resources": [
+							"Microsoft.Resources/deployments",
+							"Microsoft.Storage/storageAccounts",
+							"Microsoft.Web/serverFarms",
+							"Microsoft.Web/Sites",
+							"microsoft.insights/autoscalesettings",
+							"Microsoft.Web/certificates",
+							"Microsoft.ManagedIdentity/userAssignedIdentities",
+							"Microsoft.Resources/deploymentScripts",
+							"Microsoft.Network/networkSecurityGroups",
+							"Microsoft.Network/virtualNetworks",
+							"Microsoft.Network/networkInterfaces",
+							"Microsoft.Compute/virtualMachines",
+							"Microsoft.Insights/components",
+							"Microsoft.Sql/servers",
+							"Microsoft.Sql/servers/databases",
+							"Microsoft.Network/publicIPAddresses",
+							"Microsoft.Compute/virtualMachines/extensions"
+						]
+					}
+				]
+			}
+		],
+		"outputs": {
+			"location": "[location()]",
+			"appName": "[steps('AdvancedConfig').orchestratorName]",
+			"orchestratorAdminPassword": "[steps('OrchSetup').orchestratorAdminPassword.password]",
+			"orchestratorVersion": "[steps('OrchSetup').orchestratorVersion]",
+			"orchestratorSize": "[steps('OrchSetup').orchestratorSize]",
+			"orchestratorInstances": "[int(steps('OrchSetup').orchestratorInstances)]",
+			"EnableHAA": "[or(greater(int(steps('OrchSetup').orchestratorInstances), 1), equals(steps('HAAServer').HighAvailabilityAddon, 'Yes'))]",
+			"HAAVMAdminLogin": "[steps('HAAServer').HAADetails.HAAVMAdminLogin]",
+			"HAAVMAdminPassword": "[steps('HAAServer').HAADetails.HAAVMAdminPassword.password]",
+			"HAAadminEmail": "[steps('HAAServer').HAADetails.HAAadminEmail]",
+			"HAAAdminPassword": "[steps('HAAServer').HAADetails.HAAAdminPassword.password]",
+			"HAALicense": "[steps('HAAServer').HAADetails.HAALicense]",
+			"HAAvirtualNetworkNewOrExistingPaaS": "[steps('HAAServer').HAADetails.HAAVirtualNetwork.newOrExisting]",
+			"HAAaddressPrefixesPaaS": "[steps('HAAServer').HAADetails.HAAVirtualNetwork.addressPrefixes]",
+			"HAAsubnetPrefixPaaS": "[steps('HAAServer').HAADetails.HAAVirtualNetwork.subnets.haa-subnet.addressPrefix]",
+			"HAAwebAppsubnetPrefixPaaS": "[steps('HAAServer').HAADetails.HAAVirtualNetwork.subnets.webApp-VNetIntegr.addressPrefix]",
+			"HAAvirtualNetworkResourceGroupNamePaaS": "[steps('HAAServer').HAADetails.HAAVirtualNetwork.resourceGroup]",
+			"HAAvirtualMachineSize": "[steps('HAAServer').HAADetails.vmSize]",
+			"SQLServerName": "[if(equals(steps('AdvancedConfig').AdvConfVisibility, 'Yes'),steps('AdvancedConfig').AdvancedConfigurationDetails.OrchestratorSQLServerName,concat(steps('AdvancedConfig').orchestratorName,'sql'))]",
+			"SQLServerAdminLogin": "[steps('OrchestratorSQLServer').OrchestratorSQLServerAdminLogin]",
+			"SQLServerAdminPassword": "[steps('OrchestratorSQLServer').OrchestratorSQLServerAdminPassword.password]",
+			"TokenCertificate": "[steps('CertificateConf').TokenCertificate]",
+			"TokenCertificatePass": "[steps('CertificateConf').TokenCertificatePass]",
+			"tagsByResource": "[steps('ResourceTagsConfig').ResourceTags]",
+			"OrchStorageAccountName": "[if(equals(steps('AdvancedConfig').AdvConfVisibility, 'Yes'),steps('AdvancedConfig').AdvancedConfigurationDetails.OrchStorageAccountName,if(greaterOrEquals(length(steps('AdvancedConfig').orchestratorName), 22), concat(substring(toLower(replace(steps('AdvancedConfig').orchestratorName,'-','')),0,22),'st'), concat(toLower(replace(steps('AdvancedConfig').orchestratorName,'-','')),'st')))]",
+			"OrchDatabaseName": "[if(equals(steps('AdvancedConfig').AdvConfVisibility, 'Yes'),steps('AdvancedConfig').AdvancedConfigurationDetails.OrchDatabaseName,concat(steps('AdvancedConfig').orchestratorName,'-db'))]",
+			"OrchAppServicePlan": "[if(equals(steps('AdvancedConfig').AdvConfVisibility,'Yes'),steps('AdvancedConfig').AdvancedConfigurationDetails.OrchAppServicePlan,if(greaterOrEquals(length(steps('AdvancedConfig').orchestratorName),36),concat(substring(steps('AdvancedConfig').orchestratorName,0,36),'-asp'),concat(steps('AdvancedConfig').orchestratorName,'-asp')))]",
+			"OrchAppInsights": "[if(equals(steps('AdvancedConfig').AdvConfVisibility, 'Yes'),steps('AdvancedConfig').AdvancedConfigurationDetails.OrchAppInsights,concat(steps('AdvancedConfig').orchestratorName,'-appins'))]",
+			"OrchIdentityAppServiceName": "[if(equals(steps('AdvancedConfig').AdvConfVisibility, 'Yes'),steps('AdvancedConfig').AdvancedConfigurationDetails.OrchIdentityAppServiceName,concat(steps('AdvancedConfig').orchestratorName,'-is'))]",
+			"OrchWebhooksAppServiceName": "[if(equals(steps('AdvancedConfig').AdvConfVisibility, 'Yes'),steps('AdvancedConfig').AdvancedConfigurationDetails.OrchWebhooksAppServiceName,concat(steps('AdvancedConfig').orchestratorName,'-wh'))]",
+			"OrchCertificate": "[if(equals(steps('AdvancedConfig').AdvConfVisibility, 'Yes'),steps('AdvancedConfig').AdvancedConfigurationDetails.OrchCertificate,if(greaterOrEquals(length(steps('AdvancedConfig').orchestratorName),25),concat(substring(steps('AdvancedConfig').orchestratorName,0,25),'-cert'),concat(steps('AdvancedConfig').orchestratorName,'-cert')))]",
+			"OrchMSIName": "[if(equals(steps('AdvancedConfig').AdvConfVisibility, 'Yes'),steps('AdvancedConfig').AdvancedConfigurationDetails.OrchMSIName,concat(steps('AdvancedConfig').orchestratorName,'-msi'))]",
+			"HAAAvailabilitySetName": "[if(equals(steps('AdvancedConfig').AdvConfVisibility, 'Yes'),steps('AdvancedConfig').AdvancedConfigurationDetails.HAAAvailabilitySetName,concat(steps('AdvancedConfig').orchestratorName,'-haa-as'))]",
+			"HAANSGName": "[if(equals(steps('AdvancedConfig').AdvConfVisibility, 'Yes'),steps('AdvancedConfig').AdvancedConfigurationDetails.HAANSGName,concat(steps('AdvancedConfig').orchestratorName,'-haa-nsg'))]",
+			"HAAVnetName": "[steps('HAAServer').HAADetails.HAAVirtualNetwork.name]",
+			"HAASubnetName": "[steps('HAAServer').HAADetails.HAAVirtualNetwork.subnets.haa-subnet.name]",
+			"HAAWASubnetName": "[steps('HAAServer').HAADetails.HAAVirtualNetwork.subnets.webApp-VNetIntegr.name]",
+			"HAANICNamePrefix": "[if(equals(steps('AdvancedConfig').AdvConfVisibility, 'Yes'),steps('AdvancedConfig').AdvancedConfigurationDetails.HAANICNamePrefix,concat(steps('AdvancedConfig').orchestratorName,'-haa-nic'))]",
+			"HAAVMNamePrefix": "[if(equals(steps('AdvancedConfig').AdvConfVisibility, 'Yes'),steps('AdvancedConfig').AdvancedConfigurationDetails.HAAVMNamePrefix,concat(steps('AdvancedConfig').orchestratorName,'-haa-vm'))]"
+		}
+	}
+}

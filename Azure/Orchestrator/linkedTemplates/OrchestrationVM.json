@@ -1,0 +1,351 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "location": {
+            "type": "string",
+            "metadata": {
+                "description": "Location for all resources."
+            }
+        },
+        "appName": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "description": "Name of the virtual machine."
+            }
+        },
+        "OrchestratorArtifactsPaaS": {
+            "type": "object",
+            "metadata": {
+                "description": "UiPath Orchestrator artifact object."
+            }
+        },
+        "OrchMSIName": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 128,
+            "metadata": {
+                "description": "Orchestrator Managed Service Identity name."
+            }
+        },
+        "IdentityArtifactsPaaS": {
+            "type": "object",
+            "metadata": {
+                "description": "UiPath Identity artifacts"
+            }
+        },
+        "WebhooksArtifactsPaaS": {
+            "type": "object",
+            "metadata": {
+                "description": "UiPath Webhooks artifacts"
+            }
+        },
+        "UtilityArtifactsPaaS": {
+            "type": "object",
+            "metadata": {
+                "description": "UiPath utility artifacts (ps_utils, AzModules)"
+            }
+        },
+        "orchestratorAdminPassword": {
+            "type": "securestring",
+            "metadata": {
+                "description": "Define the password that will be used for the host administrator and the default tenant administrator account (admin)."
+            }
+        },
+        "mainStorageAccountName": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "description": "Storage account name for storing nuget packages."
+            }
+        },
+        "mainStorageid": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "description": "Storage account Id for storing nuget packages."
+            }
+        },
+        "HAAconnectionString": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "description": "High Availability Addon connection string."
+            }
+        },
+        "InsightsKey": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "description": "Instrumentation Key for application insights."
+            }
+        },
+        "OrchIdentityAppServiceName": {
+            "type": "string",
+            "minLength": 4,
+            "maxLength": 60,
+            "defaultValue":"[concat(parameters('appName'),'-is')]",
+            "metadata": {
+                "description": "Orchestrator Identity name."
+            }
+        },
+        "OrchWebhooksAppServiceName": {
+            "type": "string",
+            "minLength": 4,
+            "maxLength": 60,
+            "defaultValue": "[concat(parameters('appName'),'-wh')]",
+            "metadata": {
+                "description": "Orchestrator Webhooks name."
+            }
+        },
+        "tagsByResource": {
+            "type": "object",
+            "defaultValue": {}
+        }
+    },
+    "variables": {
+        "tempStorageAccountName": "[concat('orchst', toLower(last(split(parameters('appName'),'-'))))]",
+        "storageAccountName": "[if(greaterOrEquals(length(variables('tempStorageAccountName')), 25), substring(variables('tempStorageAccountName'),0,22), variables('tempStorageAccountName'))]",
+        "nicName": "[concat('orch-nic', last(split(parameters('appName'),'-')))]",
+        "addressPrefix": "10.0.0.0/16",
+        "subnetName": "[concat('orch-subnet-', last(split(parameters('appName'),'-')))]",
+        "subnetPrefix": "10.0.0.0/24",
+        "virtualNetworkName": "[concat('orch-vnet-', last(split(parameters('appName'),'-')))]",
+        "subnetRef": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), variables('subnetName'))]",
+        "networkSecurityGroupName": "[concat('orch-nsg-', last(split(parameters('appName'),'-')))]",
+        "MSIName": "[parameters('OrchMSIName')]",
+        "subscriptionId": "[subscription().subscriptionId]",
+        "tenantId": "[subscription().tenantId]",
+        "vmUserName": "admnc",
+        "RGName": "[resourceGroup().name]",
+        "OSVersion":"2019-Datacenter",
+        "vmSize":"Standard_D2_v3",
+        "vmName":"[concat('orchvm-', last(split(parameters('appName'),'-')))]"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Storage/storageAccounts",
+            "apiVersion": "2019-06-01",
+            "tags": "[if(contains(parameters('tagsByResource'), 'Microsoft.Storage/storageAccounts'), parameters('tagsByResource')['Microsoft.Storage/storageAccounts'], json('{}'))]",
+            "name": "[variables('storageAccountName')]",
+            "location": "[parameters('location')]",
+            "sku": {
+                "name": "Standard_LRS"
+            },
+            "kind": "StorageV2",
+            "properties": {
+                "supportsHttpsTrafficOnly": true
+            }
+        },
+        {
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "apiVersion": "2020-06-01",
+            "tags": "[if(contains(parameters('tagsByResource'), 'Microsoft.Network/networkSecurityGroups'), parameters('tagsByResource')['Microsoft.Network/networkSecurityGroups'], json('{}'))]",
+            "name": "[variables('networkSecurityGroupName')]",
+            "location": "[parameters('location')]",
+            "properties": {
+                "securityRules": [
+                    {
+                        "name": "default-allow-3389",
+                        "properties": {
+                            "priority": 1000,
+                            "access": "Allow",
+                            "direction": "Inbound",
+                            "destinationPortRange": "3389",
+                            "protocol": "Tcp",
+                            "sourcePortRange": "*",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "*"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.Network/virtualNetworks",
+            "apiVersion": "2020-06-01",
+            "tags": "[if(contains(parameters('tagsByResource'), 'Microsoft.Network/virtualNetworks'), parameters('tagsByResource')['Microsoft.Network/virtualNetworks'], json('{}'))]",
+            "name": "[variables('virtualNetworkName')]",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]"
+            ],
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "[variables('addressPrefix')]"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "name": "[variables('subnetName')]",
+                        "properties": {
+                            "addressPrefix": "[variables('subnetPrefix')]",
+                            "networkSecurityGroup": {
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.Network/networkInterfaces",
+            "apiVersion": "2020-06-01",
+            "tags": "[if(contains(parameters('tagsByResource'), 'Microsoft.Network/networkInterfaces'), parameters('tagsByResource')['Microsoft.Network/networkInterfaces'], json('{}'))]",
+            "name": "[variables('nicName')]",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', variables('virtualNetworkName'))]"
+            ],
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "privateIPAllocationMethod": "Dynamic",
+                            "subnet": {
+                                "id": "[variables('subnetRef')]"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.Compute/virtualMachines",
+            "apiVersion": "2020-06-01",
+            "tags": "[if(contains(parameters('tagsByResource'), 'Microsoft.Compute/virtualMachines'), parameters('tagsByResource')['Microsoft.Compute/virtualMachines'], json('{}'))]",
+            "name": "[variables('vmName')]",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
+                "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]"
+            ],
+            "identity": {
+                "type": "UserAssigned",
+                "userAssignedIdentities": {
+                    "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('MSIName'))]": {
+                    }
+                }
+            },
+            "properties": {
+                "hardwareProfile": {
+                    "vmSize": "[variables('vmSize')]"
+                },
+                "osProfile": {
+                    "computerName": "configvm",
+                    "adminUsername": "[variables('vmUserName')]",
+                    "adminPassword": "[parameters('orchestratorAdminPassword')]"
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "publisher": "MicrosoftWindowsServer",
+                        "offer": "WindowsServer",
+                        "sku": "[variables('OSVersion')]",
+                        "version": "latest"
+                    },
+                    "osDisk": {
+                        "createOption": "FromImage",
+                        "managedDisk": {
+                            "storageAccountType": "StandardSSD_LRS"
+                        }
+                    }
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]"
+                        }
+                    ]
+                },
+                "diagnosticsProfile": {
+                    "bootDiagnostics": {
+                        "enabled": true,
+                        "storageUri": "[reference(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))).primaryEndpoints.blob]"
+                    }
+                }
+            }
+        },
+        {
+            "apiVersion": "2020-06-01",
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "tags": "[if(contains(parameters('tagsByResource'), 'Microsoft.Compute/virtualMachines/extensions'), parameters('tagsByResource')['Microsoft.Compute/virtualMachines/extensions'], json('{}'))]",
+            "name": "[concat(variables('vmName'),'/config-app')]",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "[concat('Microsoft.Compute/virtualMachines/', variables('vmName'))]"
+            ],
+            "properties": {
+                "publisher": "Microsoft.Compute",
+                "type": "CustomScriptExtension",
+                "typeHandlerVersion": "1.10",
+                "autoUpgradeMinorVersion": true,
+                "settings": {
+                    "fileUris": [
+                        "[parameters('OrchestratorArtifactsPaaS').orchestratorArtifact]",
+                        "[parameters('OrchestratorArtifactsPaaS').WebDeployPackage]",
+                        "[parameters('OrchestratorArtifactsPaaS').PublishOrchestratorScript]",
+                        "[parameters('IdentityArtifactsPaaS').IdentityPackage]",
+                        "[parameters('IdentityArtifactsPaaS').IdentityCliMigrator]",
+                        "[parameters('IdentityArtifactsPaaS').PublishIdentityScript]",
+                        "[parameters('IdentityArtifactsPaaS').MigrateToIdentityScript]",
+                        "[parameters('WebhooksArtifactsPaaS').PublishWebhooksScript]",
+                        "[parameters('WebhooksArtifactsPaaS').MigrateToWebhooksScript]",
+                        "[parameters('WebhooksArtifactsPaaS').WebhookServicePackage]",
+                        "[parameters('WebhooksArtifactsPaaS').WebhookMigratePackage]",
+                        "[parameters('UtilityArtifactsPaaS').PSUtilsZip]",
+                        "[parameters('UtilityArtifactsPaaS').AzModulesZip]",
+                        "[parameters('UtilityArtifactsPaaS').DeployOrchestratorMainScript]"
+
+                    ]
+                },
+                "protectedSettings": {
+                    "commandToExecute": "[concat(
+                    'powershell -ExecutionPolicy Unrestricted -File',' ','Deploy-UiPathOrchestratorPaaS.ps1',
+                    ' -azureSubscriptionId ', variables('subscriptionId'),
+                    ' -azureTenantId ', variables('tenantId'),
+                    ' -azureMSIApplicationId ', reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('MSIName')), '2018-11-30').clientId, 
+                    ' -resourceGroupName ', variables('RGName'),
+                    ' -appServiceNameOrch ', parameters('appName'),
+                    ' -appServiceNameIdentity ', parameters('OrchIdentityAppServiceName'),
+                    ' -appServiceNameWebhooks ', parameters('OrchWebhooksAppServiceName'),
+                    ' -hostAdminPassword ', parameters('orchestratorAdminPassword'),
+                    ' -defaultTenantAdminPassword ', parameters('orchestratorAdminPassword'),
+                    ' -storageLocation ', concat('DefaultEndpointsProtocol=https;AccountName=',parameters('mainStorageAccountName'),';AccountKey=',listKeys(parameters('mainStorageid'), '2019-04-01').keys[0].value,';','EndpointSuffix=',replace(split(reference(parameters('mainStorageid'),'2019-06-01').primaryEndpoints.blob, 'blob.')[1], '/', '')),
+                    if(empty(parameters('HAAconnectionString')),'',concat(' -redisConnectionString ',parameters('HAAconnectionString'))),
+                    ' -identityServerUrl ', concat('https://',parameters('OrchIdentityAppServiceName'),'.azurewebsites.net/identity'),
+                    ' -orchestratorUrl ', concat('https://',parameters('appName'),'.azurewebsites.net'),
+                    ' -insightsKey ', parameters('InsightsKey')
+                    )]",
+                    "managedIdentity": {
+                        "clientId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('MSIName')), '2018-11-30').clientId]"
+                    }
+                }
+            }
+        }
+    ],
+    "outputs": {
+        "StorageAccountName": {
+            "type": "string",
+            "value": "[variables('storageAccountName')]"
+        },
+        "NICName": {
+            "type": "string",
+            "value": "[variables('nicName')]"
+        },
+        "VnetName": {
+            "type": "string",
+            "value": "[variables('virtualNetworkName')]"
+        },
+        "NSGName": {
+            "type": "string",
+            "value": "[variables('networkSecurityGroupName')]"
+        },
+        "VMName": {
+            "type": "string",
+            "value": "[variables('vmName')]"
+        }
+    }
+}

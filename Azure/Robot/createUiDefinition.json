@@ -1,0 +1,318 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/0.1.2-preview/CreateUIDefinition.ProviderControl.json#",
+  "handler": "Microsoft.Azure.CreateUIDef",
+  "version": "0.1.2-preview",
+  "parameters": {
+    "config": {
+      "isWizard": true,
+      "basics": {
+        "resourceGroup": {
+          "allowExisting": true
+        }
+      }
+    },
+    "resourceTypes": [
+      "Microsoft.Resources/deployments",
+      "Microsoft.Network/networkInterfaces",
+      "Microsoft.Network/networkSecurityGroups",
+      "Microsoft.Network/virtualNetworks",
+      "Microsoft.Network/publicIpAddresses",
+      "Microsoft.Compute/virtualMachines"
+    ],
+    "basics": [
+      {
+        "name": "vmName",
+        "type": "Microsoft.Common.TextBox",
+        "label": "Virtual Machine name",
+        "toolTip": "The name of the Virtual Machine.",
+        "constraints": {
+          "required": true,
+          "regex": "^[a-z0-9A-Z-]{4,12}$",
+          "validationMessage": "The VM Name must be between 4 and 12 characters long and contain letters, numbers and hyphens only."
+        }
+      },
+      {
+        "name": "adminUsername",
+        "type": "Microsoft.Compute.UserNameTextBox",
+        "label": "Username",
+        "toolTip": "Admin username for the machine",
+        "osPlatform": "Windows",
+        "constraints": {
+          "required": true,
+          "regex": "^(?!admin$|administrator$|sa$|root$|dbmanager$|loginmanager$|dbo$|guest$|information_schema$|sys$|db_accessadmin$|db_backupoperator$|db_datareader$|db_datawriter$|db_ddladmin$|db_denydatareader$|db_denydatawriter$|db_owner$|db_securityadmin$|public$)[a-zA-Z][a-zA-Z0-9]{4,35}$",
+          "validationMessage": "Make sure your login name meets the following requirements: It's not a typical system name (like admin, administrator, sa, root, dbmanager, loginmanager, etc.), or a built-in user or role (like guest, public, etc.). Make sure your name doesn't contain whitespaces, unicode characters, or nonalphabetic characters, and that it doesn't begin with numbers or symbols. At least 4 characters in length and a maximum of 35 characters"
+        }
+      },
+      {
+        "name": "adminPassword",
+        "type": "Microsoft.Compute.CredentialsCombo",
+        "label": {
+          "password": "Password",
+          "confirmPassword": "Confirm password"
+        },
+        "toolTip": {
+          "password": "VM & Robot Password"
+        },
+        "constraints": {
+          "required": true,
+          "customPasswordRegex": "^((?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])|(?=.*[0-9])(?=.*[a-z])(?=.*[!@#$%^&*])|(?=.*[0-9])(?=.*[A-Z])(?=.*[!@#$%^&*])|(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*])).{12,35}$",
+          "customValidationMessage": "The password must be at least 12 to 35 characters long and have 3 out of the following: - one number, - one lower case, - one upper case, - one special character (like !@#$%)."
+        },
+        "options": {
+          "hideConfirmation": false
+        },
+        "visible": true,
+        "osPlatform": "Windows"
+      },
+      {
+        "name": "instanceCount",
+        "label": "Number of virtual machines with Robots to be created.",
+        "toolTip": "Number of Robots to be created in existing Orchestrator.",
+        "type": "Microsoft.Common.TextBox",
+        "constraints": {
+          "required": true,
+          "regex": "^[1-9][0-9]{0,1}$",
+          "validationMessage": "The instance number must be between 1 and 99. Only numbers accepted."
+        }
+      }
+    ],
+    "steps": [
+      {
+        "name": "OrchestratorInfo",
+        "label": "Orchestrator Connection Info",
+        "subLabel": {
+          "preValidation": "Configure Orchestrator URL and credential infos",
+          "postValidation": "Done"
+        },
+        "bladeTitle": "OrchestratorLoginInfo",
+        "elements": [
+          {
+            "name": "orchestratorUrl",
+            "type": "Microsoft.Common.TextBox",
+            "label": "Orchestrator URL",
+            "toolTip": "The URL of an existing and licensed Orchestrator",
+            "constraints": {
+              "required": true,
+              "regex": "^(https:\\/\\/www\\.|https:\\/\\/)[a-z0-9]+([\\-\\.]{1}[a-z0-9]+)*\\.[a-z]{2,5}(:[0-9]{1,5})?(\\/.*)?$",
+              "validationMessage": "The URL of an existing and licensed Orchestrator. Must start with 'https://' "
+            }
+          },
+          {
+            "name": "orchAdmin",
+            "type": "Microsoft.Common.TextBox",
+            "label": "Orchestrator admin account",
+            "toolTip": "Orchestrator admin account with API rights",
+            "constraints": {
+              "required": true,
+              "regex": "^[a-z0-9A-Z-\\S]{3,200}$",
+              "validationMessage": "Orchestrator admin account with API rights."
+            }
+          },
+          {
+            "name": "orchPassword",
+            "type": "Microsoft.Common.PasswordBox",
+            "label": {
+              "password": "Password",
+              "confirmPassword": "Repeat password"
+            },
+            "toolTip": "The password of an existing and licensed Orchestrator",
+            "options": {
+              "hideConfirmation": false
+            },
+            "visible": true,
+            "constraints": {
+              "required": true,
+              "regex": "^[a-z0-9A-Z-\\S]{3,200}$",
+              "validationMessage": "Orchestrator admin password with API rights."
+            }
+          },
+          {
+            "name": "Tenant",
+            "type": "Microsoft.Common.TextBox",
+            "label": "Orchestrator Tenant Name",
+            "defaultValue": "Default",
+            "toolTip": "Orchestrator Tenant Name",
+            "visible": true,
+            "constraints": {
+              "required": true,
+              "regex": "^[a-z0-9A-Z-\\S]{3,200}$",
+              "validationMessage": "Orchestrator Tenant Name."
+            }
+          },
+          {
+            "name": "RobotType",
+            "type": "Microsoft.Common.DropDown",
+            "label": "Robot type",
+            "defaultValue": "Unattended",
+            "toolTip": "Available robot types: Attended, Unattended",
+            "constraints": {
+              "allowedValues": [
+                {
+                  "label": "Attended",
+                  "value": "Attended"
+                },
+                {
+                  "label": "Unattended",
+                  "value": "Unattended"
+                }
+              ],
+              "required": true
+            },
+            "visible": true
+          },
+          {
+            "name": "RobotVersion",
+            "type": "Microsoft.Common.DropDown",
+            "label": "Robot Version",
+            "defaultValue": "20.10.2",
+            "toolTip": "Please choose the robot version to be deployed. Please check this link for compatibility with Orchestrator: https://docs.uipath.com/robot/docs/about-backward-and-forward-compatibility",
+            "constraints": {
+              "allowedValues": [
+                {
+                  "label": "20.10.2",
+                  "value": "20.10.2"
+                }
+              ],
+              "required": true
+            },
+            "visible": true
+          }
+        ]
+      },
+      {
+        "name": "VirtualMachineConfig",
+        "label": "Virtual Machine Settings",
+        "subLabel": {
+          "preValidation": "Configure the virtual machine's resources and settings",
+          "postValidation": "Done"
+        },
+        "bladeTitle": "Virtual Machine Settings",
+        "elements": [
+          {
+            "name": "vmSize",
+            "type": "Microsoft.Compute.SizeSelector",
+            "label": "Virtual machine size",
+            "toolTip": "The size of virtual machine to provision.",
+            "recommendedSizes": [
+              "Standard_B2s",
+              "Standard_F4s"
+            ],
+            "osPlatform": "Windows",
+            "count": "1"
+          },
+          {
+            "name": "publicIpAddress",
+            "type": "Microsoft.Network.PublicIpAddressCombo",
+            "label": {
+              "publicIpAddress": "Public IP Address for the VM",
+              "domainNameLabel": "DNS Prefix for the public IP Address"
+            },
+            "toolTip": {
+              "publicIpAddress": "Public IP Address for the VM",
+              "domainNameLabel": "DNS Prefix for the public IP Address, must be globally unique"
+            },
+            "defaultValue": {
+              "publicIpAddressName": "[concat(basics('vmName'), '-ip')]",
+              "domainNameLabel": "[concat(basics('vmName'), '-', take(replace(guid(), '-', ''), 10))]"
+            },
+            "options": {
+              "hideNone": false,
+              "hideDomainNameLabel": false,
+              "hideExisting": true
+            },
+            "constraints": {
+              "required": {
+                "domainNameLabel": true
+              }
+            }
+          },
+          {
+            "name": "virtualNetwork",
+            "type": "Microsoft.Network.VirtualNetworkCombo",
+            "label": {
+              "virtualNetwork": "Virtual network",
+              "subnets": "Subnets"
+            },
+            "toolTip": {
+              "virtualNetwork": "Name of the virtual network",
+              "subnets": "Subnets for the virtual network"
+            },
+            "defaultValue": {
+              "name": "VirtualNetwork",
+              "addressPrefixSize": "/24"
+            },
+            "constraints": {
+              "minAddressPrefixSize": "/24"
+            },
+            "subnets": {
+              "subnet1": {
+                "label": "Subnet",
+                "defaultValue": {
+                  "name": "Subnet-1",
+                  "addressPrefixSize": "/28"
+                },
+                "constraints": {
+                  "minAddressPrefixSize": "/28",
+                  "minAddressCount": 1,
+                  "requireContiguousAddresses": false
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "name": "ResourceTagsConfig",
+        "label": "Resource Tags Configuration",
+        "subLabel": {
+          "preValidation": "Configure the Azure Resource Tags",
+          "postValidation": "Done"
+        },
+        "bladeTitle": "Resource Tags Configuration",
+        "elements": [
+          {
+            "name": "ResourceTags",
+            "type": "Microsoft.Common.TagsByResource",
+            "tooltip":"Configure resource tags.",
+            "resources": [
+              "Microsoft.Resources/deployments",
+              "Microsoft.Network/networkInterfaces",
+              "Microsoft.Network/networkSecurityGroups",
+              "Microsoft.Network/virtualNetworks",
+              "Microsoft.Network/publicIpAddresses",
+              "Microsoft.Compute/virtualMachines",
+              "Microsoft.Compute/virtualMachines/extensions"
+            ]
+          }
+        ]
+      }
+    ],
+    "outputs": {
+      "location": "[location()]",
+      "virtualMachineName": "[basics('vmName')]",
+      "adminUsername": "[basics('adminUsername')]",
+      "adminPassword": "[basics('adminPassword').password]",
+      "instanceCount": "[int(basics('instanceCount'))]",
+      "orchestratorUrl": "[steps('OrchestratorInfo').orchestratorUrl]",
+      "orchAdmin": "[steps('OrchestratorInfo').orchAdmin]",
+      "orchPassword": "[steps('OrchestratorInfo').orchPassword]",
+      "Tenant": "[steps('OrchestratorInfo').Tenant]",
+      "RobotType": "[steps('OrchestratorInfo').RobotType]",
+      "RobotVersion": "[steps('OrchestratorInfo').RobotVersion]",
+      "virtualMachineSize": "[steps('VirtualMachineConfig').vmSize]",
+      "virtualNetworkNewOrExisting": "[steps('VirtualMachineConfig').virtualNetwork.newOrExisting]",
+      "virtualNetworkName": "[steps('VirtualMachineConfig').virtualNetwork.name]",
+      "addressPrefixes": "[steps('VirtualMachineConfig').virtualNetwork.addressPrefix]",
+      "subnetName": "[steps('VirtualMachineConfig').virtualNetwork.subnets.subnet1.name]",
+      "subnetPrefix": "[steps('VirtualMachineConfig').virtualNetwork.subnets.subnet1.addressPrefix]",
+      "virtualNetworkResourceGroupName": "[steps('VirtualMachineConfig').virtualNetwork.resourceGroup]",
+      "publicIpNewOrExisting": "[steps('VirtualMachineConfig').publicIpAddress.newOrExistingOrNone]",
+      "publicIpName": "[steps('VirtualMachineConfig').publicIpAddress.name]",
+      "publicIpDns": "[steps('VirtualMachineConfig').publicIpAddress.domainNameLabel]",
+      "publicIpSku": "[steps('VirtualMachineConfig').publicIpAddress.sku]",
+      "publicIPAllocationMethod": "[steps('VirtualMachineConfig').publicIpAddress.publicIPAllocationMethod]",
+      "publicIpResourceGroupName": "[steps('VirtualMachineConfig').publicIpAddress.resourceGroup]",
+      "tagsByResource":"[steps('ResourceTagsConfig').ResourceTags]"
+    }
+  }
+}

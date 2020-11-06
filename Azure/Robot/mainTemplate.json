@@ -1,0 +1,504 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "defaultValue": "[resourceGroup().location]",
+      "type": "String",
+      "metadata": {
+        "description": "Location for all resources."
+      }
+    },
+    "orchestratorUrl": {
+      "defaultValue": "",
+      "type": "String",
+      "metadata": {
+        "description": "Orchestrator URL."
+      }
+    },
+    "orchAdmin": {
+      "defaultValue": "admin",
+      "type": "String",
+      "metadata": {
+        "description": "User admin of the orchestrator."
+      }
+    },
+    "orchPassword": {
+      "defaultValue": "",
+      "type": "securestring",
+      "metadata": {
+        "description": "Password for the orchestrator."
+      }
+    },
+    "instanceCount": {
+      "defaultValue": 1,
+      "minValue": 1,
+      "maxValue": 100,
+      "type": "Int",
+      "metadata": {
+        "description": "Number of VM instances (100 or less)"
+      }
+    },
+    "Tenant": {
+      "defaultValue": "default",
+      "type": "String",
+      "metadata": {
+        "description": "Orchestrator Tenant"
+      }
+    },
+    "RobotType": {
+      "defaultValue": "Unattended",
+      "allowedValues": [
+        "Unattended",
+        "Attended"
+      ],
+      "type": "String",
+      "metadata": {
+        "description": "Robot Type"
+      }
+    },
+    "RobotVersion": {
+      "defaultValue": "20.10.2",
+      "allowedValues": [
+        "20.10.2"
+      ],
+      "type": "String",
+      "metadata": {
+        "description": "Robot Version"
+      }
+    },
+    "virtualMachineName": {
+      "minLength": 4,
+      "maxLength": 12,
+      "type": "String",
+      "metadata": {
+        "description": "Virtual Machine Name"
+      }
+    },
+    "virtualNetworkName": {
+      "defaultValue": "newVnet",
+      "type": "String",
+      "metadata": {
+        "description": "Enter existing vnet name or type new name to create new VNET"
+      }
+    },
+    "adminUsername": {
+      "minLength": 4,
+      "maxLength": 35,
+      "type": "String",
+      "metadata": {
+        "description": "VMs Admin username"
+      }
+    },
+    "adminPassword": {
+      "minLength": 12,
+      "maxLength": 35,
+      "type": "String",
+      "metadata": {
+        "description": "VMs Admin password"
+      }
+    },
+    "virtualMachineSize": {
+      "defaultValue": "Standard_B2s",
+      "type": "String"
+    },
+    "virtualNetworkNewOrExisting": {
+      "defaultValue": "new",
+      "type": "String",
+      "metadata": {
+        "description": "Determines whether or not a new virtual network should be provisioned."
+      }
+    },
+    "addressPrefixes": {
+      "defaultValue": "10.0.0.0/16",
+      "type": "String",
+      "metadata": {
+        "description": "Address prefix of the virtual network"
+      }
+    },
+    "subnetName": {
+      "defaultValue": "default",
+      "type": "String",
+      "metadata": {
+        "description": "Name of the subnet"
+      }
+    },
+    "subnetPrefix": {
+      "defaultValue": "10.0.0.0/24",
+      "type": "String",
+      "metadata": {
+        "description": "Subnet prefix of the virtual network"
+      }
+    },
+    "publicIpSku": {
+      "defaultValue": "Basic",
+      "type": "String",
+      "metadata": {
+        "description": "Public IP SKU"
+      }
+    },
+    "publicIPAllocationMethod": {
+      "defaultValue": "Dynamic",
+      "type": "String",
+      "metadata": {
+        "description": "Public IP SKU"
+      }
+    },
+    "publicIpNewOrExisting": {
+      "defaultValue": "new",
+      "type": "String",
+      "metadata": {
+        "description": "Determines whether or not a new public ip should be provisioned."
+      }
+    },
+    "publicIpName": {
+      "defaultValue": "PublicIp",
+      "type": "String",
+      "metadata": {
+        "description": "Name of the public ip address"
+      }
+    },
+    "publicIpDns": {
+      "defaultValue": "[concat('uirobot-vm-', uniqueString(resourceGroup().id))]",
+      "type": "String",
+      "metadata": {
+        "description": "DNS of the public ip address for the VM"
+      }
+    },
+    "publicIpResourceGroupName": {
+      "defaultValue": "[resourceGroup().name]",
+      "type": "String",
+      "metadata": {
+        "description": "Name of the resource group for the public ip address"
+      }
+    },
+    "virtualNetworkResourceGroupName": {
+      "defaultValue": "[resourceGroup().name]",
+      "type": "String",
+      "metadata": {
+        "description": "Name of the resource group for the existing virtual network"
+      }
+    },
+    "_artifactsLocation": {
+      "type": "string",
+      "metadata": {
+        "description": "The base URI where artifacts required by this template are located including a trailing '/'"
+      },
+      "defaultValue": "[deployment().properties.templateLink.uri]"
+    },
+    "_artifactsLocationSasToken": {
+      "type": "securestring",
+      "metadata": {
+        "description": "The sasToken required to access _artifactsLocation.  When the template is deployed using the accompanying scripts, a sasToken will be automatically generated. Use the defaultValue if the staging location is not secured."
+      },
+      "defaultValue": ""
+    },
+    "tagsByResource": { 
+      "type": "object", 
+      "defaultValue": {} 
+    }
+  },
+  "variables": {
+    "scriptFileName": "Install-UiPathRobots.ps1",
+    "artifactFileName": "UiPathStudio.msi",
+    "robotPsUri": "[uri(parameters('_artifactsLocation'),concat('scripts','/',variables('scriptFileName'),parameters('_artifactsLocationSasToken')))]",
+    "robotArtifact": "[uri(parameters('_artifactsLocation'),concat('artifact','/',parameters('RobotVersion'),'/',variables('artifactFileName'),parameters('_artifactsLocationSasToken')))]",
+    "HostingType": "Standard",
+    "CredentialType": "Default",
+    "vmName": "[trim(toLower(parameters('virtualMachineName')))]",
+    "windowsOSV": "2016-Datacenter",
+    "osType": {
+      "publisher": "MicrosoftWindowsServer",
+      "offer": "WindowsServer",
+      "sku": "[variables('windowsOSV')]",
+      "version": "latest"
+    },
+    "imageReference": "[variables('osType')]",
+    "nsgId": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]",
+    "osDiskType": "StandardSSD_LRS",
+    "publicIpAddressName": "[parameters('publicIpName')]",
+    "publicIpAddressSku": "[parameters('publicIpSku')]",
+    "publicIpAddressType": "[parameters('publicIPAllocationMethod')]",
+    "ipConfigName": "[concat(variables('vmName'),'-ipconfig') ]",
+    "networkInterfaceName": "[concat(variables('vmName'), '-nic')]",
+    "networkSecurityGroupName": "[concat(parameters('virtualNetworkName'), '-nsg')]",
+    "attendedBot": "[concat ('powershell -ExecutionPolicy Unrestricted', 
+          ' -File ', variables('scriptFileName'),
+          ' -artifactFileName ', variables('artifactFileName'),
+          ' -orchestratorUrl ', parameters('orchestratorUrl'),
+          ' -tenant ', parameters('Tenant'),
+          ' -orchAdmin ',parameters('orchAdmin'),
+          ' -orchPassword ', parameters('orchPassword'),
+          ' -hostingType ', variables('HostingType'), 
+          ' -robotType ', parameters('RobotType'),
+          ' -adminUsername ', parameters('adminUsername'),
+          ' -cloudName Azure'
+          )]",
+    "unattendedBot": "[concat ('powershell -ExecutionPolicy Unrestricted',
+          ' -File ', variables('scriptFileName'),
+          ' -artifactFileName ', variables('artifactFileName'),
+          ' -orchestratorUrl ', parameters('orchestratorUrl'),
+          ' -tenant ', parameters('Tenant'),
+          ' -orchAdmin ', parameters('orchAdmin'),
+          ' -orchPassword ', parameters('orchPassword'),
+          ' -hostingType ', variables('HostingType'),
+          ' -robotType ', parameters('RobotType'),
+          ' -adminUsername ', parameters('adminUsername'),
+          ' -machinePassword ', parameters('adminPassword'),
+          ' -credType ', variables('CredentialType'),
+          ' -cloudName Azure'
+          )]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "pid-a5230863-ee54-403a-aac6-a86243cc50ce",
+      "tags": "[ if(contains(parameters('tagsByResource'), 'Microsoft.Resources/deployments'), parameters('tagsByResource')['Microsoft.Resources/deployments'], json('{}')) ]",
+      "properties": {
+        "mode": "Incremental",
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "resources": [
+          ]
+        }
+      }
+    },
+    {
+      "condition": "[equals(parameters('publicIpNewOrExisting'), 'new')]",
+      "type": "Microsoft.Network/networkInterfaces",
+      "tags": "[ if(contains(parameters('tagsByResource'), 'Microsoft.Network/networkInterfaces'), parameters('tagsByResource')['Microsoft.Network/networkInterfaces'], json('{}')) ]",
+      "apiVersion": "2019-04-01",
+      "name": "[concat(variables('networkInterfaceName'),copyIndex(1))]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[parameters('virtualNetworkName')]",
+        "[resourceId('Microsoft.Network/publicIpAddresses', concat(variables('publicIpAddressName'),copyIndex(1)))]"
+      ],
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "[concat(variables('ipConfigName'),copyIndex(1))]",
+            "properties": {
+              "privateIPAllocationMethod": "[parameters('publicIPAllocationMethod')]",
+              "subnet": {
+                "id": "[resourceId(parameters('virtualNetworkResourceGroupName'), 'Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworkName'), parameters('subnetName'))]"
+              },
+              "publicIPAddress": {
+                "id": "[resourceId(parameters('publicIpResourceGroupName'),'Microsoft.Network/publicIPAddresses', concat(parameters('publicIpName'),copyIndex(1)))]"
+              }
+            }
+          }
+        ],
+        "networkSecurityGroup": {
+          "id": "[variables('nsgId')]"
+        }
+      },
+      "copy": {
+        "name": "[variables('networkInterfaceName')]",
+        "count": "[parameters('instanceCount')]"
+      }
+    },
+    {
+      "condition": "[equals(parameters('publicIpNewOrExisting'), 'none')]",
+      "type": "Microsoft.Network/networkInterfaces",
+      "tags": "[ if(contains(parameters('tagsByResource'), 'Microsoft.Network/networkInterfaces'), parameters('tagsByResource')['Microsoft.Network/networkInterfaces'], json('{}')) ]",
+      "apiVersion": "2019-04-01",
+      "name": "[concat(variables('networkInterfaceName'),'-prv',copyIndex(1))]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[parameters('virtualNetworkName')]"
+      ],
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "[concat(variables('ipConfigName'),copyIndex(1))]",
+            "properties": {
+              "privateIPAllocationMethod": "[parameters('publicIPAllocationMethod')]",
+              "subnet": {
+                "id": "[resourceId(parameters('virtualNetworkResourceGroupName'), 'Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworkName'), parameters('subnetName'))]"
+              }
+            }
+          }
+        ],
+        "networkSecurityGroup": {
+          "id": "[variables('nsgId')]"
+        }
+      },
+      "copy": {
+        "name": "[variables('networkInterfaceName')]",
+        "count": "[parameters('instanceCount')]"
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "apiVersion": "2019-08-01",
+      "tags": "[ if(contains(parameters('tagsByResource'), 'Microsoft.Network/networkSecurityGroups'), parameters('tagsByResource')['Microsoft.Network/networkSecurityGroups'], json('{}')) ]",
+      "name": "[variables('networkSecurityGroupName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "securityRules": [
+          {
+            "name": "HTTP",
+            "properties": {
+              "priority": 300,
+              "protocol": "TCP",
+              "access": "Allow",
+              "direction": "Inbound",
+              "sourceAddressPrefix": "*",
+              "sourcePortRange": "*",
+              "destinationAddressPrefix": "*",
+              "destinationPortRange": "80"
+            }
+          },
+          {
+            "name": "RDP",
+            "properties": {
+              "priority": 320,
+              "protocol": "TCP",
+              "access": "Allow",
+              "direction": "Inbound",
+              "sourceAddressPrefix": "*",
+              "sourcePortRange": "*",
+              "destinationAddressPrefix": "*",
+              "destinationPortRange": "3389"
+            }
+          },
+          {
+            "name": "HTTPS",
+            "properties": {
+              "priority": 340,
+              "protocol": "TCP",
+              "access": "Allow",
+              "direction": "Inbound",
+              "sourceAddressPrefix": "*",
+              "sourcePortRange": "*",
+              "destinationAddressPrefix": "*",
+              "destinationPortRange": "443"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "apiVersion": "2020-05-01",
+      "tags": "[ if(contains(parameters('tagsByResource'), 'Microsoft.Network/virtualNetworks'), parameters('tagsByResource')['Microsoft.Network/virtualNetworks'], json('{}')) ]",
+      "name": "[parameters('virtualNetworkName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "[parameters('addressPrefixes')]"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "[parameters('subnetName')]",
+            "properties": {
+              "addressPrefix": "[parameters('subnetPrefix')]"
+            }
+          }
+        ]
+      },
+      "condition": "[equals(parameters('virtualNetworkNewOrExisting'), 'new')]"
+    },
+    {
+      "type": "Microsoft.Network/publicIpAddresses",
+      "apiVersion": "2020-05-01",
+      "tags": "[ if(contains(parameters('tagsByResource'), 'Microsoft.Network/publicIpAddresses'), parameters('tagsByResource')['Microsoft.Network/publicIpAddresses'], json('{}')) ]",
+      "name": "[concat(variables('publicIpAddressName'),copyIndex(1))]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "[variables('publicIpAddressSku')]"
+      },
+      "properties": {
+        "publicIpAllocationMethod": "[variables('publicIpAddressType')]",
+        "dnsSettings": {
+          "domainNameLabel": "[concat(parameters('publicIpDns'),copyIndex(1))]"
+        }
+      },
+      "copy": {
+        "name": "[variables('publicIpAddressName')]",
+        "count": "[parameters('instanceCount')]"
+      },
+      "condition": "[equals(parameters('publicIpNewOrExisting'), 'new')]"
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "apiVersion": "2020-06-01",
+      "tags": "[ if(contains(parameters('tagsByResource'), 'Microsoft.Compute/virtualMachines'), parameters('tagsByResource')['Microsoft.Compute/virtualMachines'], json('{}')) ]",
+      "name": "[concat(variables('vmName'),copyIndex(1))]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[variables('networkInterfaceName')]"
+      ],
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[parameters('virtualMachineSize')]"
+        },
+        "storageProfile": {
+          "osDisk": {
+            "createOption": "fromImage",
+            "managedDisk": {
+              "storageAccountType": "[variables('osDiskType')]"
+            }
+          },
+          "imageReference": "[variables('imageReference')]"
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces',if(equals(parameters('publicIpNewOrExisting'), 'none'),concat(variables('networkInterfaceName'),'-prv',copyIndex(1)), concat(variables('networkInterfaceName'),copyIndex(1))))]"
+            }
+          ]
+        },
+        "osProfile": {
+          "computerName": "[if(greaterOrEquals(length(concat(variables('vmName'),copyIndex(1))), 15), concat(substring(variables('vmName'),0,11),copyIndex(1)), concat(variables('vmName'),copyIndex(1)))]",
+          "adminUsername": "[parameters('adminUsername')]",
+          "adminPassword": "[parameters('adminPassword')]",
+          "windowsConfiguration": {
+            "enableAutomaticUpdates": true,
+            "provisionVmAgent": true
+          }
+        }
+      },
+      "copy": {
+        "name": "[variables('vmName')]",
+        "count": "[parameters('instanceCount')]"
+      }
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines/extensions",
+      "name": "[concat(variables('vmName'),copyIndex(1),'/CSExtension')]",
+      "tags": "[ if(contains(parameters('tagsByResource'), 'Microsoft.Compute/virtualMachines/extensions'), parameters('tagsByResource')['Microsoft.Compute/virtualMachines/extensions'], json('{}')) ]",
+      "apiVersion": "2020-06-01",
+      "location": "[parameters('location')]",
+      "copy": {
+        "name": "[variables('vmName')]",
+        "count": "[parameters('instanceCount')]"
+      },
+      "properties": {
+        "publisher": "Microsoft.Compute",
+        "type": "CustomScriptExtension",
+        "typeHandlerVersion": "1.7",
+        "autoUpgradeMinorVersion": true,
+        "settings": {
+          "fileUris": [
+            "[variables('robotPsUri')]",
+            "[variables('robotArtifact')]"
+          ]
+        },
+        "protectedSettings": {
+          "commandToExecute": "[if(equals(parameters('RobotType'), 'Attended'),variables('attendedBot'),variables('unattendedBot'))]"
+        }
+      },
+      "dependsOn": [
+        "[concat('Microsoft.Compute/virtualMachines/', concat(variables('vmName'),copyIndex(1)))]"
+      ]
+    }
+  ],
+  "outputs": {
+  }
+}

@@ -1,0 +1,472 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "location": {
+            "type": "string",
+            "metadata": {
+                "description": "Location for all resources."
+            }
+        },
+        "storageAccountName": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "description": "Storage account name for storing nuget packages."
+            }
+        },
+        "appServicePlanName": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "description": "App service plan name."
+            }
+        },
+        "appName": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "description": "Web app name."
+            }
+        },
+        "appInsight": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "description": "Application insights name."
+            }
+        },
+        "identityAppName": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "description": "Identity Web app name."
+            }
+        },
+        "webhookAppName": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "description": "Webhook Web app name."
+            }
+        },
+        "certificateName": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "description": "Certificate name."
+            }
+        },
+        "msiName": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "description": "Managed Identity name."
+            }
+        },
+        "SQLconnectionString": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "description": "Connection string for SQL server."
+            }
+        },
+        "SQLconnectionType": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "description": "SQL connection type."
+            }
+        },
+        "EnableHAA": {
+            "type": "Bool",
+            "metadata": {
+                "description": "Is HAA Enabled?"
+            }
+        },
+        "orchestratorVersion": {
+            "type": "string",
+            "defaultValue": "20.10.1",
+            "allowedValues": [
+                "20.10.1"
+            ],
+            "metadata": {
+                "description": "Version of the Orchestrator"
+            }
+        },
+        "virtualNetworkName": {
+            "defaultValue": "newVnet",
+            "type": "String",
+            "metadata": {
+                "description": "Enter existing vnet name or type new name to create new VNET"
+            }
+        },
+        "webSubnetRef": {
+            "defaultValue": "",
+            "type": "String",
+            "metadata": {
+                "description": "Reference for the subnet designed to work with Web App VNet integration (specific config required)."
+            }
+        },
+        "appInsightsRegion": {
+            "defaultValue": "",
+            "type": "String",
+            "metadata": {
+                "description": "App insights region."
+            }
+        },
+        "orchestratorInstances": {
+            "type": "int",
+            "defaultValue": 1,
+            "minValue": 1,
+            "maxValue": 30,
+            "metadata": {
+                "description": "No. of Orchestrator instances on App service"
+            }
+        },
+        "TokenCertificate": {
+            "type": "string",
+            "defaultValue": "Token certificate value (base64)"
+        },
+        "TokenCertificatePass": {
+            "type": "string",
+            "defaultValue": "Token certificate password"
+        },
+        "tagsByResource": {
+            "type": "object",
+            "defaultValue": {}
+        }
+    },
+    "variables": {
+        "storageAccountType": "Standard_LRS",
+        "appServiceWorkerSize": "3",
+        "workerSizeId": "3",
+        "numberOfWorkers": "1",
+        "appServiceTier": "PremiumV2",
+        "skuCode": "P2v2",
+        "contributorRoleDefinitionId": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]",
+        "bootstrapRoleAssignmentId": "[guid(concat(resourceGroup().id, 'contributor'))]",
+        "RGId": "[resourceGroup().id]",
+        "MSIName": "[parameters('msiName')]",
+        "webSiteAdditionalTags": {
+            "[concat('hidden-related:', resourceId('Microsoft.Web/serverfarms/', parameters('appServicePlanName')))]": "empty"
+        },
+        "autoScaleSettingsAdditionTags": {
+            "[concat('hidden-link:', resourceId('Microsoft.Web/serverfarms/', parameters('appServicePlanName')))]": "Resource"
+        },
+        "insightComponentAdditionalTags": {
+            "[concat('hidden-link:', resourceGroup().id, '/providers/Microsoft.Web/sites/', parameters('appName'))]": "Resource"
+        },
+        "certificateAdditionalTags": {
+            "displayName": "SelfSignedIdentity"
+        }
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Storage/storageAccounts",
+            "name": "[parameters('storageAccountName')]",
+            "tags": "[ if(contains(parameters('tagsByResource'), 'Microsoft.Storage/storageAccounts'), parameters('tagsByResource')['Microsoft.Storage/storageAccounts'], json('{}')) ]",
+            "apiVersion": "2018-11-01",
+            "location": "[parameters('location')]",
+            "sku": {
+                "name": "[variables('storageAccountType')]"
+            },
+            "kind": "StorageV2",
+            "properties": {
+                "supportsHttpsTrafficOnly": true
+            }
+        },
+        {
+            "apiVersion": "2019-08-01",
+            "name": "[parameters('appServicePlanName')]",
+            "type": "Microsoft.Web/serverFarms",
+            "tags": "[ if(contains(parameters('tagsByResource'), 'Microsoft.Web/serverFarms'), parameters('tagsByResource')['Microsoft.Web/serverFarms'], json('{}')) ]",
+            "location": "[parameters('location')]",
+            "properties": {
+                "name": "[parameters('appServicePlanName')]",
+                "workerSize": "[variables('appServiceWorkerSize')]",
+                "workerSizeId": "[variables('workerSizeId')]",
+                "numberOfWorkers": "[variables('numberOfWorkers')]",
+                "reserved": false
+            },
+            "sku": {
+                "Tier": "[variables('appServiceTier')]",
+                "Name": "[variables('skuCode')]"
+            }
+        },
+        {
+            "apiVersion": "2020-06-01",
+            "name": "[parameters('appName')]",
+            "type": "Microsoft.Web/Sites",
+            "location": "[parameters('location')]",
+            "tags": "[union( if(contains(parameters('tagsByResource'), 'Microsoft.Web/Sites'), parameters('tagsByResource')['Microsoft.Web/Sites'], json('{}')), variables('webSiteAdditionalTags') )]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/serverFarms/', parameters('appServicePlanName'))]",
+                "[resourceId('Microsoft.Insights/components/', parameters('appInsight'))]"
+            ],
+            "properties": {
+                "name": "[parameters('appName')]",
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms/', parameters('appServicePlanName'))]",
+                "siteConfig": {
+                    "connectionStrings": [
+                        {
+                            "name": "Default",
+                            "ConnectionString": "[parameters('SQLconnectionString')]",
+                            "type": "[parameters('SQLconnectionType')]"
+                        }
+                    ],
+                    "appSettings": [
+                        {
+                            "name": "Orchestrator version",
+                            "value": "[parameters('orchestratorVersion')]"
+                        }
+                    ],
+                    "phpVersion": "off",
+                    "netFrameworkVersion": "v4.5",
+                    "use32BitWorkerProcess": "false",
+                    "webSocketsEnabled": true,
+                    "alwaysOn": "true",
+                    "httpLoggingEnabled": true,
+                    "logsDirectorySizeLimit": 40,
+                    "vnetName": "[if(parameters('EnableHAA'), parameters('virtualNetworkName'), '')]"
+
+                },
+                "enabled": true
+            },
+            "resources": [
+                {
+                    "type": "config",
+                    "apiVersion": "2019-08-01",
+                    "name": "virtualNetwork",
+                    "location": "[parameters('location')]",
+                    "condition": "[parameters('EnableHAA')]",
+                    "dependsOn": [
+                        "[resourceId('Microsoft.Web/sites', parameters('appName'))]"
+                    ],
+                    "properties": {
+                        "subnetResourceId": "[parameters('webSubnetRef')]",
+                        "swiftSupported": true
+                    }
+                }
+            ]
+        },
+        {
+            "condition": "[greaterOrEquals(parameters('orchestratorInstances'),2)]",
+            "apiVersion": "2015-04-01",
+            "name": "[concat(parameters('appServicePlanName'), '-scaleset')]",
+            "type": "microsoft.insights/autoscalesettings",
+            "location": "[parameters('appInsightsRegion')]",
+            "tags": "[union( if(contains(parameters('tagsByResource'), 'microsoft.insights/autoscalesettings'), parameters('tagsByResource')['microsoft.insights/autoscalesettings'], json('{}')), variables('autoScaleSettingsAdditionTags') )]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/serverfarms/', parameters('appServicePlanName'))]"
+            ],
+            "properties": {
+                "profiles": [
+                    {
+                        "name": "Default",
+                        "capacity": {
+                            "minimum": "[parameters('orchestratorInstances')]",
+                            "maximum": "15",
+                            "default": "[parameters('orchestratorInstances')]"
+                        },
+                        "rules": [
+                            {
+                                "metricTrigger": {
+                                    "metricName": "CpuPercentage",
+                                    "metricResourceUri": "[resourceId('Microsoft.Web/serverfarms/', parameters('appServicePlanName'))]",
+                                    "timeGrain": "PT1M",
+                                    "statistic": "Average",
+                                    "timeWindow": "PT10M",
+                                    "timeAggregation": "Average",
+                                    "operator": "GreaterThan",
+                                    "threshold": 80
+                                },
+                                "scaleAction": {
+                                    "direction": "Increase",
+                                    "type": "ChangeCount",
+                                    "value": "1",
+                                    "cooldown": "PT10M"
+                                }
+                            },
+                            {
+                                "metricTrigger": {
+                                    "metricName": "CpuPercentage",
+                                    "metricResourceUri": "[resourceId('Microsoft.Web/serverfarms/', parameters('appServicePlanName'))]",
+                                    "timeGrain": "PT1M",
+                                    "statistic": "Average",
+                                    "timeWindow": "PT1H",
+                                    "timeAggregation": "Average",
+                                    "operator": "LessThan",
+                                    "threshold": 60
+                                },
+                                "scaleAction": {
+                                    "direction": "Decrease",
+                                    "type": "ChangeCount",
+                                    "value": "1",
+                                    "cooldown": "PT1H"
+                                }
+                            }
+                        ]
+                    }
+                ],
+                "enabled": true,
+                "name": "[concat(parameters('appServicePlanName'), '-scaleset')]",
+                "targetResourceUri": "[resourceId('Microsoft.Web/serverfarms/', parameters('appServicePlanName'))]"
+            }
+        },
+        {
+            "apiVersion": "2020-02-02-preview",
+            "name": "[parameters('appInsight')]",
+            "type": "Microsoft.Insights/components",
+            "location": "[parameters('appInsightsRegion')]",
+            "tags": "[union( if(contains(parameters('tagsByResource'), 'Microsoft.Insights/components'), parameters('tagsByResource')['Microsoft.Insights/components'], json('{}')), variables('insightComponentAdditionalTags') )]",
+            "properties": {
+                "ApplicationId": "[parameters('appName')]"
+            }
+        },
+        {
+            "apiVersion": "2018-11-01",
+            "name": "[parameters('identityAppName')]",
+            "type": "Microsoft.Web/Sites",
+            "location": "[parameters('location')]",
+            "tags": "[union( if(contains(parameters('tagsByResource'), 'Microsoft.Web/Sites'), parameters('tagsByResource')['Microsoft.Web/Sites'], json('{}')), variables('webSiteAdditionalTags') )]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/serverFarms/', parameters('appServicePlanName'))]",
+                "[resourceId('Microsoft.Insights/components/', parameters('appInsight'))]",
+                "[resourceId('Microsoft.Web/Sites/', parameters('appName'))]"
+            ],
+            "properties": {
+                "name": "[parameters('identityAppName')]",
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms/', parameters('appServicePlanName'))]",
+                "siteConfig": {
+                    "connectionStrings": [
+                        {
+                            "name": "DefaultConnection",
+                            "ConnectionString": "[parameters('SQLconnectionString')]",
+                            "type": "[parameters('SQLconnectionType')]"
+                        }
+                    ],
+                    "phpVersion": "off",
+                    "netFrameworkVersion": "v4.5",
+                    "use32BitWorkerProcess": "false",
+                    "webSocketsEnabled": true,
+                    "alwaysOn": "true",
+                    "httpLoggingEnabled": true,
+                    "logsDirectorySizeLimit": 40,
+                    "vnetName": "[if(parameters('EnableHAA'), parameters('virtualNetworkName'), '')]"
+                },
+                "enabled": true
+            },
+            "resources": [
+                {
+                    "type": "config",
+                    "apiVersion": "2019-08-01",
+                    "name": "virtualNetwork",
+                    "location": "[parameters('location')]",
+                    "condition": "[parameters('EnableHAA')]",
+                    "dependsOn": [
+                        "[resourceId('Microsoft.Web/sites', parameters('identityAppName'))]"
+                    ],
+                    "properties": {
+                        "subnetResourceId": "[parameters('webSubnetRef')]",
+                        "swiftSupported": true
+                    }
+                }
+            ]
+        },
+        {
+            "apiVersion": "2018-11-01",
+            "name": "[parameters('webhookAppName')]",
+            "type": "Microsoft.Web/Sites",
+            "location": "[parameters('location')]",
+            "tags": "[if(contains(parameters('tagsByResource'), 'Microsoft.Web/Sites'), parameters('tagsByResource')['Microsoft.Web/Sites'], json('{}'))]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/serverFarms/', parameters('appServicePlanName'))]",
+                "[resourceId('Microsoft.Insights/components/', parameters('appInsight'))]",
+                "[resourceId('Microsoft.Web/Sites/', parameters('appName'))]"
+            ],
+            "properties": {
+                "name": "[parameters('webhookAppName')]",
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms/', parameters('appServicePlanName'))]",
+                "enabled": true,
+                "siteConfig": {
+                    "phpVersion": "off",
+                    "netFrameworkVersion": "v4.5",
+                    "use32BitWorkerProcess": "false",
+                    "webSocketsEnabled": true,
+                    "alwaysOn": "true",
+                    "httpLoggingEnabled": true,
+                    "logsDirectorySizeLimit": 40,
+                    "metadata": [
+                        {
+                            "name": "CURRENT_STACK",
+                            "value": "dotnetcore"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "apiVersion": "2020-06-01",
+            "name": "[parameters('certificateName')]",
+            "tags": "[union(if(contains(parameters('tagsByResource'), 'Microsoft.Web/certificates'), parameters('tagsByResource')['Microsoft.Web/certificates'], json('{}')), variables('certificateAdditionalTags'))]",
+            "type": "Microsoft.Web/certificates",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/Sites/', parameters('identityAppName'))]"
+            ],
+            "location": "[parameters('location')]",
+            "properties": {
+                "pfxBlob": "[parameters('TokenCertificate')]",
+                "password": "[parameters('TokenCertificatePass')]",
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms/', parameters('appServicePlanName'))]"
+            }
+        },
+        {
+            "name": "[concat(parameters('identityAppName'),'/appsettings')]",
+            "type": "Microsoft.Web/sites/config",
+            "apiVersion": "2020-06-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/certificates', parameters('certificateName'))]"
+            ],
+            "properties": {
+                "WEBSITE_LOAD_CERTIFICATES": "[reference(resourceId('Microsoft.Web/certificates', parameters('certificateName'))).thumbprint]",
+                "AppSettings__SigningCredentialSettings__StoreLocation__Name": "[reference(resourceId('Microsoft.Web/certificates', parameters('certificateName'))).thumbprint]",
+                "AppSettings__IdentityServerAddress": "[concat('https://',parameters('identityAppName'),'.azurewebsites.net/identity')]",
+                "AppSettings__OrchestratorUrl": "[concat('https://',parameters('appName'),'.azurewebsites.net')]",
+                "AppSettings__SigningCredentialSettings__StoreLocation__Location": "CurrentUser",
+                "AppSettings__SigningCredentialSettings__StoreLocation__NameType": "Thumbprint"
+            }
+        },
+        {
+            "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+            "apiVersion": "2018-11-30",
+            "tags": "[ if(contains(parameters('tagsByResource'), 'Microsoft.ManagedIdentity/userAssignedIdentities'), parameters('tagsByResource')['Microsoft.ManagedIdentity/userAssignedIdentities'], json('{}')) ]",
+            "name": "[variables('MSIName')]",
+            "location": "[parameters('location')]"
+        },
+        {
+            "type": "Microsoft.Authorization/roleAssignments",
+            "apiVersion": "2020-04-01-preview",
+            "name": "[variables('bootstrapRoleAssignmentId')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('MSIName'))]"
+            ],
+            "properties": {
+                "roleDefinitionId": "[variables('contributorRoleDefinitionId')]",
+                "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('MSIName')), '2018-11-30').principalId]",
+                "scope": "[variables('RGId')]",
+                "principalType": "ServicePrincipal"
+            }
+        }
+    ],
+    "outputs": {
+        "storageAccountId": {
+            "type": "string",
+            "value": "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
+        },
+        "insightsKey": {
+            "type": "string",
+            "value": "[reference(resourceId('Microsoft.Insights/components', parameters('appInsight'))).InstrumentationKey]"
+        }
+    }
+}
