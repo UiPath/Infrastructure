@@ -1,4 +1,4 @@
-# How to use these templates to depploy to Azure
+# How to use these templates to deploy to Azure
 
 ## Note
 These are the templates we use for the Azure marketplace deployment and we want to offer them to you so you can have a starting point to customize UiPath deployments. These will be automatically uploaded here with any new release.
@@ -20,7 +20,7 @@ These are the templates we use for the Azure marketplace deployment and we want 
 ## Steps
 1. Fork github repository:  
 https://docs.github.com/en/free-pro-team@latest/github/getting-started-with-github/fork-a-repo#fork-an-example-repository
-2. Create a folder a navigate to it using a command line prompt
+2. Create a folder a navigate to it using a command line tool
 3. Clone the forked github repository to a folder of your choosing:
 ``` cmd
 git clone https://github.com/<github username>/Infrastructure.git
