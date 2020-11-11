@@ -1,4 +1,4 @@
-# How to use the marketplace deployment
+# How to use these templates to depploy to Azure
 
 ## Note
 These are the templates we use for the Azure marketplace deployment and we want to offer them to you so you can have a starting point to customize UiPath deployments. These will be automatically uploaded here with any new release.
@@ -20,7 +20,7 @@ These are the templates we use for the Azure marketplace deployment and we want 
 ## Steps
 1. Fork github repository:  
 https://docs.github.com/en/free-pro-team@latest/github/getting-started-with-github/fork-a-repo#fork-an-example-repository
-2. Create a folder a navigate to it
+2. Create a folder a navigate to it using a command line prompt
 3. Clone the forked github repository to a folder of your choosing:
 ``` cmd
 git clone https://github.com/<github username>/Infrastructure.git
@@ -30,7 +30,8 @@ git clone https://github.com/<github username>/Infrastructure.git
 cd Setup
 ./Set-DeploymentConfiguration.ps1 -UiPathSolution Orchestrator #or Robot
 ```
-5. Upload the files from the `Upload` folder to Azure blob storage (or any other storage solution from where it can be downloaded using an URL). Paths are printed in the command line also.
+5. Upload the files from the `Upload` folder to Azure blob storage (or any other storage solution from where it can be downloaded using an URL). Paths are printed in the command line also. You can use the portal, powershell or az cli.
+Az cli examples:
 ```bash
 # Upload blob
 az storage blob upload --account-name <storage account name> --container-name <container name> --name <file name> --file <file path>
