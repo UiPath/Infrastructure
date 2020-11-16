@@ -1,0 +1,270 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: This template creates a cluster to provide high availability. (qs-1r2g4124c)
+Parameters:
+  VPCID:
+    Type: 'AWS::EC2::VPC::Id'
+  VPCCIDR:
+    AllowedPattern: >-
+      ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
+    Default: 10.0.0.0/16
+    Description: CIDR block for the VPC
+    Type: String
+  SubnetIDs:
+    Description: Comma separated Subnet IDs where HAA VMs need to be launched
+    Type: List<AWS::EC2::Subnet::Id>
+  KeyPairName:
+    Description: EC2 Instance Key pair name
+    Type: String
+  HAAUser:
+    Description: High Availability Add-on username (email)
+    Type: String
+  HAAPassword:
+    Description: High Availability Add-on password
+    Type: String
+    NoEcho: 'true'
+  HAALicense:
+    Description: High Availability Add-on license key
+    Type: String
+  FindAMIFunctionArn:
+    Description: ARN for Lambda function used to find AMI by name
+    Type: String
+Conditions:
+  TrialHAA: !Equals
+    - !Ref HAALicense
+    - ''
+Resources:
+  HaaSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Security Group allowing access to High-Availability Add-On application
+      GroupName: !Join
+        - '-'
+        - - !Ref 'AWS::StackName'
+          - UiPathHaaSecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Join
+            - '-'
+            - - !Ref 'AWS::StackName'
+              - UiPathHaaSecurityGroup
+      VpcId: !Ref VPCID
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: !Ref VPCCIDR
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Ref VPCCIDR
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref VPCCIDR
+        - IpProtocol: icmp
+          FromPort: 8
+          ToPort: -1
+          CidrIp: !Ref VPCCIDR
+        - IpProtocol: tcp
+          FromPort: 1968
+          ToPort: 1968
+          CidrIp: !Ref VPCCIDR
+        - IpProtocol: tcp
+          FromPort: 3333
+          ToPort: 3339
+          CidrIp: !Ref VPCCIDR
+        - IpProtocol: tcp
+          FromPort: 36379
+          ToPort: 36380
+          CidrIp: !Ref VPCCIDR
+        - IpProtocol: tcp
+          FromPort: 8001
+          ToPort: 8002
+          CidrIp: !Ref VPCCIDR
+        - IpProtocol: tcp
+          FromPort: 8004
+          ToPort: 8004
+          CidrIp: !Ref VPCCIDR
+        - IpProtocol: tcp
+          FromPort: 8443
+          ToPort: 8444
+          CidrIp: !Ref VPCCIDR
+        - IpProtocol: tcp
+          FromPort: 9080
+          ToPort: 9080
+          CidrIp: !Ref VPCCIDR
+        - IpProtocol: tcp
+          FromPort: 9081
+          ToPort: 9081
+          CidrIp: !Ref VPCCIDR
+        - IpProtocol: tcp
+          FromPort: 8070
+          ToPort: 8071
+          CidrIp: !Ref VPCCIDR
+        - IpProtocol: tcp
+          FromPort: 9443
+          ToPort: 9443
+          CidrIp: !Ref VPCCIDR
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          CidrIp: !Ref VPCCIDR
+        - IpProtocol: tcp
+          FromPort: 10000
+          ToPort: 19999
+          CidrIp: !Ref VPCCIDR
+        - IpProtocol: tcp
+          FromPort: 20000
+          ToPort: 29999
+          CidrIp: !Ref VPCCIDR
+        - IpProtocol: tcp
+          FromPort: 53
+          ToPort: 53
+          CidrIp: !Ref VPCCIDR
+        - IpProtocol: tcp
+          FromPort: 5353
+          ToPort: 5353
+          CidrIp: !Ref VPCCIDR
+  HAInstanceAMI:
+    Type: 'Custom::HAInstanceAMI'
+    Properties:
+      ServiceToken: !Ref FindAMIFunctionArn
+      RegionName: !Ref 'AWS::Region'
+      ImageName: RHEL-7.7*_HVM_GA*
+      Architecture: x86_64
+      VirtualizationType: hvm
+      Owners: '309956199498'
+  HAMaster:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      ImageId: !Ref HAInstanceAMI
+      InstanceType: m4.xlarge
+      KeyName: !Ref KeyPairName
+      SecurityGroupIds:
+        - !Ref HaaSecurityGroup
+      SubnetId: !Select [ '0', !Ref SubnetIDs ]
+      UserData: !Base64
+        'Fn::Join':
+          - |+
+
+          - - '#!/bin/bash'
+            - yum update -y
+            - yum install -y wget
+            - 'wget http://download.uipath.com/haa/get-haa.sh'
+            - chmod +x get-haa.sh
+            - !Join
+              - ' '
+              - - sh get-haa.sh
+                - '-u'
+                - !Ref HAAUser
+                - '-p'
+                - !Ref HAAPassword
+                - !If
+                  - TrialHAA
+                  - ''
+                  - !Join
+                    - ''
+                    - - '-l '
+                      - !Ref HAALicense
+      Tags:
+        - Key: Name
+          Value: !Join
+            - '-'
+            - - !Ref 'AWS::StackName'
+              - HA-Master
+  HASlave1:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      ImageId: !Ref HAInstanceAMI
+      InstanceType: m4.xlarge
+      KeyName: !Ref KeyPairName
+      SecurityGroupIds:
+        - !Ref HaaSecurityGroup
+      SubnetId: !Select [ '0', !Ref SubnetIDs ]
+      UserData: !Base64
+        'Fn::Join':
+          - |+
+
+          - - '#!/bin/bash'
+            - yum update -y
+            - yum install -y wget
+            - 'wget http://download.uipath.com/haa/get-haa.sh'
+            - chmod +x get-haa.sh
+            - !Join
+              - ' '
+              - - sh get-haa.sh
+                - '-u'
+                - !Ref HAAUser
+                - '-p'
+                - !Ref HAAPassword
+                - '-j '
+                - !GetAtt
+                  - HAMaster
+                  - PrivateIp
+      Tags:
+        - Key: Name
+          Value: !Join
+            - '-'
+            - - !Ref 'AWS::StackName'
+              - HA-Slave-1
+  HASlave2:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      ImageId: !Ref HAInstanceAMI
+      InstanceType: m4.xlarge
+      KeyName: !Ref KeyPairName
+      SecurityGroupIds:
+        - !Ref HaaSecurityGroup
+      SubnetId: !Select [ '0',  !Ref SubnetIDs ]
+      UserData: !Base64
+        'Fn::Join':
+          - |+
+
+          - - '#!/bin/bash'
+            - yum update -y
+            - yum install -y wget
+            - 'wget http://download.uipath.com/haa/get-haa.sh'
+            - chmod +x get-haa.sh
+            - !Join
+              - ' '
+              - - sh get-haa.sh
+                - '-u'
+                - !Ref HAAUser
+                - '-p'
+                - !Ref HAAPassword
+                - '-j '
+                - !GetAtt
+                  - HAMaster
+                  - PrivateIp
+      Tags:
+        - Key: Name
+          Value: !Join
+            - '-'
+            - - !Ref 'AWS::StackName'
+              - HA-Slave-2
+Outputs:
+  HAMasterID:
+    Value: !Ref HAMaster
+    Description: ID of HA Master VM in Private Subnet 1
+  HAMasterPrivateIP:
+    Value: !GetAtt
+      - HAMaster
+      - PrivateIp
+    Description: Private IP of HA Master VM in Private Subnet 1
+  HASlave1ID:
+    Value: !Ref HASlave1
+    Description: ID of HA Slave 1 VM in Private Subnet 1
+  HASlave1PrivateIP:
+    Value: !GetAtt
+      - HASlave1
+      - PrivateIp
+    Description: Private IP of HA Slave 1 VM in Private Subnet 1
+  HASlave2ID:
+    Value: !Ref HASlave2
+    Description: ID of HA Slave 2 VM in Private Subnet 1
+  HASlave2PrivateIP:
+    Value: !GetAtt
+      - HASlave2
+      - PrivateIp
+    Description: Private IP of HA Slave 2 VM in Private Subnet 1
