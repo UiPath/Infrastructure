@@ -1,11 +1,4 @@
-
-Azure/Orchestrator/PaaS/delete/MultiNode/azuredeploy.json
-Azure/Orchestrator/PaaS/delete/MultiNode/azuredeploy.parameters.json
-Azure/Orchestrator/PaaS/delete/MultiNode/README.md
-Azure/Orchestrator/PaaS/delete/SingleNode/azuredeploy.json
-Azure/Orchestrator/PaaS/delete/SingleNode/README.md
-Redis/Redis for windows/.DS_Store
-.DS_Store
-.history
-Redis-removed/
-ML/du_prereq.sh
+.idea/
+taskcat_outputs/
+.taskcat/
+.vscode/
