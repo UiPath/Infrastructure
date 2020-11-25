@@ -82,7 +82,7 @@
   "variables": {
     "appName": "[trim(toLower(parameters('appName')))]",
     "SQLServerName": "[trim(toLower(parameters('SQLServerName')))]",
-    "artifactsName": "[if(contains(parameters('orchestratorVersion'),'19.10.'),'UiPath.Orchestrator.Web.zip','UiPath.Web.zip'))]",
+    "artifactsName": "[if(contains(parameters('orchestratorVersion'),'19.10.'),'UiPath.Orchestrator.Web.zip','UiPath.Web.zip')]",
     "orchestratorLink": "[concat('https://download.uipath.com/versions/',parameters('orchestratorVersion'),'/',variables('artifactsName'))]",
     "appServiceTier": "PremiumV2",
     "skuCode": "P1v2",
