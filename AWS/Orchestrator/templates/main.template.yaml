@@ -1073,7 +1073,7 @@ Resources:
     Properties:
       TemplateURL: !Sub
         - >-
-          https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/orchestrator/storage.template.yaml
+          https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/storage.template.yaml
         - S3Bucket: !If
             - UsingDefaultBucket
             - !Sub '${QSS3BucketName}-${AWS::Region}'
@@ -1094,7 +1094,7 @@ Resources:
     Properties:
       TemplateURL: !Sub
         - >-
-          https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/orchestrator/routing.template.yaml
+          https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/routing.template.yaml
         - S3Bucket: !If
             - UsingDefaultBucket
             - !Sub '${QSS3BucketName}-${AWS::Region}'
@@ -1121,7 +1121,7 @@ Resources:
     Properties:
       TemplateURL: !Sub
         - >-
-          https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/orchestrator/ha.template.yaml
+          https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/ha.template.yaml
         - S3Bucket: !If
             - UsingDefaultBucket
             - !Sub '${QSS3BucketName}-${AWS::Region}'
@@ -1150,7 +1150,7 @@ Resources:
     Properties:
       TemplateURL: !Sub
         - >-
-          https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/orchestrator/database.template.yaml
+          https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/database.template.yaml
         - S3Bucket: !If
             - UsingDefaultBucket
             - !Sub '${QSS3BucketName}-${AWS::Region}'
@@ -1177,7 +1177,7 @@ Resources:
     Properties:
       TemplateURL: !Sub
         - >-
-          https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/orchestrator/server.template.yaml
+          https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/server.template.yaml
         - S3Bucket: !If
             - UsingDefaultBucket
             - !Sub '${QSS3BucketName}-${AWS::Region}'
@@ -1256,24 +1256,29 @@ Resources:
         HostedZoneID: !Ref HostedZoneID
 
 Outputs:
-  ApplicationLoadBalancer:
-    Description: Application Load Balancer Name
+  FQDNLoadBalancer:
+    Description: UiPath Orchestrator Login page
+    Value: !Ref UiPathFQDN
+  BastionHost:
+    Description: Bastion Host's Public IP address 
     Value: !GetAtt
-      - RoutingStack
-      - Outputs.ApplicationLoadBalancer
-    Export:
-      Name: !Sub '${AWS::StackName}-ApplicationLoadBalancer'
-  RDSDBInstanceEndpointAddress:
-    Description: RDS-MSSQL Database Instance Endpoint Address
+      - ServerStack
+      - Outputs.BastionHostPublicIP
+  HaaNodesIPs:
+    Description: High Availability Add-on's list of IP addresses 
+    Value: !Join
+      - ','
+      - - !GetAtt 
+          - HAStack
+          - Outputs.HAMasterPrivateIP
+        - !GetAtt
+          - HAStack
+          - Outputs.HASlave1PrivateIP
+        - !GetAtt
+          - HAStack
+          - Outputs.HASlave2PrivateIP
+  NugetStorageS3Bucket:
+    Description: S3 bucket name that contains Orchestrator's Nuget packages
     Value: !GetAtt
-      - DatabaseStack
-      - Outputs.RDSDBInstanceEndpointAddress
-    Export:
-      Name: !Sub '${AWS::StackName}-RDSDBInstanceEndpointAddress'
-  RDSDBInstanceEndpointPort:
-    Description: RDS-MSSQL Database Instance Endpoint Port
-    Value: !GetAtt
-      - DatabaseStack
-      - Outputs.RDSDBInstanceEndpointPort
-    Export:
-      Name: !Sub '${AWS::StackName}-RDSDBInstanceEndpointPort'
+      - StorageStack
+      - Outputs.NugetStorageBucketName

@@ -21,7 +21,7 @@ Parameters:
     Description: ARN for Lambda function used to find AMI by name
     Type: String
   AdminPassword:
-    Description: Windows Administrator password to login as
+    Description: Robot's Windows Administrator password to login as
     Type: String
     NoEcho: 'true'
     Default: ''
@@ -62,9 +62,6 @@ Conditions:
   UsingDefaultBucket: !Equals
     - !Ref QSS3BucketName
     - aws-quickstart
-  IsAttendedRobot: !Equals
-    - !Ref RobotType
-    - Attended
 Resources:
   RobotIAMRole:
     Type: 'AWS::IAM::Role'
@@ -202,19 +199,12 @@ Resources:
                   - !Ref RobotType
                   - '-cloudName'
                   - 'AWS' 
-                  - !If 
-                    - IsAttendedRobot
-                    - !Join 
-                      - ' '
-                      - - '-machinePassword'
-                        - !Join 
-                          - ''
-                          - - '\"'
-                            - !Ref AdminPassword
-                            - '\"'
-                        - '-credType'
-                        - 'Default' 
+                  - '-machinePassword'
+                  - !Join 
                     - ''
+                    - - '\"'
+                      - !Ref AdminPassword
+                      - '\"'
               waitAfterCompletion: '0'
               cwd: 'C:\cfn\sources\'
     Properties:
@@ -259,7 +249,7 @@ Outputs:
     Value: !GetAtt 
       - BastionHost
       - PublicIp
-    Description: Private IP of BastionHost in Public Subnet 1
+    Description: Public IP of BastionHost in Public Subnet 1
   UiPathRobotPrivateIP:
     Value: !GetAtt 
       - UiPathRobot

@@ -385,7 +385,7 @@ Resources:
                 finally:
                     cfnresponse.send(event, context, status, returnAttribute, new_physical_id)
       Runtime: python3.6
-      Timeout: 600
+      Timeout: 900
       TracingConfig:
         Mode: Active
       VpcConfig:

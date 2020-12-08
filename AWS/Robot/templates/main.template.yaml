@@ -31,14 +31,11 @@ Metadata:
         Parameters:
           - RobotVersion
           - RobotType
+          - AdminPassword
           - OrchestratorURL
           - OrchestratorTenant
           - OrchestratorAPIUser
           - OrchestratorAPIPassword
-      - Label:
-          default: Bastion Host Configuration
-        Parameters:
-          - AdminPassword
       - Label:
           default: Quickstart Bucket configuration
         Parameters:
@@ -78,7 +75,7 @@ Metadata:
       OrchestratorAPIUser:
         default: Orchestrator API username with role to create/add Robot.
       OrchestratorAPIPassword:
-        default: Orchestrator API password.s
+        default: Orchestrator API password
       AdminPassword:
         default: Admin Password
       QSS3BucketName:
@@ -184,7 +181,7 @@ Parameters:
     Description: EC2 instance type
     Type: String
   AdminPassword:
-    Description: Windows Administrator password to login as.
+    Description: Robot's Windows Administrator password to login as.
     Type: String
     NoEcho: 'true'
     MinLength: '6'
@@ -244,7 +241,7 @@ Parameters:
     ConstraintDescription: >-
       Quick Start key prefix can include numbers, lowercase letters, uppercase
       letters, and hyphens (-), and ending with a slash(/).
-    Default: quickstart-uipath-orchestrator/
+    Default: quickstart-uipath-robot/
     Description: S3 key prefix under which Quick Start templates are hosted.
     Type: String
 Conditions:
@@ -286,7 +283,7 @@ Resources:
     Properties:
       TemplateURL: !Sub 
         - >-
-          https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/robot/lambda-role.template.yaml
+          https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/lambda-role.template.yaml
         - S3Bucket: !If 
             - UsingDefaultBucket
             - !Sub '${QSS3BucketName}-${AWS::Region}'
@@ -300,7 +297,7 @@ Resources:
     Properties:
       TemplateURL: !Sub 
         - >-
-          https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/robot/security.template.yaml
+          https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/security.template.yaml
         - S3Bucket: !If 
             - UsingDefaultBucket
             - !Sub '${QSS3BucketName}-${AWS::Region}'
@@ -393,7 +390,7 @@ Resources:
     Properties:
       TemplateURL: !Sub 
         - >-
-          https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/robot/server.template.yaml
+          https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/server.template.yaml
         - S3Bucket: !If 
             - UsingDefaultBucket
             - !Sub '${QSS3BucketName}-${AWS::Region}'
@@ -424,24 +421,14 @@ Resources:
         OrchestratorAPIUser: !Ref OrchestratorAPIUser
         OrchestratorAPIPassword: !Ref OrchestratorAPIPassword
 Outputs:
-  VPCID:
-    Description: VPC ID
+  BastionHostPublicIP:
+    Description: Public IP of Bastion host in Public Subnet 1
     Value: !GetAtt 
-      - NetworkStack
-      - Outputs.VPCID
-    Export:
-      Name: !Sub '${AWS::StackName}-VPCID'
-  VPCCIDR:
-    Description: VPC CIDR
-    Value: !GetAtt 
-      - NetworkStack
-      - Outputs.VPCCIDR
-    Export:
-      Name: !Sub '${AWS::StackName}-VPCCIDR'
+      - ServerStack
+      - Outputs.BastionHostPublicIP
   UiPathRobotPrivateIP:
-    Description: Private IP of UiPathRobot in Public Subnet 1
+    Description: Private IP of UiPath Robot in Private Subnet 1
     Value: !GetAtt 
       - ServerStack
       - Outputs.UiPathRobotPrivateIP
-    Export:
-      Name: !Sub '${AWS::StackName}-UiPathRobotPrivateIP'
+
