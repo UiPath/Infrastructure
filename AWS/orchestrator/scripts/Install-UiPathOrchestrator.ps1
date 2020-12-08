@@ -113,10 +113,6 @@ function Main {
     Install-UiPathOrchestratorEnterprise -msiPath "$rootDirectory\sources\UiPathOrchestrator.msi" -logPath $script:installLog -msiFeatures $msiFeatures -msiProperties $msiProperties
 
     Remove-WebSite -webSiteName "Default Web Site" -port "80"
-
-#    $bearerToken = Connect-ToOrchestrator -tenant $orchestratorTenant -username $orchestratorAdminUsername -password $orchestratorAdminPassword
-#
-#    Set-OrchestratorLicense -licenseCode $orchestratorLicenseCode -tenant $orchestratorTenant -username $orchestratorAdminUsername -bearerToken $bearerToken
 }
 
 function RemoveIISDirectoryBrowsingFeature {
@@ -142,6 +138,7 @@ param(
         New-WebBinding -Name $siteName -IPAddress "*" -Port 443 -Protocol "https"
         Stop-Website -Name $siteName
         Start-Website -Name $siteName
+        Write-Verbose "Adding new binding and restarting Orchestrator WebSite !"
     }
     catch {
         Write-Error -Exception $_.Exception -Message "Failed to configure Orchestrator"
@@ -239,6 +236,7 @@ function Remove-WebSite ($webSiteName, $port) {
             Stop-Website "$webSiteName"
             Set-ItemProperty "IIS:\Sites\$webSiteName" serverAutoStart False
             Remove-WebBinding -Name "$webSiteName" -BindingInformation "*:${port}:"
+            Write-Verbose "Removed $webSiteName WebSite !"
         }
     }
     catch {
@@ -256,23 +254,33 @@ function Connect-ToOrchestrator {
         [Parameter(Mandatory = $true)]
         [string] $password
     )
-    try {
 
-        $orchLoginPath = "/api/account/authenticate"
-        $dataLogin = @{
-            tenancyName            = $tenant
-            usernameOrEmailAddress = $username
-            password               = $password
-        } | ConvertTo-Json
+    $tries = 20
+    while ($tries -ge 1) {
+        try {
+            $orchLoginPath = "/api/account/authenticate"
+            $dataLogin = @{
+                tenancyName            = $tenant
+                usernameOrEmailAddress = $username
+                password               = $password
+            } | ConvertTo-Json
 
-        $orchLoginUri = [System.Uri]::new([System.Uri]$publicUrl, $orchLoginPath)
-        $loginResponse = Invoke-RestMethod -Uri $orchLoginUri.AbsoluteUri  -Method Post -Body $dataLogin -ContentType "application/json"
-        $bearerToken = $loginResponse.result
-        return $bearerToken
-    }
-    catch {
-        Write-Error -Exception $_.Exception -Message "Failed to authenticate to Orchestrator"
-        throw $_.Exception
+            $orchLoginUri = [System.Uri]::new([System.Uri]$publicUrl, $orchLoginPath)
+            $loginResponse = Invoke-RestMethod -Uri $orchLoginUri.AbsoluteUri  -Method Post -Body $dataLogin -ContentType "application/json"
+            $bearerToken = $loginResponse.result
+            return $bearerToken
+        }
+        catch {
+            $tries--
+            Write-Verbose "Exception: $_"
+            if ($tries -lt 1) {
+                throw "Site not started in due time. Failed to authenticate 20 times in a row"
+            }
+            else {
+                Write-Verbose "Failed to authenticate to Orchestrator. Try number: $tries. Retrying again in 30 second"
+                Start-Sleep 30
+            }
+        }
     }
 }
 
@@ -300,7 +308,7 @@ function Set-OrchestratorLicense {
 
             $getTenantLicense = Invoke-RestMethod -Uri $orchGetLicenseUri -Method GET -ContentType "application/json" -UseBasicParsing -Headers $Headers
             if ( $getTenantLicense.'@odata.count' -eq "0") {
-                
+
                 $activateLicensePath = "/odata/HostLicenses/UiPath.Server.Configuration.OData.ActivateLicenseOnline"
                 $licenseBody = @{
                     licenseKey = $licenseCode
@@ -308,7 +316,7 @@ function Set-OrchestratorLicense {
                     email= $username
                 } | ConvertTo-Json
                 $orchLicenseUri = [System.Uri]::new([System.Uri]$publicUrl, $activateLicensePath)
-                
+
                 Invoke-RestMethod -Uri $orchLicenseUri.AbsoluteUri  -Method Post -Body $licenseBody -ContentType "application/json" -Headers $Headers
 
                 Write-Verbose "Licensing Orchestrator's $tenant tenant..."
@@ -354,6 +362,7 @@ function Test-OrchestratorInstallation {
                 }
             }
         }
+
     }
     catch {
         Write-Error -Exception $_.Exception -Message "Failed to connect to installed Orchestrator at $Url"
@@ -378,6 +387,8 @@ try {
         . "$PSScriptRoot\Install-SelfSignedCertificate.ps1" -rootPath "$rootDirectory" -certificatePassword $orchestratorAdminPassword -orchestratorHost $orchestratorHost
         Main
         Restart-OrchestratorSite
+        $bearerToken = Connect-ToOrchestrator -tenant $orchestratorTenant -username $orchestratorAdminUsername -password $orchestratorAdminPassword
+        Set-OrchestratorLicense -licenseCode $orchestratorLicenseCode -tenant $orchestratorTenant -username $orchestratorAdminUsername -bearerToken $bearerToken
     }
     else {
         Write-Verbose "No configuration is available, performing installation for the first time"
@@ -386,6 +397,8 @@ try {
         Write-Verbose "Performed installation for the first time, testing installation"
         Restart-OrchestratorSite
         Test-OrchestratorInstallation -Url $publicUrl -Verbose
+        $bearerToken = Connect-ToOrchestrator -tenant $orchestratorTenant -username $orchestratorAdminUsername -password $orchestratorAdminPassword
+        Set-OrchestratorLicense -licenseCode $orchestratorLicenseCode -tenant $orchestratorTenant -username $orchestratorAdminUsername -bearerToken $bearerToken
         Write-Verbose "Uploading the configuration"
         . "$PSScriptRoot\Write-ConfigToS3.ps1" -Source "$rootDirectory\config.json" -Destination "s3://$configS3BucketName/config.json"
         . "$PSScriptRoot\Write-ConfigToS3.ps1" -Source "$rootDirectory\$orchestratorHost.pfx" -Destination "s3://$configS3BucketName/$orchestratorHost.pfx"
@@ -398,4 +411,3 @@ catch {
     Write-Error -Exception $_.Exception -Message "Failed to install Orchestrator"
     throw $_.Exception
 }
-
