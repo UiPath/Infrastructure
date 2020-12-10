@@ -1,0 +1,78 @@
+trigger:
+  - main
+
+variables:
+  - template: .pipelines/variables/project.yml
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+steps:
+- script: |
+    sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-key C99B11DEB97541F0
+    sudo apt-add-repository https://cli.github.com/packages
+    sudo apt update
+    sudo apt install gh
+    gh --version
+  displayName: 'Install gh'
+
+- task: AzureCLI@2
+  displayName: "Environment: add secrets"
+  inputs:
+    azureSubscription: "AzureDevTest-EA"
+    scriptType: pscore
+    scriptLocation: inlineScript
+    inlineScript: |
+      Write-Output "Retrieving secrets from cma-dev-config-kv"
+      $secretList = (az keyvault secret list --vault-name cma-dev-config-kv | ConvertFrom-Json)
+      $secrets = $secretList | ForEach-Object  { "export $(($_.name -creplace '(?<!^)\p{Lu}', '_$&').ToUpper())=$(((az keyvault secret show --id $($_.id)) | ConvertFrom-Json).value )" }
+
+      Write-Output "Secrets extracted:"
+      $secretList | ForEach-Object { "$($_.name)" }
+      $secretList = ""
+
+      if  ($secrets) {
+        $secrets > $(Pipeline.Workspace)/secrets.env
+      }
+      else {
+        Write-Error "No secrets retrieved. Halting execution!"
+        Exit1
+      }
+
+      Write-Output "Cleaning up secrets..."
+      $secrets = ""
+      Write-Output "All done!"
+
+- script: |
+    export $(cat $(Pipeline.Workspace)/secrets.env | xargs)
+    gh auth login --hostname github.com --with-token <<< $GITHUB_TOKEN
+    gh auth status 2>&1 | grep "Logged in to github.com" || exit 1
+    git config -l --show-origin
+  workingDirectory: $(Agent.BuildDirectory)
+  displayName: 'gh login'
+
+
+- template: .pipelines/templates/cd.create.pr.step.yml
+  parameters:
+    reposList:
+      - gitRepo: awsOrchestrator
+        targetBranch: main
+        prBranch: update-submodule
+      - gitRepo: awsRobot
+        targetBranch: main
+        prBranch: update-submodule
+    gitUserEmail: '$(gitUserEmail)'
+    gitUserHandle: '$(gitUserHandle)'
+
+resources:
+  repositories:
+    - repository: awsOrchestrator
+      type: github
+      endpoint: UiPath
+      name: UiPath/aws-quickstart-orchestrator
+      ref: main
+    - repository: awsRobot
+      type: github
+      endpoint: UiPath
+      name: UiPath/aws-quickstart-robot
+      ref: main

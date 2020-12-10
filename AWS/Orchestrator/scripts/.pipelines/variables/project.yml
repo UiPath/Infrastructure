@@ -1,0 +1,4 @@
+variables:
+  gitUserEmail: 'andrei.barbu@uipath.com'
+  gitUserHandle: 'AndreiBarbuOz'
+  upstreamTargetBranch: 'develop'

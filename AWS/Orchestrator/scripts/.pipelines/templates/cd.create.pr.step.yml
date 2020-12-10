@@ -1,0 +1,59 @@
+parameters:
+  - name: reposList
+    displayName: Name of the repositories to update
+    type: object
+    default: []
+  - name: gitUserEmail
+    default: ''
+    displayName: Git user email to use for commits
+  - name: gitUserHandle
+    default: ''
+    displayName: Git use name to use for commits
+
+steps:
+
+  - ${{ each crtRepo in parameters.reposList }}:
+    # checkout repository to $(Agent.BuildDirectory)
+    - checkout: ${{ crtRepo.gitRepo }}
+      submodules: recursive
+      displayName: 'checkout ${{ crtRepo.gitRepo }}'
+      path: ${{ crtRepo.gitRepo }}
+      persistCredentials: 'true'
+
+    - script: |
+        set -ex
+        git remote update
+        git fetch
+        git checkout ${{ crtRepo.targetBranch }}
+        git pull
+        git checkout -b ${{ crtRepo.prBranch }}
+        git status -v
+        git branch -v
+        remote_url=$(git config --get-all remote.origin.url)
+        echo $remote_url
+        extra_header=$(git config --get-all http.$remote_url.extraheader)
+        echo $extra_header
+        git -c http.extraheader="$extra_header" submodule update --remote --force --merge
+        git status -v
+        git diff
+        git config --global user.email ${{ parameters.gitUserEmail }}
+        git config --global user.name ${{ parameters.gitUserHandle }}
+        set +e
+        git commit -a -m "update submodule"
+        if [ $? -ne 0 ]; then
+            echo "nothing to commit"
+            exit 0
+        fi
+        set -e
+        git remote set-url origin $remote_url
+        set +e
+        git status | grep "Your branch is up to date"
+        if [ $? -eq 0 ]; then
+            echo "branch already up to date"
+            exit 0
+        fi
+        git push origin HEAD:${{ crtRepo.prBranch }} --force
+        gh auth status
+        gh pr view 2>&1 | grep "state:[[:space:]]*OPEN" || gh pr create --title "update submodules" --body "Update submodules"
+      displayName: 'Update submodule for repo: ${{ crtRepo.gitRepo }}'
+      workingDirectory: $(Agent.BuildDirectory)/${{ crtRepo.gitRepo }}
