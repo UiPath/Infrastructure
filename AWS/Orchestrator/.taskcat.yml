@@ -4,8 +4,6 @@ project:
     QSS3KeyPrefix: "quickstart-uipath-orchestrator/"
     QSS3BucketName: "$[taskcat_autobucket]"
     QSS3BucketRegion: "$[taskcat_current_region]"
-    HAAPassword: "$[taskcat_genpass_8]"
-    OrchestratorPassword: "$[taskcat_genpass_8]"
     RDSUsername: "$[taskcat_random-string]"
     RDSPassword: "$[taskcat_genpass_8]"
     RDSDBName: "$[taskcat_random-string]"
@@ -37,29 +35,31 @@ tests:
     parameters:
       AvailabilityZones: "$[taskcat_getaz_2]"
       UiPathFQDN: testone.uipathmarketplace.net
+      HAAPassword: "1qazXSW@3edc"
+      OrchestratorPassword: "1qazXSW@3edc"
 
-  three-az-orchestrator:
-    template: ./templates/main.template.yaml
-    regions:
-    - us-east-1
-    parameters:
-      AvailabilityZones: "$[taskcat_getaz_3]"
-      UiPathFQDN: testtwo.uipathmarketplace.net
-
-  add-license-orchestrator:
-    template: ./templates/main.template.yaml
-    regions:
-    - us-west-1
-    parameters:
-      AvailabilityZones: "$[taskcat_getaz_2]"
-      UiPathFQDN: testthree.uipathmarketplace.net
-      OrchestratorLicense: "orchlicense"
-
-  europe-orchestrator:
-    template: ./templates/main.template.yaml
-    regions:
-    - eu-west-1
-    parameters:
-      AvailabilityZones: "$[taskcat_getaz_2]"
-      UiPathFQDN: testfour.uipathmarketplace.net
-      OrchestratorInstanceCount: "3"
+#  three-az-orchestrator:
+#    template: ./templates/main.template.yaml
+#    regions:
+#    - us-east-1
+#    parameters:
+#      AvailabilityZones: "$[taskcat_getaz_3]"
+#      UiPathFQDN: testtwo.uipathmarketplace.net
+#
+#  add-license-orchestrator:
+#    template: ./templates/main.template.yaml
+#    regions:
+#    - us-west-1
+#    parameters:
+#      AvailabilityZones: "$[taskcat_getaz_2]"
+#      UiPathFQDN: testthree.uipathmarketplace.net
+#      OrchestratorLicense: "orchlicense"
+#
+#  europe-orchestrator:
+#    template: ./templates/main.template.yaml
+#    regions:
+#    - eu-west-1
+#    parameters:
+#      AvailabilityZones: "$[taskcat_getaz_2]"
+#      UiPathFQDN: testfour.uipathmarketplace.net
+#      OrchestratorInstanceCount: "3"
