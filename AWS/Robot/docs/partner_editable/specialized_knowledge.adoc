@@ -1,0 +1,17 @@
+// Replace the content in <>
+// For example: “familiarity with basic concepts in networking, database operations, and data encryption” or “familiarity with <software>.”
+// Include links if helpful. 
+// You don't need to list AWS services or point to general info about AWS; the boilerplate already covers this.
+
+This deployment guide also requires a moderate level of familiarity with these AWS services.
+
+https://aws.amazon.com/cloudformation/[AWS CloudFormation]
+
+https://aws.amazon.com/vpc/[Amazon VPC]
+
+https://aws.amazon.com/ec2/[Amazon EC2]
+
+https://aws.amazon.com/iam/[AWS IAM]
+
+https://aws.amazon.com/lambda/[AWS Lambda]
+

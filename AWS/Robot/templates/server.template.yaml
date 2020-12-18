@@ -87,13 +87,13 @@ Resources:
     Properties:
       PolicyDocument:
         Version: '2012-10-17'
-        Statement: 
-          - Action: 
-            - s3:GetObject 
-            Resource: !Sub 
-            - arn:${AWS::Partition}:s3:::${S3Bucket}/${QSS3KeyPrefix}* 
-            - S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName] 
-            Effect: Allow 
+        Statement:
+          - Action:
+              - s3:GetObject
+            Resource: !Sub
+              - arn:${AWS::Partition}:s3:::${S3Bucket}/${QSS3KeyPrefix}*
+              - S3Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
+            Effect: Allow
       PolicyName: aws-quick-start-s3-policy
       Roles:
         - !Ref RobotIAMRole
@@ -113,7 +113,7 @@ Resources:
         S3AccessCreds:
           type: S3
           roleName: !Ref 'RobotIAMRole'
-          buckets: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
+          buckets: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
       AWS::CloudFormation::Init:
         configSets:
           config:
@@ -141,9 +141,9 @@ Resources:
             c:\cfn\sources\Install-UiPathRobots.ps1:
               source:
                 !Sub
-                  - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/Install-UiPathRobots.ps1'
-                  - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
-                    S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
+                - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/Install-UiPathRobots.ps1'
+                - S3Region: !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
+                  S3Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
               authentication: S3AccessCreds
           services:
             windows:
@@ -170,25 +170,25 @@ Resources:
                   - '-artifactFileName'
                   - 'UiPathStudio.msi'
                   - '-orchestratorUrl'
-                  - !Join 
+                  - !Join
                     - ''
                     - - '\"'
                       - !Ref OrchestratorURL
                       - '\"'
                   - '-tenant'
-                  - !Join 
+                  - !Join
                     - ''
                     - - '\"'
                       - !Ref OrchestratorTenant
                       - '\"'
                   - '-orchAdmin'
-                  - !Join 
+                  - !Join
                     - ''
                     - - '\"'
                       - !Ref OrchestratorAPIUser
                       - '\"'
                   - '-orchPassword'
-                  - !Join 
+                  - !Join
                     - ''
                     - - '\"'
                       - !Ref OrchestratorAPIPassword
@@ -198,9 +198,9 @@ Resources:
                   - '-robotType'
                   - !Ref RobotType
                   - '-cloudName'
-                  - 'AWS' 
+                  - 'AWS'
                   - '-machinePassword'
-                  - !Join 
+                  - !Join
                     - ''
                     - - '\"'
                       - !Ref AdminPassword
@@ -211,7 +211,7 @@ Resources:
       ImageId: !GetAtt HostInstanceAMI.ImageId
       IamInstanceProfile: !Ref RobotInstanceProfile
       InstanceType: !Ref InstanceType
-      KeyName: !Ref KeyPairName      
+      KeyName: !Ref KeyPairName
       SecurityGroupIds:
         - !Ref GatewaySecurityGroup
       SubnetId: !Ref PrivateSubnetID
@@ -240,18 +240,18 @@ Resources:
           SubnetId: !Ref PublicSubnetID
       Tags:
         - Key: Name
-          Value: !Join 
+          Value: !Join
             - '-'
             - - !Ref 'AWS::StackName'
               - BastionHost
 Outputs:
   BastionHostPublicIP:
-    Value: !GetAtt 
+    Value: !GetAtt
       - BastionHost
       - PublicIp
     Description: Public IP of BastionHost in Public Subnet 1
   UiPathRobotPrivateIP:
-    Value: !GetAtt 
+    Value: !GetAtt
       - UiPathRobot
       - PrivateIp
     Description: Private IP of UiPathRobot in Public Subnet 1

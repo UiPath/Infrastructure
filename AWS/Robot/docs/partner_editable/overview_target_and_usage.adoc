@@ -1,0 +1,7 @@
+// Replace the content in <>
+// Identify your target audience and explain how/why they would use this Quick Start.
+//Avoid borrowing text from third-party websites (copying text from AWS service documentation is fine). Also, avoid marketing-speak, focusing instead on the technical aspect.
+
+This guide provides instructions for deploying the {partner-product-short-name} Quick Start reference architecture on the AWS Cloud.
+
+This Quick Start is for users who wants the convenience of deploying UiPath Robot application on AWS cloud. It deploys UiPath Robot which enables you to run processes developed in Studio. Robots need to be connected to Orchestrator in order to execute processes or they have to be licensed locally (read more about licensing). The type of Robot you have at your disposal is determined by the license, while the Robot service is determined by the deployment.

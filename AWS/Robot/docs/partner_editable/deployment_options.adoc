@@ -1,0 +1,6 @@
+// Edit this placeholder text to accurately describe your architecture.
+
+This Quick Start only provides end-to-end deployment option, meaning it builds a new VPC, set of Subnets, NAT Gateways, Internet Gateway, Security groups, Bastion host and other components for you. In order to setup the complete networking and routing infrastructure you need to provide only the CIDR block for the VPC that you wish to create.
+
+* It however lets you configure instance types and software settings such as user names and passwords, as discussed later in this guide.
+
