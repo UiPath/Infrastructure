@@ -298,20 +298,6 @@
             "defaultValue": "",
             "type": "securestring"
         },
-        "_artifactsLocation": {
-            "type": "string",
-            "metadata": {
-                "description": "The base URI where artifacts required by this template are located including a trailing '/'"
-            },
-            "defaultValue": "[deployment().properties.templateLink.uri]"
-        },
-        "_artifactsLocationSasToken": {
-            "type": "securestring",
-            "metadata": {
-                "description": "The sasToken required to access _artifactsLocation.  When the template is deployed using the accompanying scripts, a sasToken will be automatically generated. Use the defaultValue if the staging location is not secured."
-            },
-            "defaultValue": ""
-        },
         "tagsByResource": {
             "type": "object",
             "defaultValue": {}
@@ -392,35 +378,33 @@
         "webSubnetRef": "[if(equals(parameters('HAAvirtualNetworkNewOrExistingPaaS'),'new'), resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('HAAVnetName'), parameters('HAAWASubnetName')), resourceId(parameters('HAAvirtualNetworkResourceGroupNamePaaS'),'Microsoft.Network/virtualNetworks/subnets', parameters('HAAVnetName'), parameters('HAAWASubnetName')))]",
         "installScriptFileName": "install-haa.sh",
         "installPackage": "haa-2.0.0.tar.gz",
-        "installPackageUri": "[uri(parameters('_artifactsLocation'),concat(variables('installPackage'),parameters('_artifactsLocationSasToken')))]",
-        "installScriptUri": "[uri(parameters('_artifactsLocation'),concat(variables('installScriptFileName'),parameters('_artifactsLocationSasToken')))]",
-        "SQLTemplateUri": "[uri(parameters('_artifactsLocation'),concat('linkedTemplates/SQL.json', parameters('_artifactsLocationSasToken')))]",
-        "HAATemplateUri": "[uri(parameters('_artifactsLocation'),concat('linkedTemplates/HAA.json', parameters('_artifactsLocationSasToken')))]",
-        "PaaSWithIdentityTemplateUri": "[uri(parameters('_artifactsLocation'),concat('linkedTemplates/PaaSWithIdentity.json', parameters('_artifactsLocationSasToken')))]",
-        "OrchestrationVMUri": "[uri(parameters('_artifactsLocation'),concat('linkedTemplates/OrchestrationVM.json', parameters('_artifactsLocationSasToken')))]",
-        "CleanUpOrchestrationScriptUri": "[uri(parameters('_artifactsLocation'),concat('linkedTemplates/CleanUpScriptsTemplate.json', parameters('_artifactsLocationSasToken')))]",
+        "installPackageUri": "https://paastestblob.blob.core.windows.net/paas/haa-2.0.0.tar.gz",
+        "installScriptUri": "https://github.com/onoipor1/Infrastructure/blob/main/Azure/Orchestrator/install-haa.sh",
+        "SQLTemplateUri": "https://github.com/onoipor1/Infrastructure/blob/main/Azure/Orchestrator/linkedTemplates/SQL.json",
+        "HAATemplateUri": "https://github.com/onoipor1/Infrastructure/blob/main/Azure/Orchestrator/linkedTemplates/HAA.json",
+        "PaaSWithIdentityTemplateUri": "https://github.com/onoipor1/Infrastructure/blob/main/Azure/Orchestrator/linkedTemplates/PaaSWithIdentity.json",
+        "PaaSDeployUri": "https://paastestblob.blob.core.windows.net/paas/DeployPaaS.json",
         "OrchestratorArtifactsPaaS": {
-            "OrchestratorArtifact": "[uri(parameters('_artifactsLocation'),concat(parameters('orchestratorVersion'),'/UiPath.Orchestrator.Web.zip',parameters('_artifactsLocationSasToken')))]",
-            "PublishOrchestratorScript": "[uri(parameters('_artifactsLocation'),concat(parameters('orchestratorVersion'),'/Publish-Orchestrator.ps1',parameters('_artifactsLocationSasToken')))]",
-            "WebDeployPackage": "[uri(parameters('_artifactsLocation'),concat(parameters('orchestratorVersion'),'/WebDeploy_amd64_en-US.msi',parameters('_artifactsLocationSasToken')))]"
+            "OrchestratorArtifact": "https://paastestblob.blob.core.windows.net/paas/UiPath.Orchestrator.Web.zip",
+            "PublishOrchestratorScript": "https://github.com/onoipor1/Infrastructure/blob/main/Azure/Orchestrator/20.10.1/Publish-Orchestrator.ps1",
+            "WebDeployPackage": "https://github.com/onoipor1/Infrastructure/blob/main/Azure/Orchestrator/20.10.1/WebDeploy_amd64_en-US.msi"
         },
         "IdentityArtifactsPaaS": {
-            "IdentityPackage": "[uri(parameters('_artifactsLocation'),concat(parameters('orchestratorVersion'), '/UiPath.IdentityServer.Web.zip',parameters('_artifactsLocationSasToken')))]",
-            "IdentityCliMigrator": "[uri(parameters('_artifactsLocation'),concat(parameters('orchestratorVersion'), '/UiPath.IdentityServer.Migrator.Cli.zip',parameters('_artifactsLocationSasToken')))]",
-            "PublishIdentityScript": "[uri(parameters('_artifactsLocation'),concat(parameters('orchestratorVersion'), '/Publish-IdentityServer.ps1',parameters('_artifactsLocationSasToken')))]",
-            "MigrateToIdentityScript": "[uri(parameters('_artifactsLocation'),concat(parameters('orchestratorVersion'), '/MigrateTo-IdentityServer.ps1',parameters('_artifactsLocationSasToken')))]"
+            "IdentityPackage": "https://paastestblob.blob.core.windows.net/paas/UiPath.IdentityServer.Web.zip",
+            "IdentityCliMigrator": "https://paastestblob.blob.core.windows.net/paas/UiPath.IdentityServer.Migrator.Cli.zip",
+            "PublishIdentityScript": "https://github.com/onoipor1/Infrastructure/blob/main/Azure/Orchestrator/20.10.1/Publish-IdentityServer.ps1",
+            "MigrateToIdentityScript": "https://github.com/onoipor1/Infrastructure/blob/main/Azure/Orchestrator/20.10.1/MigrateTo-IdentityServer.ps1"
         },
         "WebhooksArtifactsPaaS": {
-            "PublishWebhooksScript": "[uri(parameters('_artifactsLocation'),concat(parameters('orchestratorVersion'), '/Publish-Webhooks.ps1',parameters('_artifactsLocationSasToken')))]",
-            "MigrateToWebhooksScript": "[uri(parameters('_artifactsLocation'),concat(parameters('orchestratorVersion'), '/MigrateTo-Webhooks.ps1',parameters('_artifactsLocationSasToken')))]",
-            "WebhookServicePackage": "[uri(parameters('_artifactsLocation'),concat(parameters('orchestratorVersion'), '/UiPath.WebhookService.Web.zip',parameters('_artifactsLocationSasToken')))]",
-            "WebhookMigratePackage": "[uri(parameters('_artifactsLocation'),concat(parameters('orchestratorVersion'), '/UiPath.WebhookService.Migrator.Cli.zip',parameters('_artifactsLocationSasToken')))]"
+            "PublishWebhooksScript": "https://github.com/onoipor1/Infrastructure/blob/main/Azure/Orchestrator/20.10.1/Publish-Webhooks.ps1",
+            "MigrateToWebhooksScript": "https://github.com/onoipor1/Infrastructure/blob/main/Azure/Orchestrator/20.10.1/MigrateTo-Webhooks.ps1",
+            "WebhookServicePackage": "https://paastestblob.blob.core.windows.net/paas/UiPath.WebhookService.Web.zip",
+            "WebhookMigratePackage": "https://paastestblob.blob.core.windows.net/paas/UiPath.WebhookService.Migrator.Cli.zip"
         },
         "UtilityArtifactsPaaS": {
-            "PSUtilsZip": "[uri(parameters('_artifactsLocation'),concat(parameters('orchestratorVersion'), '/ps_utils.zip',parameters('_artifactsLocationSasToken')))]",
-            "AzModulesZip": "[uri(parameters('_artifactsLocation'),concat(parameters('orchestratorVersion'), '/AzModules.zip',parameters('_artifactsLocationSasToken')))]",
-            "CleanUpOrchestrationResources": "[uri(parameters('_artifactsLocation'),concat(parameters('orchestratorVersion'),'/CleanUpOrchestrationResources.ps1',parameters('_artifactsLocationSasToken')))]",
-            "DeployOrchestratorMainScript": "[uri(parameters('_artifactsLocation'),concat(parameters('orchestratorVersion'),'/Deploy-UiPathOrchestratorPaaS.ps1',parameters('_artifactsLocationSasToken')))]"
+            "PSUtilsZip": "https://github.com/onoipor1/Infrastructure/blob/main/Azure/Orchestrator/20.10.1/ps_utils.zip",
+            "AzModulesZip": "https://github.com/onoipor1/Infrastructure/blob/main/Azure/Orchestrator/20.10.1/AzModules.zip",
+            "DeployOrchestratorMainScript": "https://github.com/onoipor1/Infrastructure/blob/main/Azure/Orchestrator/20.10.1/Deploy-UiPathOrchestratorPaaS.ps1"
         }
     },
     "resources": [
@@ -651,7 +635,7 @@
             }
         },
         {
-            "name": "OrchestrationVM",
+            "name": "DeployPaaS",
             "type": "Microsoft.Resources/deployments",
             "apiVersion": "2019-10-01",
             "dependsOn": [
@@ -660,7 +644,7 @@
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
-                    "uri": "[variables('OrchestrationVMUri')]"
+                    "uri": "[variables('PaaSDeployUri')]"
                 },
                 "parameters": {
                     "location": {
@@ -704,52 +688,6 @@
                     },
                     "OrchWebhooksAppServiceName": { 
                         "value": "[parameters('OrchWebhooksAppServiceName')]" 
-                    },
-                    "tagsByResource": {
-                        "value": "[parameters('tagsByResource')]"
-                    }
-                }
-            }
-        },
-        {
-            "name": "CleanUpOrchestrationScript",
-            "type": "Microsoft.Resources/deployments",
-            "apiVersion": "2019-10-01",
-            "dependsOn": [
-                "OrchestrationVM"
-            ],
-            "properties": {
-                "mode": "Incremental",
-                "templateLink": {
-                    "uri": "[variables('CleanUpOrchestrationScriptUri')]"
-                },
-                "parameters": {
-                    "location": {
-                        "value": "[parameters('location')]"
-                    },
-                    "StorageAccountName": {
-                        "value": "[reference('OrchestrationVM').outputs.StorageAccountName.value]"
-                    },
-                    "NICName": {
-                        "value": "[reference('OrchestrationVM').outputs.NICName.value]"
-                    },
-                    "VnetName": {
-                        "value": "[reference('OrchestrationVM').outputs.VnetName.value]"
-                    },
-                    "NSGName": {
-                        "value": "[reference('OrchestrationVM').outputs.NSGName.value]"
-                    },
-                    "VMName": {
-                        "value": "[reference('OrchestrationVM').outputs.VMName.value]"
-                    },
-                    "MSIName": {
-                        "value": "[parameters('OrchMSIName')]"
-                    },
-                    "UtilityArtifactsPaaS": {
-                        "value": "[variables('UtilityArtifactsPaaS')]"
-                    },
-                    "InsightsKey": {
-                        "value": "[reference('PaaSWithIdentityTemplate').outputs.insightsKey.value]"
                     },
                     "tagsByResource": {
                         "value": "[parameters('tagsByResource')]"
