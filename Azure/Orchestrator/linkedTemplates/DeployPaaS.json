@@ -1,0 +1,169 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "location": {
+            "type": "string",
+            "metadata": {
+                "description": "Location for all resources."
+            }
+        },
+        "appName": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "description": "Name of the virtual machine."
+            }
+        },
+        "OrchestratorArtifactsPaaS": {
+            "type": "object",
+            "metadata": {
+                "description": "UiPath Orchestrator artifact object."
+            }
+        },
+        "OrchMSIName": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 128,
+            "metadata": {
+                "description": "Orchestrator Managed Service Identity name."
+            }
+        },
+        "IdentityArtifactsPaaS": {
+            "type": "object",
+            "metadata": {
+                "description": "UiPath Identity artifacts"
+            }
+        },
+        "WebhooksArtifactsPaaS": {
+            "type": "object",
+            "metadata": {
+                "description": "UiPath Webhooks artifacts"
+            }
+        },
+        "UtilityArtifactsPaaS": {
+            "type": "object",
+            "metadata": {
+                "description": "UiPath utility artifacts (ps_utils, AzModules)"
+            }
+        },
+        "orchestratorAdminPassword": {
+            "type": "securestring",
+            "metadata": {
+                "description": "Define the password that will be used for the host administrator and the default tenant administrator account (admin)."
+            }
+        },
+        "mainStorageAccountName": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "description": "Storage account name for storing nuget packages."
+            }
+        },
+        "mainStorageid": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "description": "Storage account Id for storing nuget packages."
+            }
+        },
+        "HAAconnectionString": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "description": "High Availability Addon connection string."
+            }
+        },
+        "InsightsKey": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "description": "Instrumentation Key for application insights."
+            }
+        },
+        "OrchIdentityAppServiceName": {
+            "type": "string",
+            "minLength": 4,
+            "maxLength": 60,
+            "defaultValue":"[concat(parameters('appName'),'-is')]",
+            "metadata": {
+                "description": "Orchestrator Identity name."
+            }
+        },
+        "OrchWebhooksAppServiceName": {
+            "type": "string",
+            "minLength": 4,
+            "maxLength": 60,
+            "defaultValue": "[concat(parameters('appName'),'-wh')]",
+            "metadata": {
+                "description": "Orchestrator Webhooks name."
+            }
+        },
+        "tagsByResource": {
+            "type": "object",
+            "defaultValue": {}
+        }
+    },
+    "variables": {
+        "MSIName": "[parameters('OrchMSIName')]",
+        "subscriptionId": "[subscription().subscriptionId]",
+        "tenantId": "[subscription().tenantId]",
+        "RGName": "[resourceGroup().name]"
+    },
+
+{
+  "type": "Microsoft.Resources/deploymentScripts",
+  "apiVersion": "2020-10-01",
+  "name": "DeployPaaS",
+  "location": "[resourceGroup().location]",
+  "dependsOn": [
+    "PaaSWithIdentityTemplate"
+  ],
+  "identity": {
+    "type": "UserAssigned",
+    "userAssignedIdentities": {
+		"[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities',variables('MSIName'))]": {}
+    }
+  },
+  "kind": "AzurePowerShell",
+  "properties": {
+    "forceUpdateTag": "[parameters('utcValue')]",
+    "azPowerShellVersion": "3.0",
+    "timeout": "PT30M",
+	"primaryScriptUri": "https://github.com/UiPath/Infrastructure/blob/main/Azure/Orchestrator/20.10.1/Deploy-UiPathOrchestratorPaaS.ps1",
+	"supportingScriptUris":[
+      "https://github.com/UiPath/Infrastructure/blob/main/Azure/Orchestrator/20.10.1/MigrateTo-IdentityServer.ps1",
+	  "https://github.com/UiPath/Infrastructure/blob/main/Azure/Orchestrator/20.10.1/MigrateTo-Webhooks.ps1",
+	  "https://github.com/UiPath/Infrastructure/blob/main/Azure/Orchestrator/20.10.1/Publish-IdentityServer.ps1",
+	  "https://github.com/UiPath/Infrastructure/blob/main/Azure/Orchestrator/20.10.1/Publish-Orchestrator.ps1",
+	  "https://github.com/UiPath/Infrastructure/blob/main/Azure/Orchestrator/20.10.1/Publish-Webhooks.ps1"
+	  "https://paastestblob.blob.core.windows.net/paas/AzureDeployUtils.ps1",
+	  "https://paastestblob.blob.core.windows.net/paas/CloudDeploymentUtils.ps1",
+	  "https://paastestblob.blob.core.windows.net/paas/IdentityDeployUtils.ps1",
+	  "https://paastestblob.blob.core.windows.net/paas/Migrate-Packages.psm1",
+	  "https://paastestblob.blob.core.windows.net/paas/MiscUtils.ps1",
+	  "https://paastestblob.blob.core.windows.net/paas/MsDeployUtils.ps1",
+	  "https://paastestblob.blob.core.windows.net/paas/OrchestratorSettingsUtils.ps1",
+	  "https://paastestblob.blob.core.windows.net/paas/Platform.Configuration.Tool.ps1",
+	  "https://paastestblob.blob.core.windows.net/paas/Set-SessionExpiration.ps1",
+	  "https://paastestblob.blob.core.windows.net/paas/WebhooksDeployUtils.ps1",
+	  "https://paastestblob.blob.core.windows.net/paas/ZipUtils.ps1"
+      ],
+    "arguments": " -azureSubscriptionId ', variables('subscriptionId'),
+                    ' -azureTenantId ', variables('tenantId'),
+                    ' -azureMSIApplicationId ', reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('MSIName')), '2018-11-30').clientId, 
+                    ' -resourceGroupName ', variables('RGName'),
+                    ' -appServiceNameOrch ', parameters('appName'),
+                    ' -appServiceNameIdentity ', parameters('OrchIdentityAppServiceName'),
+                    ' -appServiceNameWebhooks ', parameters('OrchWebhooksAppServiceName'),
+                    ' -hostAdminPassword ', parameters('orchestratorAdminPassword'),
+                    ' -defaultTenantAdminPassword ', parameters('orchestratorAdminPassword'),
+                    ' -storageLocation ', concat('DefaultEndpointsProtocol=https;AccountName=',parameters('mainStorageAccountName'),';AccountKey=',listKeys(parameters('mainStorageid'), '2019-04-01').keys[0].value,';','EndpointSuffix=',replace(split(reference(parameters('mainStorageid'),'2019-06-01').primaryEndpoints.blob, 'blob.')[1], '/', '')),
+                    if(empty(parameters('HAAconnectionString')),'',concat(' -redisConnectionString ',parameters('HAAconnectionString'))),
+                    ' -identityServerUrl ', concat('https://',parameters('OrchIdentityAppServiceName'),'.azurewebsites.net/identity'),
+                    ' -orchestratorUrl ', concat('https://',parameters('appName'),'.azurewebsites.net'),
+                    ' -insightsKey ', parameters('InsightsKey')"
+    "cleanupPreference": "OnSuccess",
+    "retentionInterval": "P1D"
+  }
+}						
