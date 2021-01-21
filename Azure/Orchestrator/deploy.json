@@ -1,0 +1,77 @@
+{
+  "location": {
+    "value": "eastus"
+  },
+  "appName": {
+    "value": "paastestdeploy"
+  },
+  "orchestratorAdminPassword": {
+    "value": "Temp12345678"
+  },
+  "orchestratorVersion": {
+    "value": "20.10.1"
+  },
+  "orchestratorSize": {
+    "value": "Small"
+  },
+  "orchestratorInstances": {
+    "value": 1
+  },
+  "EnableHAA": {
+    "value": false
+  },
+  "SQLServerName": {
+    "value": "paastestdeploysql"
+  },
+  "SQLServerAdminLogin": {
+    "value": "kdbadm"
+  },
+  "SQLServerAdminPassword": {
+    "value": "Temp12345678"
+  },
+  "TokenCertificate": {
+    "value": "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"
+  },
+  "TokenCertificatePass": {
+    "value": "Rimer123"
+  },
+  "tagsByResource": {
+    "value": {}
+  },
+  "OrchStorageAccountName": {
+    "value": "paastestdeployst"
+  },
+  "OrchDatabaseName": {
+    "value": "paastestdeploy-db"
+  },
+  "OrchAppServicePlan": {
+    "value": "paastestdeploy-asp"
+  },
+  "OrchAppInsights": {
+    "value": "paastestdeploy-appins"
+  },
+  "OrchIdentityAppServiceName": {
+    "value": "paastestdeploy-is"
+  },
+  "OrchWebhooksAppServiceName": {
+    "value": "paastestdeploy-wh"
+  },
+  "OrchCertificate": {
+    "value": "paastestdeploy-cert"
+  },
+  "OrchMSIName": {
+    "value": "paastestdeploy-msi"
+  },
+  "HAAAvailabilitySetName": {
+    "value": "paastestdeploy-haa-as"
+  },
+  "HAANSGName": {
+    "value": "paastestdeploy-haa-nsg"
+  },
+  "HAANICNamePrefix": {
+    "value": "paastestdeploy-haa-nic"
+  },
+  "HAAVMNamePrefix": {
+    "value": "paastestdeploy-haa-vm"
+  }
+}
