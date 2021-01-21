@@ -1,0 +1,31 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+- task: AzureResourceManagerTemplateDeployment@3
+  inputs:
+    deploymentScope: 'Resource Group'
+    azureResourceManagerConnection: 'Free Trial(bf04c084-4451-4de0-a557-5bfa03145769)'
+    subscriptionId: 'bf04c084-4451-4de0-a557-5bfa03145769'
+    action: 'Create Or Update Resource Group'
+    resourceGroupName: 'paaspipelinetest-rg'
+    location: 'East US'
+    templateLocation: 'URL of the file'
+    csmFileLink: 'https://github.com/onoipor1/Infrastructure/raw/main/Azure/Orchestrator/mainTemplate.json'
+    csmParametersFileLink: 'https://github.com/onoipor1/Infrastructure/raw/main/Azure/Orchestrator/deploy.json'
+    deploymentMode: 'Incremental'
+    deploymentName: 'PaaSTestDeploy'
+trigger:
+- main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+steps:
+- script: echo Hello, world!
+  displayName: 'Run a one-line script'
+
+- script: |
+    echo Add other tasks to build, test, and deploy your project.
+    echo See https://aka.ms/yaml
+  displayName: 'Run a multi-line script'
