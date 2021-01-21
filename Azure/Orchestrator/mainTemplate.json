@@ -380,31 +380,30 @@
         "installPackage": "haa-2.0.0.tar.gz",
         "installPackageUri": "https://paastestblob.blob.core.windows.net/paas/haa-2.0.0.tar.gz",
         "installScriptUri": "https://github.com/onoipor1/Infrastructure/blob/main/Azure/Orchestrator/install-haa.sh",
-        "SQLTemplateUri": "https://github.com/onoipor1/Infrastructure/blob/main/Azure/Orchestrator/linkedTemplates/SQL.json",
-        "HAATemplateUri": "https://github.com/onoipor1/Infrastructure/blob/main/Azure/Orchestrator/linkedTemplates/HAA.json",
-        "PaaSWithIdentityTemplateUri": "https://github.com/onoipor1/Infrastructure/blob/main/Azure/Orchestrator/linkedTemplates/PaaSWithIdentity.json",
-        "PaaSDeployUri": "https://paastestblob.blob.core.windows.net/paas/DeployPaaS.json",
+        "SQLTemplateUri": "https://github.com/onoipor1/Infrastructure/raw/main/Azure/Orchestrator/linkedTemplates/SQL.json",
+        "HAATemplateUri": "https://github.com/onoipor1/Infrastructure/raw/main/Azure/Orchestrator/linkedTemplates/HAA.json",
+        "PaaSWithIdentityTemplateUri": "https://github.com/onoipor1/Infrastructure/raw/main/Azure/Orchestrator/linkedTemplates/PaaSWithIdentity.json",
         "OrchestratorArtifactsPaaS": {
             "OrchestratorArtifact": "https://paastestblob.blob.core.windows.net/paas/UiPath.Orchestrator.Web.zip",
-            "PublishOrchestratorScript": "https://github.com/onoipor1/Infrastructure/blob/main/Azure/Orchestrator/20.10.1/Publish-Orchestrator.ps1",
-            "WebDeployPackage": "https://github.com/onoipor1/Infrastructure/blob/main/Azure/Orchestrator/20.10.1/WebDeploy_amd64_en-US.msi"
+            "PublishOrchestratorScript": "https://github.com/onoipor1/Infrastructure/raw/main/Azure/Orchestrator/20.10.1/Publish-Orchestrator.ps1",
+            "WebDeployPackage": "https://github.com/onoipor1/Infrastructure/raw/main/Azure/Orchestrator/20.10.1/WebDeploy_amd64_en-US.msi"
         },
         "IdentityArtifactsPaaS": {
             "IdentityPackage": "https://paastestblob.blob.core.windows.net/paas/UiPath.IdentityServer.Web.zip",
             "IdentityCliMigrator": "https://paastestblob.blob.core.windows.net/paas/UiPath.IdentityServer.Migrator.Cli.zip",
-            "PublishIdentityScript": "https://github.com/onoipor1/Infrastructure/blob/main/Azure/Orchestrator/20.10.1/Publish-IdentityServer.ps1",
-            "MigrateToIdentityScript": "https://github.com/onoipor1/Infrastructure/blob/main/Azure/Orchestrator/20.10.1/MigrateTo-IdentityServer.ps1"
+            "PublishIdentityScript": "https://github.com/onoipor1/Infrastructure/raw/main/Azure/Orchestrator/20.10.1/Publish-IdentityServer.ps1",
+            "MigrateToIdentityScript": "https://github.com/onoipor1/Infrastructure/raw/main/Azure/Orchestrator/20.10.1/MigrateTo-IdentityServer.ps1"
         },
         "WebhooksArtifactsPaaS": {
-            "PublishWebhooksScript": "https://github.com/onoipor1/Infrastructure/blob/main/Azure/Orchestrator/20.10.1/Publish-Webhooks.ps1",
-            "MigrateToWebhooksScript": "https://github.com/onoipor1/Infrastructure/blob/main/Azure/Orchestrator/20.10.1/MigrateTo-Webhooks.ps1",
+            "PublishWebhooksScript": "https://github.com/onoipor1/Infrastructure/raw/main/Azure/Orchestrator/20.10.1/Publish-Webhooks.ps1",
+            "MigrateToWebhooksScript": "https://github.com/onoipor1/Infrastructure/raw/main/Azure/Orchestrator/20.10.1/MigrateTo-Webhooks.ps1",
             "WebhookServicePackage": "https://paastestblob.blob.core.windows.net/paas/UiPath.WebhookService.Web.zip",
             "WebhookMigratePackage": "https://paastestblob.blob.core.windows.net/paas/UiPath.WebhookService.Migrator.Cli.zip"
         },
         "UtilityArtifactsPaaS": {
-            "PSUtilsZip": "https://github.com/onoipor1/Infrastructure/blob/main/Azure/Orchestrator/20.10.1/ps_utils.zip",
-            "AzModulesZip": "https://github.com/onoipor1/Infrastructure/blob/main/Azure/Orchestrator/20.10.1/AzModules.zip",
-            "DeployOrchestratorMainScript": "https://github.com/onoipor1/Infrastructure/blob/main/Azure/Orchestrator/20.10.1/Deploy-UiPathOrchestratorPaaS.ps1"
+            "PSUtilsZip": "https://github.com/onoipor1/Infrastructure/raw/main/Azure/Orchestrator/20.10.1/ps_utils.zip",
+            "AzModulesZip": "https://github.com/onoipor1/Infrastructure/raw/main/Azure/Orchestrator/20.10.1/AzModules.zip",
+            "DeployOrchestratorMainScript": "https://github.com/onoipor1/Infrastructure/raw/main/Azure/Orchestrator/20.10.1/Deploy-UiPathOrchestratorPaaS.ps1"
         }
     },
     "resources": [
@@ -627,67 +626,6 @@
                     },
                     "TokenCertificatePass": {
                         "value": "[parameters('TokenCertificatePass')]"
-                    },
-                    "tagsByResource": {
-                        "value": "[parameters('tagsByResource')]"
-                    }
-                }
-            }
-        },
-        {
-            "name": "DeployPaaS",
-            "type": "Microsoft.Resources/deployments",
-            "apiVersion": "2019-10-01",
-            "dependsOn": [
-                "PaaSWithIdentityTemplate"
-            ],
-            "properties": {
-                "mode": "Incremental",
-                "templateLink": {
-                    "uri": "[variables('PaaSDeployUri')]"
-                },
-                "parameters": {
-                    "location": {
-                        "value": "[parameters('location')]"
-                    },
-                    "appName": {
-                        "value": "[parameters('appName')]"
-                    },
-                    "OrchestratorArtifactsPaaS": {
-                        "value": "[variables('OrchestratorArtifactsPaaS')]"
-                    },
-                    "IdentityArtifactsPaaS": {
-                        "value": "[variables('IdentityArtifactsPaaS')]"
-                    },
-                    "WebhooksArtifactsPaaS": {
-                        "value": "[variables('WebhooksArtifactsPaaS')]"
-                    },
-                    "UtilityArtifactsPaaS": {
-                        "value": "[variables('UtilityArtifactsPaaS')]"
-                    },
-                    "OrchMSIName": {
-                        "value": "[parameters('OrchMSIName')]"
-                    },
-                    "orchestratorAdminPassword": {
-                        "value": "[parameters('orchestratorAdminPassword')]"
-                    },
-                    "mainStorageAccountName": {
-                        "value": "[variables('storageAccountName')]"
-                    },
-                    "mainStorageid": {
-                        "value": "[reference('PaaSWithIdentityTemplate').outputs.storageAccountId.value]"
-                    },
-                    "HAAconnectionString": {
-                        "value": "[if(parameters('EnableHAA'), concat(reference('HAATemplate').outputs.masterNICPrivateIP.value,':',variables('HAAPort'),',',reference('HAATemplate').outputs.worker1NICPrivateIP.value,':',variables('HAAPort'), ',', reference('HAATemplate').outputs.worker2NICPrivateIP.value,':',variables('HAAPort'), ',password=',parameters('HAAAdminPassword'),',ssl=',variables('enableNonSslPort'),',abortConnect=False'),'')]"
-                    },
-                    "InsightsKey": {
-                        "value": "[reference('PaaSWithIdentityTemplate').outputs.insightsKey.value]"
-                    },
-                    "OrchIdentityAppServiceName": { 
-                        "value": "[parameters('OrchIdentityAppServiceName')]" 
-                    },
-                    "OrchWebhooksAppServiceName": { 
-                        "value": "[parameters('OrchWebhooksAppServiceName')]" 
                     },
                     "tagsByResource": {
                         "value": "[parameters('tagsByResource')]"
