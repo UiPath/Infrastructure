@@ -225,7 +225,7 @@
                     "netFrameworkVersion": "v4.5",
                     "use32BitWorkerProcess": "true",
                     "webSocketsEnabled": true,
-                    "alwaysOn": "true",
+                    "alwaysOn": "false",
                     "httpLoggingEnabled": true,
                     "logsDirectorySizeLimit": 40,
                     "vnetName": "[if(parameters('EnableHAA'), parameters('virtualNetworkName'), '')]"
@@ -350,7 +350,7 @@
                     "netFrameworkVersion": "v4.5",
                     "use32BitWorkerProcess": "true",
                     "webSocketsEnabled": true,
-                    "alwaysOn": "true",
+                    "alwaysOn": "false",
                     "httpLoggingEnabled": true,
                     "logsDirectorySizeLimit": 40,
                     "vnetName": "[if(parameters('EnableHAA'), parameters('virtualNetworkName'), '')]"
@@ -394,7 +394,7 @@
                     "netFrameworkVersion": "v4.5",
                     "use32BitWorkerProcess": "true",
                     "webSocketsEnabled": true,
-                    "alwaysOn": "true",
+                    "alwaysOn": "false",
                     "httpLoggingEnabled": true,
                     "logsDirectorySizeLimit": 40,
                     "metadata": [
