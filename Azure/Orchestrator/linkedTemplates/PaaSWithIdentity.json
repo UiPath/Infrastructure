@@ -428,7 +428,8 @@
                 "AppSettings__SigningCredentialSettings__StoreLocation__Location": "CurrentUser",
                 "AppSettings__SigningCredentialSettings__StoreLocation__NameType": "Thumbprint"
             }
-        },
+        }
+        ],
     "outputs": {
         "storageAccountId": {
             "type": "string",
