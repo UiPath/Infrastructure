@@ -57,13 +57,6 @@
                 "description": "Certificate name."
             }
         },
-        "msiName": {
-            "type": "string",
-            "defaultValue": "",
-            "metadata": {
-                "description": "Managed Identity name."
-            }
-        },
         "SQLconnectionString": {
             "type": "string",
             "defaultValue": "",
@@ -147,7 +140,6 @@
         "contributorRoleDefinitionId": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]",
         "bootstrapRoleAssignmentId": "[guid(concat(resourceGroup().id, 'contributor'))]",
         "RGId": "[resourceGroup().id]",
-        "MSIName": "[parameters('msiName')]",
         "webSiteAdditionalTags": {
             "[concat('hidden-related:', resourceId('Microsoft.Web/serverfarms/', parameters('appServicePlanName')))]": "empty"
         },
@@ -437,28 +429,6 @@
                 "AppSettings__SigningCredentialSettings__StoreLocation__NameType": "Thumbprint"
             }
         },
-        {
-            "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
-            "apiVersion": "2018-11-30",
-            "tags": "[ if(contains(parameters('tagsByResource'), 'Microsoft.ManagedIdentity/userAssignedIdentities'), parameters('tagsByResource')['Microsoft.ManagedIdentity/userAssignedIdentities'], json('{}')) ]",
-            "name": "[variables('MSIName')]",
-            "location": "[parameters('location')]"
-        },
-        {
-            "type": "Microsoft.Authorization/roleAssignments",
-            "apiVersion": "2020-04-01-preview",
-            "name": "[variables('bootstrapRoleAssignmentId')]",
-            "dependsOn": [
-                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('MSIName'))]"
-            ],
-            "properties": {
-                "roleDefinitionId": "[variables('contributorRoleDefinitionId')]",
-                "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('MSIName')), '2018-11-30').principalId]",
-                "scope": "[variables('RGId')]",
-                "principalType": "ServicePrincipal"
-            }
-        }
-    ],
     "outputs": {
         "storageAccountId": {
             "type": "string",
