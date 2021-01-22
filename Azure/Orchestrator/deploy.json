@@ -62,9 +62,6 @@
   "OrchCertificate": {
     "value": "paastestdeploy-cert"
   },
-  "OrchMSIName": {
-    "value": "paastestdeploy-msi"
-  },
   "HAAAvailabilitySetName": {
     "value": "paastestdeploy-haa-as"
   },
