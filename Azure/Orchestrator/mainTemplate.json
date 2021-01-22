@@ -70,15 +70,6 @@
                 "description": "Orchestrator Certificate name."
             }
         },
-        "OrchMSIName": {
-            "type": "string",
-            "minLength": 3,
-            "maxLength": 128,
-            "defaultValue": "[concat(parameters('appName'),'-msi')]",
-            "metadata": {
-                "description": "Orchestrator Managed Service Identity name."
-            }
-        },
         "OrchDatabaseName": {
             "type": "string",
             "minLength": 4,
@@ -590,9 +581,6 @@
                     },
                     "certificateName": {
                         "value": "[parameters('OrchCertificate')]"
-                    },
-                    "msiName": {
-                        "value": "[parameters('OrchMSIName')]"
                     },
                     "appInsight": {
                         "value": "[variables('appInsight')]"
