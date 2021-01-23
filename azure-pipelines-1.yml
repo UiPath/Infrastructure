@@ -1,0 +1,39 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+- main
+
+pool:
+  vmImage: 'Windows-latest'
+
+steps:
+- script: echo Hello, world!
+  displayName: 'Run a one-line script'
+
+- script: |
+    echo Add other tasks to build, test, and deploy your project.
+    echo See https://aka.ms/yaml
+  displayName: 'Run a multi-line script'
+- task: AzurePowerShell@5
+  inputs:
+    azureSubscription: 'Free Trial(bf04c084-4451-4de0-a557-5bfa03145769)'
+    ScriptType: 'FilePath'
+    ScriptPath: 'https://docs.uipath.com/robot/docs/login-using-thales'
+    ScriptArguments: '
+     -azureSubscriptionId $(az account show --query "id" --output tsv)
+     -azureTenantId $(az account show --query "tenantId" --output tsv)
+     -resourceGroupName ${env:RGNAME}
+     -appServiceNameOrch ${env:ORCHNAME}
+     -appServiceNameIdentity ${env:IDNAME}
+     -appServiceNameWebhooks ${env:WEBHOOKNAME}
+     -hostAdminPassword ${env:ORCHPASSWORD}
+     -defaultTenantAdminPassword ${env:ORCHPASSWORD}
+     -storageLocation ${env:STORAGELOCATION}
+     -identityServerUrl ${env:IDENTITYURL}
+     -orchestratorUrl ${env:ORCHURL}
+     -insightsKey $(Get-AzureRmResource -ExpandProperties -ResourceType "microsoft.insights/components"  -ResourceGroupName "${env:RGNAME}" | select -ExpandProperty Properties  | Select Name, InstrumentationKey)
+     '
+
