@@ -101,12 +101,6 @@ function InstallMSDeploy {
     }
 }
 
-function LoginToAzure {
-    Write-Output "$(Get-Date) Login with MSI..."
-    Connect-AzureRmAccount -Identity -AccountId $azureMSIApplicationId -SubscriptionId $azureSubscriptionId -TenantId $azureTenantId -ErrorAction Stop
-    Write-Output "$(Get-Date) Logged in with MSI."
-}
-
 function PublishOrchestrator {
     Write-Output "******* $(Get-Date) Step $global:stepCount: Publish orchestrator script: ******* "
     
