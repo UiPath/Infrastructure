@@ -19,7 +19,7 @@ steps:
   displayName: 'Run a multi-line script'
 - task: AzurePowerShell@5
   inputs:
-    azureSubscription: 'PaaSPipelineTest - Azure'
+    azureSubscription: 'Free Trial(1)(bf04c084-4451-4de0-a557-5bfa03145769)'
     AzurePowerShellVersion: 'LatestVersion'
     ScriptType: 'FilePath'
     ScriptPath: '$(System.DefaultWorkingDirectory)\Azure\Orchestrator\20.10.1\Deploy-UiPathOrchestratorPaaS.ps1'
