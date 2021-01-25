@@ -20,6 +20,7 @@ steps:
 - task: AzurePowerShell@5
   inputs:
     azureSubscription: 'Free Trial(bf04c084-4451-4de0-a557-5bfa03145769)'
+    azurePowerShellVersion: 'LatestVersion'
     ScriptType: 'FilePath'
     ScriptPath: 'https://github.com/onoipor1/Infrastructure/raw/main/Azure/Orchestrator/20.10.1/Deploy-UiPathOrchestratorPaaS.ps1'
     ScriptArguments: '
@@ -36,4 +37,3 @@ steps:
      -orchestratorUrl ${env:ORCHURL}
      -insightsKey $(Get-AzureRmResource -ExpandProperties -ResourceType "microsoft.insights/components"  -ResourceGroupName "${env:RGNAME}" | select -ExpandProperty Properties  | Select Name, InstrumentationKey)
      '
-
