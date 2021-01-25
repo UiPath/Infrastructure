@@ -19,7 +19,7 @@ steps:
   displayName: 'Run a multi-line script'
 - task: PowerShell@2
   inputs:
-    filePath: "https://github.com/onoipor1/Infrastructure/raw/main/Azure/Orchestrator/20.10.1/Deploy-UiPathOrchestratorPaaS.ps1"
+    filePath: '$(System.DefaultWorkingDirectory)Infrastructure\blob\main\Azure\Orchestrator\20.10.1\Deploy-UiPathOrchestratorPaaS.ps1'
     Arguments: '
      -azureSubscriptionId $(az account show --query "id" --output tsv)
      -azureTenantId $(az account show --query "tenantId" --output tsv)
