@@ -24,15 +24,15 @@ steps:
     ScriptType: 'FilePath'
     ScriptPath: '$(System.DefaultWorkingDirectory)\Azure\Orchestrator\20.10.1\Deploy-UiPathOrchestratorPaaS.ps1'
     ScriptArguments:
-     -azureSubscriptionId ${env:SUBSCRIPTIONID}
-     -azureTenantId ${env:TENANTID}
-     -resourceGroupName ${env:RGNAME}
-     -appServiceNameOrch ${env:ORCHNAME}
-     -appServiceNameIdentity ${env:IDNAME}
-     -appServiceNameWebhooks ${env:WEBHOOKNAME}
-     -hostAdminPassword ${env:ORCHPASSWORD}
-     -defaultTenantAdminPassword ${env:ORCHPASSWORD}
-     -storageLocation ${env:STORAGELOCATION}
+     -azureSubscriptionId $(SubscriptionID)
+     -azureTenantId $(TENANTID)
+     -resourceGroupName $(RGNAME)
+     -appServiceNameOrch $(ORCHNAME)
+     -appServiceNameIdentity $(IDNAME)
+     -appServiceNameWebhooks $(WEBHOOKNAME)
+     -hostAdminPassword $(ORCHPASSWORD)
+     -defaultTenantAdminPassword $(ORCHPASSWORD)
+     -storageLocation $(STORAGELOCATION)
      -identityServerUrl $(identityurl)
-     -orchestratorUrl ${env:ORCHURL}
+     -orchestratorUrl $(ORCHURL)
 
