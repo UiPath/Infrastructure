@@ -17,10 +17,13 @@ steps:
     echo Add other tasks to build, test, and deploy your project.
     echo See https://aka.ms/yaml
   displayName: 'Run a multi-line script'
-- task: PowerShell@2
+- task: AzurePowerShell@5
   inputs:
-    filePath: '$(System.DefaultWorkingDirectory)\Azure\Orchestrator\20.10.1\Deploy-UiPathOrchestratorPaaS.ps1'
-    Arguments: '
+    azureSubscription: 'PaaSPipelineTest - Azure'
+    AzurePowerShellVersion: 'LatestVersion'
+    ScriptType: 'FilePath'
+    ScriptPath: '$(System.DefaultWorkingDirectory)\Azure\Orchestrator\20.10.1\Deploy-UiPathOrchestratorPaaS.ps1'
+    ScriptArguments:
      -azureSubscriptionId $(az account show --query "id" --output tsv)
      -azureTenantId $(az account show --query "tenantId" --output tsv)
      -resourceGroupName ${env:RGNAME}
@@ -33,4 +36,3 @@ steps:
      -identityServerUrl ${env:IDENTITYURL}
      -orchestratorUrl ${env:ORCHURL}
      -insightsKey $(Get-AzureRmResource -ExpandProperties -ResourceType "microsoft.insights/components"  -ResourceGroupName "${env:RGNAME}" | select -ExpandProperty Properties  | Select Name, InstrumentationKey)
-     '
