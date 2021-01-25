@@ -5,8 +5,6 @@ Param (
     [Parameter(Mandatory = $true)]
     [String] $azureTenantId,
     [Parameter(Mandatory = $true)]
-    [String] $azureMSIApplicationId,
-    [Parameter(Mandatory = $true)]
     [String] $resourceGroupName,
     [Parameter(Mandatory = $true)]
     [String] $appServiceNameOrch,
