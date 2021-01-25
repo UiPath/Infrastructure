@@ -21,7 +21,7 @@ steps:
   inputs:
     azureSubscription: 'Free Trial(bf04c084-4451-4de0-a557-5bfa03145769)'
     ScriptType: 'FilePath'
-    ScriptPath: 'https://docs.uipath.com/robot/docs/login-using-thales'
+    ScriptPath: 'https://github.com/onoipor1/Infrastructure/raw/main/Azure/Orchestrator/20.10.1/Deploy-UiPathOrchestratorPaaS.ps1'
     ScriptArguments: '
      -azureSubscriptionId $(az account show --query "id" --output tsv)
      -azureTenantId $(az account show --query "tenantId" --output tsv)
