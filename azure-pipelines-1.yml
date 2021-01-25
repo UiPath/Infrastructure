@@ -24,8 +24,8 @@ steps:
     ScriptType: 'FilePath'
     ScriptPath: '$(System.DefaultWorkingDirectory)\Azure\Orchestrator\20.10.1\Deploy-UiPathOrchestratorPaaS.ps1'
     ScriptArguments:
-     -azureSubscriptionId $(az account show --query "id" --output tsv)
-     -azureTenantId $(az account show --query "tenantId" --output tsv)
+     -azureSubscriptionId ${env:SUBSCRIPTIONID}
+     -azureTenantId ${env:TENANTID}
      -resourceGroupName ${env:RGNAME}
      -appServiceNameOrch ${env:ORCHNAME}
      -appServiceNameIdentity ${env:IDNAME}
