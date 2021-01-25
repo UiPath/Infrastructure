@@ -33,6 +33,6 @@ steps:
      -hostAdminPassword ${env:ORCHPASSWORD}
      -defaultTenantAdminPassword ${env:ORCHPASSWORD}
      -storageLocation ${env:STORAGELOCATION}
-     -identityServerUrl ${env:IDENTITYURL}
+     -identityServerUrl $(identityurl)
      -orchestratorUrl ${env:ORCHURL}
 
