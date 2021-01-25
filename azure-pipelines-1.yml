@@ -35,4 +35,4 @@ steps:
      -storageLocation ${env:STORAGELOCATION}
      -identityServerUrl ${env:IDENTITYURL}
      -orchestratorUrl ${env:ORCHURL}
-     -insightsKey $(Get-AzureRmResource -ExpandProperties -ResourceType "microsoft.insights/components"  -ResourceGroupName "${env:RGNAME}" | select -ExpandProperty Properties  | Select Name, InstrumentationKey)
+
