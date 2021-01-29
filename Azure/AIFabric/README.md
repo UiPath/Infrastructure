@@ -35,7 +35,7 @@ Please allow anywhere up to 1 hour for the whole process to complete
 
 ### Console deployment
 
-[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAndreiBarbuOz%2Fuipath-ai-fabric%2Fmaster%2FmainTemplate.json)
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FUiPath%2FInfrastructure%2Fmain%2FAzure%2FAIFabric%2FmainTemplate.json)
 
 
 ### Command line deployment
