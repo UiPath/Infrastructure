@@ -1,0 +1,138 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  This template creates an Route53 Hosted zone and adds related record sets.
+  (qs-1r2g4123h)
+Parameters:
+  VPCID:
+    Type: 'AWS::EC2::VPC::Id'
+  VPCCIDR:
+    Description: CIDR block for the VPC
+    Type: String
+  SubnetIDs:
+    Description: Comma separated Subnet IDs where Gateway VMs need to be launched
+    Type: List<AWS::EC2::Subnet::Id>
+  Fqdn:
+    Description: The fully qualified domain name where the UiPath Orchestrator should be installed
+    Type: String
+  HostedZoneID:
+    Description: The Route 53 hosted zone Id
+    Type: AWS::Route53::HostedZone::Id
+  SSLCertificateArn:
+    Description: Arn of SSL certificate to use for the HTTPS listener
+    Type: String
+Resources:
+  ELBSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Security Group allowing access to High-Availability Add-On application
+      GroupName: !Join
+        - '-'
+        - - !Ref 'AWS::StackName'
+          - UiPathHaaSecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Join
+            - '-'
+            - - !Ref 'AWS::StackName'
+              - UiPathHaaSecurityGroup
+      VpcId: !Ref VPCID
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: !Ref VPCCIDR
+          Description: Access to target instance on port 80
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Ref VPCCIDR
+          Description: Access to target instance on port 443
+  ApplicationLoadBalancer:
+    Type: 'AWS::ElasticLoadBalancingV2::LoadBalancer'
+    Properties:
+      Type: application
+      Scheme: internet-facing
+      SecurityGroups:
+        - !Ref ELBSecurityGroup
+      Subnets: !Ref SubnetIDs
+  TargetGroup:
+    Type: 'AWS::ElasticLoadBalancingV2::TargetGroup'
+    Properties:
+      Port: 443
+      Protocol: HTTPS
+      VpcId: !Ref VPCID
+      TargetGroupAttributes:
+        - Key: stickiness.enabled
+          Value: 'true'
+        - Key: stickiness.type
+          Value: lb_cookie
+      TargetType: instance
+      HealthCheckPath: /api/status
+      HealthCheckPort: '443'
+      HealthCheckProtocol: HTTPS
+  HttpListener:
+    Type: 'AWS::ElasticLoadBalancingV2::Listener'
+    Properties:
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: redirect
+          RedirectConfig:
+            Port: '443'
+            Protocol: HTTPS
+            StatusCode: HTTP_301
+  HttpsListener:
+    Type: 'AWS::ElasticLoadBalancingV2::Listener'
+    Properties:
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: 443
+      Protocol: HTTPS
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroup
+      SslPolicy: ELBSecurityPolicy-2016-08
+      Certificates:
+        - CertificateArn: !Ref SSLCertificateArn
+  RecordSet:
+    Type: 'AWS::Route53::RecordSet'
+    Properties:
+      HostedZoneId: !Ref HostedZoneID
+      Name: !Ref Fqdn
+      Type: A
+      AliasTarget:
+        EvaluateTargetHealth: false
+        DNSName: !GetAtt 
+          - ApplicationLoadBalancer
+          - DNSName
+        HostedZoneId: !GetAtt 
+          - ApplicationLoadBalancer
+          - CanonicalHostedZoneID
+Outputs:
+  ApplicationLoadBalancer:
+    Value: !GetAtt 
+      - ApplicationLoadBalancer
+      - LoadBalancerFullName
+    Description: Application Load Balancer Name
+  TargetGroupARN:
+    Value: !Ref TargetGroup
+    Description: Target Group Name
+  TargetGroupName:
+    Value: !GetAtt 
+      - TargetGroup
+      - TargetGroupFullName
+    Description: Target Group Name
+  HttpListener:
+    Value: !Ref HttpListener
+    Description: HTTP Listener ARN
+  HttpsListener:
+    Value: !Ref HttpsListener
+    Description: HTTPS Listener ARN
+  RecordSet:
+    Value: !Ref RecordSet
+    Description: Route53 A Record

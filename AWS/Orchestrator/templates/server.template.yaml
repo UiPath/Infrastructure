@@ -1,0 +1,795 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: This template creates a cluster to provide high availability. (qs-1r2g4122s)
+Parameters:
+  VPCID:
+    Type: 'AWS::EC2::VPC::Id'
+  VPCCIDR:
+    Description: CIDR block for the VPC
+    Type: String
+  PrivateSubnetIDs:
+    Description: >-
+      Comma separated Private Subnet IDs where Orchestrator VMs need to be
+      launched
+    Type: List<AWS::EC2::Subnet::Id>
+  PublicSubnetIDs:
+    Description: Comma separated Public Subnet IDs where Bastion hosts need to be launched
+    Type: List<AWS::EC2::Subnet::Id>
+  TargetGroupARN:
+    Description: ARN for Elastic load balancer target group
+    Type: String
+  KeyPairName:
+    Description: EC2 Instance Key pair name
+    Type: String
+  InstanceType:
+    Description: Orchestrator Instance type
+    Type: String
+  FindAMIFunctionArn:
+    Description: ARN for Lambda function used to find AMI by name
+    Type: String
+  OrchestratorVersion:
+    Description: UIPath Orchestrator Version Number
+    Type: String
+  OrchestratorInstanceCount:
+    Description: Desired Capacity (instance count) for Orchestrator instances
+    Type: String
+  OrchestratorLicense:
+    Description: Orchestrator license code
+    Type: String
+  OrchestratorPassword:
+    Description: Orchestrator Administrator password to login as
+    Type: String
+    NoEcho: 'true'
+  DatabaseServerName:
+    Description: RDS Instance endpoint URL
+    Type: String
+  DatabaseName:
+    Description: Name of Database to be created
+    Type: String
+  DatabaseUsername:
+    Description: RDS DB username
+    Type: String
+  DatabasePassword:
+    Description: RDS DB password
+    Type: String
+    NoEcho: 'true'
+  NugetStorageBucketName:
+    Type: String
+    Description: Name of bucket where nuget packages should be stored
+  NugetStorageBucketArn:
+    Type: String
+    Description: Arn of bucket where nuget packages should be stored
+  QSS3BucketName:
+    Type: String
+    Description: Name of bucket storing the quickstart files
+  QSS3BucketRegion:
+    Type: String
+    Description: Name of region where the bucket storing the quickstart files is located
+  QSS3KeyPrefix:
+    Type: String
+    Description: Quickstart bucket prefix
+  GatewayPrivateIP:
+    Description: Private IP Address of Storage Gateway VM
+    Type: String
+  HAMasterPrivateIP:
+    Description: Private IP Address of HA Master Instance
+    Type: String
+  HASlave1PrivateIP:
+    Description: Private IP Address of HA Slave1 Instance
+    Type: String
+  HASlave2PrivateIP:
+    Description: Private IP Address of HA Slave2 Instance
+    Type: String
+  HAPort:
+    Description: Port on which HA listens to
+    Type: String
+  HAAPassword:
+    Description: High Availability Add-on password
+    Type: String
+    NoEcho: 'true'
+  Fqdn:
+    Description: The fully qualified domain name where the load balancer listens
+    Type: String
+Conditions:
+  UsingDefaultBucket: !Equals
+    - !Ref QSS3BucketName
+    - aws-quickstart
+Resources:
+  OrchestratorSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Security Group allowing access to UiPath applications
+      VpcId: !Ref VPCID
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Ref VPCCIDR
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: !Ref VPCCIDR
+        - IpProtocol: tcp
+          FromPort: 3389
+          ToPort: 3389
+          CidrIp: !Ref VPCCIDR
+  HostInstanceAMI:
+    Type: 'Custom::HostInstanceAMI'
+    Properties:
+      ServiceToken: !Ref FindAMIFunctionArn
+      RegionName: !Ref 'AWS::Region'
+      ImageName: Windows_Server-2019-English-Full-Base-*
+      Architecture: x86_64
+      VirtualizationType: hvm
+      Owners: amazon
+  OrchestratorIamRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Description: IAM Role providing required access for EC2 instance
+  OrchestratorInstanceProfile:
+    Type: 'AWS::IAM::InstanceProfile'
+    Properties:
+      Roles:
+        - !Ref OrchestratorIamRole
+      Path: '/'
+  ConfigS3Bucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration:
+        Status: Enabled
+  ConfigBucketCleanupLambdaRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      Description: >-
+        IAM Role to be assumed by Lambda functions for cleaning up the config S3 bucket before delete
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: ConfigS3DeleteAllow
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 's3:GetAccelerateConfiguration'
+                  - 's3:GetBucketLocation'
+                  - 's3:GetBucketVersioning'
+                  - 's3:ListBucket'
+                  - 's3:ListBucketVersions'
+                  - 's3:ListBucketMultipartUploads'
+                Resource:
+                  - !GetAtt ConfigS3Bucket.Arn
+                  - !Ref NugetStorageBucketArn
+              - Effect: Allow
+                Action:
+                  - 's3:DeleteObject'
+                  - 's3:DeleteObjectVersion'
+                Resource:
+                  - !Join
+                    - ''
+                    - - !GetAtt ConfigS3Bucket.Arn
+                      - '/*'
+                  - !Join
+                    - ''
+                    - - !Ref NugetStorageBucketArn
+                      - '/*'
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 'xray:PutTraceSegments'
+                Resource: '*'
+  ConfigBucketCleanupFunction:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Description: >-
+        Delete all objects inside the Config S3 bucket when the stack is deleted
+      Handler: index.handler
+      Role: !GetAtt ConfigBucketCleanupLambdaRole.Arn
+      Code:
+        ZipFile: |
+          import boto3
+          import json
+          import cfnresponse
+          import threading
+          def create(properties, physical_id):
+              bucket_name = properties['BucketName']
+              print(f'Creating bucket {bucket_name} ...')
+              return_attribute = dict(Action='CREATE')
+              return cfnresponse.SUCCESS, bucket_name, return_attribute
+          def update(properties, physical_id):
+              bucket_name = physical_id
+              print(f'Updating bucket {bucket_name} ...')
+              return_attribute = dict(Action='UPDATE')
+              return cfnresponse.SUCCESS, bucket_name, return_attribute
+          def delete(properties, physical_id):
+              bucket_name = physical_id
+              print(f'Deleting bucket {bucket_name} ...')
+              s3 = boto3.resource('s3')
+              bucket = s3.Bucket(bucket_name)
+              bucket.object_versions.delete()
+              return_attribute = dict(Action='DELETE')
+              return cfnresponse.SUCCESS, bucket_name, return_attribute
+          def timeout(event, context):
+              print('Execution is about to time out, sending failure response to CloudFormation')
+              cfnresponse.send(event, context, cfnresponse.FAILED, {}, None)
+          def handler(event, context):
+              # make sure we send a failure to CloudFormation if the function is going to timeout
+              timer = threading.Timer((context.get_remaining_time_in_millis() / 1000.00) - 0.5, timeout, args=[event, context])
+              timer.start()
+              print('Received event: ' + json.dumps(event))
+              status = cfnresponse.FAILED
+              new_physical_id = None
+              returnAttribute = {}
+              try:
+                  properties = event.get('ResourceProperties')
+                  physical_id = event.get('PhysicalResourceId')
+                  status, new_physical_id, returnAttribute = {
+                      'Create': create,
+                      'Update': update,
+                      'Delete': delete
+                  }.get(event['RequestType'], lambda x, y: (cfnresponse.FAILED, None))(properties, physical_id)
+              except Exception as e:
+                  print('Exception: ' + str(e))
+                  status = cfnresponse.FAILED
+              finally:
+                  cfnresponse.send(event, context, status, returnAttribute, new_physical_id)
+      Runtime: python3.6
+      Timeout: 30
+      TracingConfig:
+        Mode: Active
+  ConfigBucketCleanup:
+    Type: 'Custom::ConfigBucketCleanup'
+    Properties:
+      ServiceToken: !GetAtt ConfigBucketCleanupFunction.Arn
+      BucketName: !Ref ConfigS3Bucket
+  NugetBucketCleanup:
+    Type: 'Custom::ConfigBucketCleanup'
+    Properties:
+      ServiceToken: !GetAtt ConfigBucketCleanupFunction.Arn
+      BucketName: !Ref NugetStorageBucketName
+  ConfigS3IAMPolicy:
+    Type: 'AWS::IAM::Policy'
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - 's3:GetAccelerateConfiguration'
+              - 's3:GetBucketLocation'
+              - 's3:GetBucketVersioning'
+              - 's3:ListBucket'
+              - 's3:ListBucketVersions'
+              - 's3:ListBucketMultipartUploads'
+            Resource: !GetAtt ConfigS3Bucket.Arn
+          - Effect: Allow
+            Action:
+              - 's3:AbortMultipartUpload'
+              - 's3:DeleteObject'
+              - 's3:DeleteObjectVersion'
+              - 's3:GetObject'
+              - 's3:GetObjectAcl'
+              - 's3:GetObjectVersion'
+              - 's3:ListMultipartUploadParts'
+              - 's3:PutObject'
+              - 's3:PutObjectAcl'
+            Resource: !Join
+              - ''
+              - - !GetAtt ConfigS3Bucket.Arn
+                - '/*'
+      PolicyName: ConfigS3Access
+      Roles:
+        - !Ref OrchestratorIamRole
+  LogsAccessPolicy:
+    Type: 'AWS::IAM::Policy'
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Action:
+              - cloudwatch:PutMetricData
+              - ec2:DescribeVolumes
+              - ec2:DescribeTags
+              - logs:PutLogEvents
+              - logs:DescribeLogStreams
+              - logs:DescribeLogGroups
+              - logs:CreateLogStream
+              - logs:CreateLogGroup
+            Resource: "*"
+            Effect: Allow
+      PolicyName: CloudwatchLogsAccess
+      Roles:
+        - !Ref OrchestratorIamRole
+  QuickstartS3IAMPolicy:
+    Type: 'AWS::IAM::Policy'
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Action:
+              - s3:GetObject
+            Resource: !Sub
+              - arn:${AWS::Partition}:s3:::${S3Bucket}/${QSS3KeyPrefix}*
+              - S3Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
+            Effect: Allow
+      PolicyName: AwsQuickstartS3Access
+      Roles:
+        - !Ref OrchestratorIamRole
+  ConfigTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: "Installation"
+          AttributeType: "S"
+      KeySchema:
+        - AttributeName: "Installation"
+          KeyType: "HASH"
+  ConfigTableIAMPolicy:
+    Type: 'AWS::IAM::Policy'
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - 'dynamodb:*'
+            Resource: !GetAtt ConfigTable.Arn
+      Roles:
+        - !Ref OrchestratorIamRole
+      PolicyName: ConfigDynamoDbTableAccess
+  LaunchConfiguration:
+    Type: 'AWS::AutoScaling::LaunchConfiguration'
+    Metadata:
+      AWS::CloudFormation::Authentication:
+        S3AccessCreds:
+          type: S3
+          roleName: !Ref OrchestratorIamRole
+          buckets: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
+      AWS::CloudFormation::Init:
+        configSets:
+          config:
+            - cloudwatch_install
+            - cloudwatch_setup
+            - cloudwatch_agent_restart
+            - setup
+            - prerequisites
+            - install
+        cloudwatch_install:
+          files:
+            C:\cfn\sources\amazon-cloudwatch-agent.msi:
+              source: 'https://s3.amazonaws.com/amazoncloudwatch-agent/windows/amd64/latest/amazon-cloudwatch-agent.msi'
+          commands:
+            a-install-cloudwatch-agent:
+              command: start /wait msiexec /i c:\cfn\sources\amazon-cloudwatch-agent.msi /qn /quiet /passive /norestart
+              waitAfterCompletion: '0'
+        cloudwatch_setup:
+          files:
+            "C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent.json":
+              content: !Sub |
+                {
+                  "logs": {
+                    "logs_collected": {
+                      "files": {
+                        "collect_list": [
+                          {
+                            "file_path": "c:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\Logs\\amazon-cloudwatch-agent.log",
+                            "log_group_name": "/aws/ec2/${AWS::StackName}/{instance_id}",
+                            "log_stream_name": "cloudwatch-agent.log"
+                          },
+                          {
+                            "file_path": "c:\\cfn\\log\\cfn-init.log",
+                            "log_group_name": "/aws/ec2/${AWS::StackName}/{instance_id}",
+                            "log_stream_name": "cfn-init.log"
+                          },
+                          {
+                            "file_path": "c:\\cfn\\log\\cfn-wire.log",
+                            "log_group_name": "/aws/ec2/${AWS::StackName}/{instance_id}",
+                            "log_stream_name": "cfn-wire.log"
+                          },
+                          {
+                            "file_path": "c:\\cfn\\log\\cfn-init-cmd.log",
+                            "log_group_name": "/aws/ec2/${AWS::StackName}/{instance_id}",
+                            "log_stream_name": "cfn-init-cmd.log"
+                          },
+                          {
+                            "file_path": "c:\\cfn\\log\\install.log",
+                            "log_group_name": "/aws/ec2/${AWS::StackName}/{instance_id}",
+                            "log_stream_name": "install.log"
+                          },
+                          {
+                            "file_path": "c:\\cfn\\log\\cfn-hup.log",
+                            "log_group_name": "/aws/ec2/${AWS::StackName}/{instance_id}",
+                            "log_stream_name": "cfn-hup.log"
+                          }
+                        ]
+                      },
+                      "windows_events": {
+                        "collect_list": [
+                          {
+                            "event_name": "Application",
+                            "event_levels": [
+                              "INFORMATION",
+                              "WARNING",
+                              "CRITICAL",
+                              "ERROR"
+                            ],
+                            "log_group_name": "/aws/ec2/${AWS::StackName}/{instance_id}",
+                            "log_stream_name": "Application"
+                          }
+                        ]
+                      }
+                    },
+                    "log_stream_name": "default.log"
+                  }
+                }
+        cloudwatch_agent_restart:
+          commands:
+            01_stop_service:
+              command: powershell -Command "C:\\'Program Files'\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1 -a stop"
+            02_start_service:
+              command: powershell -Command "C:\\'Program Files'\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1 -a fetch-config -m ec2 -c file:C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent.json -s"
+        setup:
+          files:
+            c:\cfn\cfn-hup.conf:
+              content: !Sub |
+                [main]
+                stack=${AWS::StackName}
+                region=${AWS::Region}
+                interval=1
+            c:\cfn\hooks.d\cfn-auto-reloader.conf:
+              content: !Sub |
+                [cfn-auto-reloader-hook]
+                triggers=post.update
+                path=Resources.LaunchConfiguration.Metadata
+                action=cfn-init.exe -v -c config -s ${AWS::StackName} -r LaunchConfiguration --region ${AWS::Region}
+            c:\cfn\scripts\Install-UiPathOrchestrator.ps1:
+              source:
+                !Sub
+                - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/Install-UiPathOrchestrator.ps1'
+                - S3Region: !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
+                  S3Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
+              authentication: S3AccessCreds
+            c:\cfn\scripts\Install-RolesAndFeatures.ps1:
+              source:
+                !Sub
+                - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/Install-RolesAndFeatures.ps1'
+                - S3Region: !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
+                  S3Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
+              authentication: S3AccessCreds
+            c:\cfn\scripts\Get-File.ps1:
+              source:
+                !Sub
+                - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/Get-File.ps1'
+                - S3Region: !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
+                  S3Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
+              authentication: S3AccessCreds
+            c:\cfn\scripts\Write-ConfigToS3.ps1:
+              source:
+                !Sub
+                - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/Write-ConfigToS3.ps1'
+                - S3Region: !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
+                  S3Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
+              authentication: S3AccessCreds
+            c:\cfn\scripts\Install-SelfSignedCertificate.ps1:
+              source:
+                !Sub
+                - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/Install-SelfSignedCertificate.ps1'
+                - S3Region: !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
+                  S3Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
+              authentication: S3AccessCreds
+            c:\cfn\scripts\Set-MutexLock.ps1:
+              source:
+                !Sub
+                - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/Set-MutexLock.ps1'
+                - S3Region: !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion ]
+                  S3Bucket: !If [ UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName ]
+              authentication: S3AccessCreds
+          services:
+            windows:
+              cfn-hup:
+                enabled: 'true'
+                ensureRunning: 'true'
+                files:
+                  - c:\cfn\cfn-hup.conf
+                  - c:\cfn\hooks.d\cfn-auto-reloader.conf
+          commands:
+            a-set-execution-policy:
+              command: powershell.exe -command Set-ExecutionPolicy RemoteSigned -Force
+              waitAfterCompletion: '0'
+        prerequisites:
+          files:
+            c:\cfn\sources\UiPathOrchestrator.msi:
+              source: !Sub 'https://download.uipath.com/versions/${OrchestratorVersion}/UiPathOrchestrator.msi'
+            c:\cfn\sources\NDP472-KB4054530-x86-x64-AllOS-ENU.exe:
+              source: https://download.microsoft.com/download/6/E/4/6E48E8AB-DC00-419E-9704-06DD46E5F81D/NDP472-KB4054530-x86-x64-AllOS-ENU.exe
+            c:\cfn\sources\rewrite_amd64_en-US.msi:
+              source: https://download.microsoft.com/download/1/2/8/128E2E22-C1B9-44A4-BE2A-5859ED1D4592/rewrite_amd64_en-US.msi
+            c:\cfn\sources\dotnet-hosting-3.1.8-win.exe:
+              source: https://download.visualstudio.microsoft.com/download/pr/854cbd11-4b96-4a44-9664-b95991c0c4f7/8ec4944a5bd770faba2f769e647b1e6e/dotnet-hosting-3.1.8-win.exe
+          commands:
+            a-install-dotnet-framework:
+              command: start /wait c:\cfn\sources\NDP472-KB4054530-x86-x64-AllOS-ENU.exe /q /norestart
+              waitAfterCompletion: '0'
+            b-install-roles-and-features:
+              command: powershell.exe -command C:\cfn\scripts\Install-RolesAndFeatures.ps1
+              waitAfterCompletion: '0'
+            c-install-rewrite:
+              command: start /wait msiexec /i c:\cfn\sources\rewrite_amd64_en-US.msi /qn /quiet /passive /norestart
+              waitAfterCompletion: '0'
+              ignoreErrors: false
+            d-install-dotnet-core:
+              command: start /wait c:\cfn\sources\dotnet-hosting-3.1.8-win.exe OPT_NO_RUNTIME=1 /q /norestart
+              waitAfterCompletion: '0'
+              ignoreErrors: false
+        install:
+          commands:
+            a-execute-install:
+              command: !Join
+                - ' '
+                - - 'powershell.exe -command C:\cfn\scripts\Install-UiPathOrchestrator.ps1'
+                  - '-databaseServerName'
+                  - !Ref DatabaseServerName
+                  - '-databaseName'
+                  - !Ref DatabaseName
+                  - '-databaseUserName'
+                  - !Ref DatabaseUsername
+                  - '-databaseUserPassword'
+                  - !Ref DatabasePassword
+                  - '-orchestratorAdminPassword'
+                  - !Ref OrchestratorPassword
+                  - '-redisServerHost'
+                  - !Join
+                    - ','
+                    - - !Ref HAMasterPrivateIP
+                      - !Ref HASlave1PrivateIP
+                      - !Ref HASlave2PrivateIP
+                  - '-redisServerPort'
+                  - !Ref HAPort
+                  - '-redisServerPassword'
+                  - !Ref HAAPassword
+                  - '-configS3BucketName'
+                  - !Ref ConfigS3Bucket
+                  - '-configTableName'
+                  - !Ref ConfigTable
+                  - '-orchestratorLicenseCode'
+                  - !Join
+                    - ''
+                    - - '''"'
+                      - !Ref OrchestratorLicense
+                      - '"'''
+                  - '-publicUrl'
+                  - !Sub 'https://${Fqdn}'
+                  - '-NuGetStoragePath'
+                  - !Sub '${GatewayPrivateIP}\${NugetStorageBucketName}'
+                  - '-Verbose'
+              waitAfterCompletion: '0'
+    Properties:
+      AssociatePublicIpAddress: false
+      BlockDeviceMappings:
+        - DeviceName: /dev/sda1
+          Ebs:
+            DeleteOnTermination: true
+            Encrypted: false
+            VolumeSize: 100
+            VolumeType: gp2
+      ImageId: !GetAtt HostInstanceAMI.ImageId
+      IamInstanceProfile: !GetAtt OrchestratorInstanceProfile.Arn
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyPairName
+      LaunchConfigurationName: !Join
+        - '-'
+        - - !Ref 'AWS::StackName'
+          - Orchestrator-LaunchConfiguration
+      PlacementTenancy: default
+      SecurityGroups:
+        - !Ref OrchestratorSecurityGroup
+      UserData: !Base64
+        Fn::Sub: |
+          <script>
+          cfn-init.exe -v -c config -s ${AWS::StackId} -r LaunchConfiguration --region ${AWS::Region}
+          cfn-signal.exe -e %errorlevel% --stack ${AWS::StackId} --resource AutoScalingGroup --region ${AWS::Region}
+          </script>
+  AutoScalingGroup:
+    Type: 'AWS::AutoScaling::AutoScalingGroup'
+    CreationPolicy:
+      ResourceSignal:
+        Count: !Ref OrchestratorInstanceCount
+        Timeout: PT1H
+    Properties:
+      DesiredCapacity: !Ref OrchestratorInstanceCount
+      HealthCheckType: EC2
+      LaunchConfigurationName: !Ref LaunchConfiguration
+      MaxSize: '20'
+      MetricsCollection:
+        - Granularity: 1Minute
+          Metrics:
+            - GroupMinSize
+            - GroupMaxSize
+            - GroupDesiredCapacity
+            - GroupInServiceInstances
+            - GroupTotalInstances
+      MinSize: !Ref OrchestratorInstanceCount
+      Tags:
+        - Key: Name
+          PropagateAtLaunch: true
+          Value: !Sub '${AWS::StackName}-UIPath-Orchestrator'
+      TargetGroupARNs:
+        - !Ref TargetGroupARN
+      VPCZoneIdentifier: !Ref PrivateSubnetIDs
+  ScaleUpAutoScalingPolicy:
+    Type: 'AWS::AutoScaling::ScalingPolicy'
+    Properties:
+      AdjustmentType: ChangeInCapacity
+      AutoScalingGroupName: !Ref AutoScalingGroup
+      Cooldown: '300'
+      ScalingAdjustment: 1
+  ScaleDownAutoScalingPolicy:
+    Type: 'AWS::AutoScaling::ScalingPolicy'
+    Properties:
+      AdjustmentType: ChangeInCapacity
+      AutoScalingGroupName: !Ref AutoScalingGroup
+      Cooldown: '300'
+      ScalingAdjustment: -1
+  HighMemoryAlarm:
+    Type: 'AWS::CloudWatch::Alarm'
+    Properties:
+      AlarmDescription: >-
+        This metric monitors ec2 memory for high utilization on Orchestrator
+        hosts
+      Namespace: Windows/Default
+      MetricName: MemoryUtilization
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 2
+      Period: 300
+      Statistic: Average
+      Threshold: 80
+      Dimensions:
+        - Name: AutoScalingGroupName
+          Value: !Ref AutoScalingGroup
+      AlarmActions:
+        - !Ref ScaleUpAutoScalingPolicy
+      ActionsEnabled: true
+  LowMemoryAlarm:
+    Type: 'AWS::CloudWatch::Alarm'
+    Properties:
+      AlarmDescription: >-
+        This metric monitors ec2 memory for low utilization on Orchestrator
+        hosts
+      Namespace: Windows/Default
+      MetricName: MemoryUtilization
+      ComparisonOperator: LessThanOrEqualToThreshold
+      EvaluationPeriods: 2
+      Period: 300
+      Statistic: Average
+      Threshold: 40
+      Dimensions:
+        - Name: AutoScalingGroupName
+          Value: !Ref AutoScalingGroup
+      AlarmActions:
+        - !Ref ScaleDownAutoScalingPolicy
+      ActionsEnabled: true
+  HighCPUAlarm:
+    Type: 'AWS::CloudWatch::Alarm'
+    Properties:
+      AlarmDescription: This metric monitors ec2 cpu for high utilization on Orchestrator hosts
+      Namespace: AWS/EC2
+      MetricName: CPUUtilization
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 2
+      Period: 120
+      Statistic: Average
+      Threshold: 60
+      Dimensions:
+        - Name: AutoScalingGroupName
+          Value: !Ref AutoScalingGroup
+      AlarmActions:
+        - !Ref ScaleUpAutoScalingPolicy
+      ActionsEnabled: true
+  LowCPUAlarm:
+    Type: 'AWS::CloudWatch::Alarm'
+    Properties:
+      AlarmDescription: >-
+        This metric monitors ec2 memory for low utilization on Orchestrator
+        hosts
+      Namespace: AWS/EC2
+      MetricName: CPUUtilization
+      ComparisonOperator: LessThanOrEqualToThreshold
+      EvaluationPeriods: 2
+      Period: 120
+      Statistic: Average
+      Threshold: 10
+      Dimensions:
+        - Name: AutoScalingGroupName
+          Value: !Ref AutoScalingGroup
+      AlarmActions:
+        - !Ref ScaleDownAutoScalingPolicy
+      ActionsEnabled: true
+  BastionSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Security Group allowing RDP access to the bastion
+      VpcId: !Ref VPCID
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3389
+          ToPort: 3389
+          CidrIp: 0.0.0.0/0
+  BastionHost:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      ImageId: !Ref HostInstanceAMI
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyPairName
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeleteOnTermination: true
+          DeviceIndex: '0'
+          GroupSet:
+            - !Ref BastionSecurityGroup
+          SubnetId: !Select [ '0', !Ref PublicSubnetIDs ]
+      Tags:
+        - Key: Name
+          Value: !Join
+            - '-'
+            - - !Ref 'AWS::StackName'
+              - BastionHost
+Outputs:
+  LaunchTemplate:
+    Value: !Ref LaunchConfiguration
+    Description: Launch configuration template
+  AutoScalingGroup:
+    Value: !Ref AutoScalingGroup
+    Description: Auto sclaing group
+  ScaleUpAutoScalingPolicy:
+    Value: !Ref ScaleUpAutoScalingPolicy
+    Description: Auto scaling policy to scale up resources
+  ScaleDownAutoScalingPolicy:
+    Value: !Ref ScaleDownAutoScalingPolicy
+    Description: Auto scaling policy to scale down resources
+  HighMemoryAlarm:
+    Value: !Ref HighMemoryAlarm
+    Description: High memory usage alarm
+  LowMemoryAlarm:
+    Value: !Ref LowMemoryAlarm
+    Description: Low memory usage alarm
+  HighCPUAlarm:
+    Value: !Ref HighCPUAlarm
+    Description: High cpu usage alarm
+  LowCPUAlarm:
+    Value: !Ref LowCPUAlarm
+    Description: Low cpu usage alarm
+  BastionHostPublicIP:
+    Value: !GetAtt
+      - BastionHost
+      - PublicIp
+    Description: Private IP of BastionHost in Public Subnet 1
+  InstanceSecurityGroup:
+    Description: Security Group allowing access to UiPath applications
+    Value: !Ref OrchestratorSecurityGroup

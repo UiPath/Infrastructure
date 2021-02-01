@@ -1,0 +1,434 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  This template creates a Multi-AZ, multi-subnet VPC infrastructure with UIPath
+  Orchestrator deployed in private Subnets, with an ALB behind a Route53 in
+  public subnets. (qs-1r2g41216)
+Metadata:
+  'AWS::CloudFormation::Interface':
+    ParameterGroups:
+      - Label:
+          default: Availability Zone Configuration
+        Parameters:
+          - AvailabilityZones
+          - NumberOfAZs
+      - Label:
+          default: Network Configuration
+        Parameters:
+          - VPCCIDR
+          - PublicSubnetTag1
+          - PublicSubnetTag2
+          - PublicSubnetTag3
+          - PrivateSubnetTag1
+          - PrivateSubnetTag2
+          - PrivateSubnetTag3
+      - Label:
+          default: Robot VM Configuration
+        Parameters:
+          - KeyPairName
+          - InstanceType
+      - Label:
+          default: UiPath Robot Configuration
+        Parameters:
+          - RobotVersion
+          - RobotType
+          - AdminPassword
+          - OrchestratorURL
+          - OrchestratorTenant
+          - OrchestratorAPIUser
+          - OrchestratorAPIPassword
+      - Label:
+          default: Quickstart Bucket configuration
+        Parameters:
+          - QSS3BucketName
+          - QSS3KeyPrefix
+    ParameterLabels:
+      AvailabilityZones:
+        default: Availability Zone(s) selection
+      NumberOfAZs:
+        default: Number of AZs to use
+      VPCCIDR:
+        default: VPC CIDR
+      PrivateSubnetTag1:
+        default: Private subnet 1 tag
+      PrivateSubnetTag2:
+        default: Private subnet 2 tag
+      PrivateSubnetTag3:
+        default: Private subnet 3 tag
+      PublicSubnetTag1:
+        default: Public subnet 1 tag
+      PublicSubnetTag2:
+        default: Public subnet 2 tag
+      PublicSubnetTag3:
+        default: Public subnet 3 tag
+      KeyPairName:
+        default: Instance Key pair
+      InstanceType:
+        default: Instance type
+      RobotType:
+        default: UiPath Robot type (attended/unattended).
+      RobotVersion:
+        default: UiPath Robot version.
+      OrchestratorURL:
+        default: URL of an existing and licensed Orchestrator.
+      OrchestratorTenant:
+        default: Tenant name where the Robot will be created.
+      OrchestratorAPIUser:
+        default: Orchestrator API username with role to create/add Robot.
+      OrchestratorAPIPassword:
+        default: Orchestrator API password
+      AdminPassword:
+        default: Admin Password
+      QSS3BucketName:
+        default: Template hosting Bucket
+      QSS3KeyPrefix:
+        default: Template folder
+Parameters:
+  AvailabilityZones:
+    Description: >-
+      List of Availability Zones to use for the subnets in the VPC - maximum of
+      3 AZs are used for this deployment (logical order of your selections is
+      preserved).
+    Type: 'List<AWS::EC2::AvailabilityZone::Name>'
+  NumberOfAZs:
+    AllowedValues:
+      - '2'
+      - '3'
+    Default: '2'
+    Description: >-
+      Number of Availability Zones to use in the VPC (upto 3), must match your
+      selections in the list of Availability Zones parameter.
+    Type: String
+  VPCCIDR:
+    AllowedPattern: '^([0-9]{1,3}\.){2}([0]{1}.)[0]{1}(\/[16]{2})$'
+    ConstraintDescription: CIDR block parameter must be in the form x.x.0.0/16
+    Default: 10.0.0.0/16
+    Description: 'CIDR block for the VPC, must be in the form x.x.0.0/16.'
+    Type: String
+  PrivateSubnetTag1:
+    AllowedPattern: '^([a-zA-Z0-9+\-._:/@]+=[a-zA-Z0-9+\-.,_:/@ *\\"''\[\]\{\}]*)?$'
+    ConstraintDescription: >-
+      tags must be in format "Key=Value" keys can only contain
+      [a-zA-Z0-9+\-._:/@], values can contain [a-zA-Z0-9+\-._:/@ *\\"'\[\]\{\}]
+    Default: Network=Private1
+    Description: Tag to add to private subnet 1 in format Key=Value (Optional).
+    Type: String
+  PrivateSubnetTag2:
+    AllowedPattern: '^([a-zA-Z0-9+\-._:/@]+=[a-zA-Z0-9+\-.,_:/@ *\\"''\[\]\{\}]*)?$'
+    ConstraintDescription: >-
+      tags must be in format "Key=Value" keys can only contain
+      [a-zA-Z0-9+\-._:/@], values can contain [a-zA-Z0-9+\-._:/@ *\\"'\[\]\{\}]
+    Default: Network=Private2
+    Description: Tag to add to private subnet 2 in format Key=Value (Optional).
+    Type: String
+  PrivateSubnetTag3:
+    AllowedPattern: '^([a-zA-Z0-9+\-._:/@]+=[a-zA-Z0-9+\-.,_:/@ *\\"''\[\]\{\}]*)?$'
+    ConstraintDescription: >-
+      tags must be in format "Key=Value" keys can only contain
+      [a-zA-Z0-9+\-._:/@], values can contain [a-zA-Z0-9+\-._:/@ *\\"'\[\]\{\}]
+    Default: Network=Private3
+    Description: Tag to add to private subnet 3 in format Key=Value (Optional).
+    Type: String
+  PublicSubnetTag1:
+    AllowedPattern: '^([a-zA-Z0-9+\-._:/@]+=[a-zA-Z0-9+\-.,_:/@ *\\"''\[\]\{\}]*)?$'
+    ConstraintDescription: >-
+      tags must be in format "Key=Value" keys can only contain
+      [a-zA-Z0-9+\-._:/@], values can contain [a-zA-Z0-9+\-._:/@ *\\"'\[\]\{\}]
+    Default: Network=Public1
+    Description: Tag to add to public subnet 1 in format Key=Value (Optional)
+    Type: String
+  PublicSubnetTag2:
+    AllowedPattern: '^([a-zA-Z0-9+\-._:/@]+=[a-zA-Z0-9+\-.,_:/@ *\\"''\[\]\{\}]*)?$'
+    ConstraintDescription: >-
+      tags must be in format "Key=Value" keys can only contain
+      [a-zA-Z0-9+\-._:/@], values can contain [a-zA-Z0-9+\-._:/@ *\\"'\[\]\{\}]
+    Default: Network=Public2
+    Description: Tag to add to public subnet 2 in format Key=Value (Optional).
+    Type: String
+  PublicSubnetTag3:
+    AllowedPattern: '^([a-zA-Z0-9+\-._:/@]+=[a-zA-Z0-9+\-.,_:/@ *\\"''\[\]\{\}]*)?$'
+    ConstraintDescription: >-
+      tags must be in format "Key=Value" keys can only contain
+      [a-zA-Z0-9+\-._:/@], values can contain [a-zA-Z0-9+\-._:/@ *\\"'\[\]\{\}]
+    Default: Network=Public3
+    Description: Tag to add to public subnet 3 in format Key=Value (Optional).
+    Type: String
+  KeyPairName:
+    Description: 'Existing Key Pair, which is to be used to Log in to VM instances.'
+    Type: 'AWS::EC2::KeyPair::KeyName'
+  InstanceType:
+    AllowedValues:
+      - t2.micro
+      - t2.small
+      - t2.medium
+      - t2.large
+      - m4.large
+      - m4.xlarge
+      - m4.2xlarge
+      - m4.4xlarge
+      - m4.10xlarge
+      - c4.large
+      - c4.xlarge
+      - c4.2xlarge
+      - c4.4xlarge
+      - c4.8xlarge
+      - r4.large
+      - r4.xlarge
+      - r4.2xlarge
+      - r4.4xlarge
+      - r4.8xlarge
+    ConstraintDescription: 'Class of instance, must be a valid EC2 instance type from the list.'
+    Default: t2.medium
+    Description: EC2 instance type
+    Type: String
+  AdminPassword:
+    Description: Robot's Windows Administrator password to login as.
+    Type: String
+    NoEcho: 'true'
+    MinLength: '6'
+    MaxLength: '124'
+    AllowedPattern: >-
+      (?=^.{6,124}$)((?=.*\d)(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[^A-Za-z0-9])(?=.*[a-z])|(?=.*[^A-Za-z0-9])(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[A-Z])(?=.*[^A-Za-z0-9]))^.*
+    ConstraintDescription: >-
+      Windows Administrator Password must contain at least one uppercase letter
+      and be longer than six charaters.
+  RobotType:
+    Type: String
+    Default: Attended
+    AllowedValues:
+      - Attended
+      - Unattended
+    Description: >-
+      Choose what type of UiPath Robot you want to be installed. Options are: Attended or Unattended.
+  RobotVersion:
+    Description: UIPath Robot Version to be installed.
+    Type: String
+    Default: 20.10.2
+    AllowedValues:
+      - 20.10.2
+    ConstraintDescription: 'Robot version number can contain only digits and dot(.), and must .'
+  OrchestratorURL:
+    Type: String
+    Description: URL of an existing and licensed Orchestrator.
+  OrchestratorTenant:
+    Type: String
+    Default: default
+    Description: Tenant name where the Robot will be created.
+  OrchestratorAPIUser:
+    Type: String
+    Description: Orchestrator API username with role to create/add Robot.
+  OrchestratorAPIPassword:
+    Type: String
+    Description: Orchestrator API password.
+    NoEcho: 'true'
+  QSS3BucketName:
+    AllowedPattern: '^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$'
+    ConstraintDescription: >-
+      Quick Start bucket name can include numbers, lowercase letters, uppercase
+      letters, and hyphens (-). It cannot start or end with a hyphen (-).
+    Description: S3 bucket name hosting the Quickstart templates.
+    Type: String
+    Default: aws-quickstart
+  QSS3BucketRegion:
+    Default: eu-central-1
+    Description: >-
+      The AWS Region where the Quick Start S3 bucket (QSS3BucketName) is hosted.
+      When using your own bucket, you must specify this value.
+    Type: String
+    AllowedPattern: (us(-gov)?|ap|ca|cn|eu|sa)-(central|(north|south)?(east|west)?)-\d
+    ConstraintDescription: Quick Start bucket region must be a valid AWS Region code.
+  QSS3KeyPrefix:
+    AllowedPattern: '^[0-9a-zA-Z-/]*/$'
+    ConstraintDescription: >-
+      Quick Start key prefix can include numbers, lowercase letters, uppercase
+      letters, and hyphens (-), and ending with a slash(/).
+    Default: quickstart-uipath-robot/
+    Description: S3 key prefix under which Quick Start templates are hosted.
+    Type: String
+Conditions:
+  UsingDefaultBucket: !Equals
+    - !Ref QSS3BucketName
+    - aws-quickstart
+Resources:
+  NetworkStack:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL: !Sub 
+        - >-
+          https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}submodules/quickstart-aws-vpc/templates/aws-vpc.template
+        - S3Bucket: !If 
+            - UsingDefaultBucket
+            - !Sub '${QSS3BucketName}-${AWS::Region}'
+            - !Ref QSS3BucketName
+          S3Region: !If 
+            - UsingDefaultBucket
+            - !Ref 'AWS::Region'
+            - !Ref QSS3BucketRegion
+      Parameters:
+        AvailabilityZones: !Join 
+          - ','
+          - !Ref AvailabilityZones
+        NumberOfAZs: !Ref NumberOfAZs
+        VPCCIDR: !Ref VPCCIDR
+        CreatePrivateSubnets: 'true'
+        CreateAdditionalPrivateSubnets: 'true'
+        KeyPairName: !Ref KeyPairName
+        PublicSubnetTag1: !Ref PublicSubnetTag1
+        PublicSubnetTag2: !Ref PublicSubnetTag2
+        PublicSubnetTag3: !Ref PublicSubnetTag3
+        PrivateSubnetATag1: !Ref PrivateSubnetTag1
+        PrivateSubnetBTag1: !Ref PrivateSubnetTag2
+        PrivateSubnetBTag2: !Ref PrivateSubnetTag3
+  LambdaRoleStack:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL: !Sub 
+        - >-
+          https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/lambda-role.template.yaml
+        - S3Bucket: !If 
+            - UsingDefaultBucket
+            - !Sub '${QSS3BucketName}-${AWS::Region}'
+            - !Ref QSS3BucketName
+          S3Region: !If 
+            - UsingDefaultBucket
+            - !Ref 'AWS::Region'
+            - !Ref QSS3BucketRegion
+  SecurityStack:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL: !Sub 
+        - >-
+          https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/security.template.yaml
+        - S3Bucket: !If 
+            - UsingDefaultBucket
+            - !Sub '${QSS3BucketName}-${AWS::Region}'
+            - !Ref QSS3BucketName
+          S3Region: !If 
+            - UsingDefaultBucket
+            - !Ref 'AWS::Region'
+            - !Ref QSS3BucketRegion
+      Parameters:
+        VPCID: !GetAtt 
+          - NetworkStack
+          - Outputs.VPCID
+        VPCCIDR: !Ref VPCCIDR
+  FindAMIFunction:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Description: Finds a matching AMI Id
+      Handler: index.handler
+      Role: !GetAtt 
+        - LambdaRoleStack
+        - Outputs.CustomLambdaRoleArn
+      Code:
+        ZipFile: !Join 
+          - |+
+
+          - - import boto3
+            - import json
+            - import cfnresponse
+            - 'def create(properties, physical_id):'
+            - '    regionName = properties[''RegionName'']'
+            - '    imageName = properties[''ImageName'']'
+            - '    architecture = properties[''Architecture'']'
+            - '    virtualizationType = properties[''VirtualizationType'']'
+            - '    owners = properties[''Owners'']'
+            - '    imageId = '''''
+            - '    ec2 = boto3.client(''ec2'', regionName)'
+            - '    images = ec2.describe_images('
+            - '        ExecutableUsers=[''all''],'
+            - '        Filters=['
+            - '            { ''Name'': ''name'', ''Values'': [imageName] },'
+            - '            { ''Name'': ''state'', ''Values'': [''available''] },'
+            - '            { ''Name'': ''architecture'', ''Values'': [architecture] },'
+            - '            { ''Name'': ''virtualization-type'', ''Values'': [virtualizationType] }'
+            - '        ],'
+            - '        Owners=[owners]'
+            - '    )[''Images'']'
+            - '    if len(images) > 0:'
+            - '        imageId = images[0][''ImageId'']'
+            - '    print(regionName, imageId)'
+            - '    returnAttribute = {}'
+            - '    returnAttribute[''ImageId''] = imageId'
+            - '    returnAttribute[''Action''] = ''CREATE'''
+            - '    return cfnresponse.SUCCESS, imageId, returnAttribute'
+            - 'def update(properties, physical_id):'
+            - '    imageId = physical_id'
+            - '    returnAttribute = {}'
+            - '    returnAttribute[''ImageId''] = imageId'
+            - '    returnAttribute[''Action''] = ''UPDATE'''
+            - '    return cfnresponse.SUCCESS, imageId, returnAttribute'
+            - 'def delete(properties, physical_id):'
+            - '    imageId = physical_id'
+            - '    returnAttribute = {}'
+            - '    returnAttribute[''ImageId''] = imageId'
+            - '    returnAttribute[''Action''] = ''DELETE'''
+            - '    return cfnresponse.SUCCESS, imageId, returnAttribute'
+            - 'def handler(event, context):'
+            - '    print(''Received event: '' + json.dumps(event))'
+            - '    status = cfnresponse.FAILED'
+            - '    new_physical_id = None'
+            - '    returnAttribute = {}'
+            - '    try:'
+            - '        properties = event.get(''ResourceProperties'')'
+            - '        physical_id = event.get(''PhysicalResourceId'')'
+            - '        status, new_physical_id, returnAttribute = {'
+            - '            ''Create'': create,'
+            - '            ''Update'': update,'
+            - '            ''Delete'': delete'
+            - '        }.get(event[''RequestType''], lambda x, y: (cfnresponse.FAILED, None))(properties, physical_id)'
+            - '    except Exception as e:'
+            - '        print(''Exception: '' + str(e))'
+            - '        status = cfnresponse.FAILED'
+            - '    finally:'
+            - '        cfnresponse.send(event, context, status, returnAttribute, new_physical_id)'
+      Runtime: python3.6
+      Timeout: 30
+      TracingConfig:
+        Mode: Active
+  ServerStack:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL: !Sub 
+        - >-
+          https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/server.template.yaml
+        - S3Bucket: !If 
+            - UsingDefaultBucket
+            - !Sub '${QSS3BucketName}-${AWS::Region}'
+            - !Ref QSS3BucketName
+          S3Region: !If 
+            - UsingDefaultBucket
+            - !Ref 'AWS::Region'
+            - !Ref QSS3BucketRegion
+      Parameters:
+        PrivateSubnetID: !GetAtt NetworkStack.Outputs.PrivateSubnet1AID
+        PublicSubnetID: !GetAtt NetworkStack.Outputs.PublicSubnet1ID
+        GatewaySecurityGroup: !GetAtt
+          - SecurityStack
+          - Outputs.SecurityGroup
+        KeyPairName: !Ref KeyPairName
+        InstanceType: !Ref InstanceType
+        FindAMIFunctionArn: !GetAtt 
+          - FindAMIFunction
+          - Arn
+        AdminPassword: !Ref AdminPassword
+        RobotType: !Ref RobotType
+        RobotVersion: !Ref RobotVersion
+        QSS3BucketName: !Ref QSS3BucketName
+        QSS3BucketRegion: !Ref QSS3BucketRegion
+        QSS3KeyPrefix: !Ref QSS3KeyPrefix
+        OrchestratorURL: !Ref OrchestratorURL
+        OrchestratorTenant: !Ref OrchestratorTenant
+        OrchestratorAPIUser: !Ref OrchestratorAPIUser
+        OrchestratorAPIPassword: !Ref OrchestratorAPIPassword
+Outputs:
+  BastionHostPublicIP:
+    Description: Public IP of Bastion host in Public Subnet 1
+    Value: !GetAtt 
+      - ServerStack
+      - Outputs.BastionHostPublicIP
+  UiPathRobotPrivateIP:
+    Description: Private IP of UiPath Robot in Private Subnet 1
+    Value: !GetAtt 
+      - ServerStack
+      - Outputs.UiPathRobotPrivateIP
+

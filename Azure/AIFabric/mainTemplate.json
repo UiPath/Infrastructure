@@ -1,0 +1,843 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "resourceName": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the managed Kubernetes cluster"
+      }
+    },
+    "licenseField": {
+      "type": "string",
+      "metadata": {
+        "description": "AI Fabric license"
+      }
+    },
+    "cpusize": {
+      "type": "string",
+      "defaultValue": "Standard_D8s_v3",
+      "allowedValues": [
+        "Standard_D8s_v3",
+        "Standard_D32s_v3",
+        "Standard_F8s_v2",
+        "Standard_F16s_v2"
+      ],
+      "metadata": {
+        "description": "Size of the machine without GPU"
+      }
+    },
+    "gputype": {
+      "type": "string",
+      "defaultValue": "Standard_NC6",
+      "allowedValues": [
+        "Standard_NC6",
+        "Standard_NC12"
+      ],
+      "metadata": {
+        "description": "Size of the machine with GPU"
+      }
+    },
+    "orchestratorEndpoint": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "URL of the Orchestrator instance"
+      }
+    },
+    "identityEndpoint": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "URL of the Identity server instance"
+      }
+    },
+    "jwtToken": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Orchestrator installation access token"
+      }
+    },
+    "sqlAdministratorLogin": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "The administrator username of the SQL logical server."
+      }
+    },
+    "sqlAdministratorLoginPassword": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "The administrator password of the SQL logical server."
+      }
+    },
+    "exposeKotsAdmin": {
+      "type": "string",
+      "allowedValues": [
+        "yes",
+        "no"
+      ],
+      "metadata": {
+        "description": "Expose kots admin"
+      }
+    },
+    "kotsAdminPassword": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "The administrator password of the kots admin interface."
+      }
+    },
+    "acrSKU": {
+      "type": "string",
+      "defaultValue": "Basic",
+      "allowedValues": [
+        "Basic",
+        "Standard",
+        "Premium"
+      ],
+      "metadata": {
+        "description": "Container Registry SKU"
+      }
+    },
+    "identity": {
+      "type": "object",
+      "defaultValue": {}
+    },
+    "kubernetesVersion": {
+      "defaultValue": "1.19.6",
+      "type": "string",
+      "allowedValues": [
+        "1.19.6",
+        "1.19.3",
+        "1.18.14",
+        "1.18.10",
+        "1.17.16",
+        "1.16.15",
+        "1.16.13"
+      ],
+      "metadata": {
+        "description": "AKS Kubernetes version"
+      }
+    },
+    "tagsByResource": {
+      "type": "object",
+      "defaultValue": {}
+    },
+    "utcValue": {
+      "type": "string",
+      "defaultValue": "[utcNow()]"
+    }
+  },
+  "variables": {
+    "resourceRoot": "aifabric",
+    "apiVersion": {
+      "aks": "2020-06-01",
+      "acr": "2019-05-01",
+      "la": "2020-08-01",
+      "blobContainer": "2019-06-01",
+      "network": "2020-07-01",
+      "storage": "2019-06-01"
+    },
+    "databasetype": "single",
+    "analytics": {
+      "laWorkspaceName": "[concat(variables('resourceRoot'),'-laws')]",
+      "aiName": "[concat(variables('resourceRoot'),'-applogs')]"
+    },
+    "vNetPeerSelector": {
+      "id": null,
+      "location": null,
+      "name": null
+    },
+    "maxPods": 30,
+    "osDiskSizeGB": 256,
+    "serviceCidr": "10.0.10.0/24",
+    "subnetPrefix": "10.0.11.0/24",
+    "dnsServiceIP": "10.0.10.10",
+    "vnetAddressPrefix": "10.0.0.0/16",
+    "dockerBridgeCidr": "172.17.0.1/16",
+    "KS": "aif-core/azureunstable",
+    "sqlServerName": "[uniqueString('sql', resourceGroup().id)]",
+    "vnetName": "[concat(variables('resourceRoot'),'-vnet')]",
+    "subnetName": "default",
+    "storageAccounts": {
+      "aifStorage": "[concat('aif', uniqueString(resourceGroup().id))]",
+      "aifTraining": "[concat('training', uniqueString(resourceGroup().id))]",
+      "aifTrainingArtifacts": "[concat('artifacts', uniqueString(resourceGroup().id))]"
+    },
+    "container1Name": "aifabric-staging",
+    "container2Name": "ml-model-files",
+    "logContainer": "deploymentlogs",
+    "acrName": "[concat('aif', uniqueString(resourceGroup().id))]",
+    "netAgentPoolProfiles": {
+      "vnetSubnetId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnetName'), variables('subnetName'))]"
+    },
+    "agentPoolProfiles": [
+      {
+        "nodeCount": 3,
+        "nodeVmSize": "[parameters('cpusize')]",
+        "taints": null,
+        "availabilityZones": [
+          "1",
+          "2",
+          "3"
+        ],
+        "enableAutoScaling": true,
+        "maxCount": 6,
+        "minCount": 3,
+        "mode": "System"
+      },
+      {
+        "nodeCount": 1,
+        "nodeVmSize": "[parameters('gputype')]",
+        "taints": [
+          "nvidia.com/gpu=present:NoSchedule"
+        ],
+        "availabilityZones": null,
+        "enableAutoScaling": true,
+        "maxCount": 3,
+        "minCount": 1,
+        "mode": "User"
+      }
+    ]
+  },
+  "resources": [
+    {
+      "apiVersion": "2014-04-01",
+      "name": "[variables('analytics').aiName]",
+      "type": "Microsoft.Insights/components",
+      "tags": "[ if(contains(parameters('tagsByResource'), 'Microsoft.ContainerService/managedClusters'), parameters('tagsByResource')['Microsoft.ContainerService/managedClusters'], json('{}')) ]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "applicationId": "[variables('analytics').aiName]"
+      }
+    },
+    {
+      "type": "Microsoft.OperationalInsights/workspaces",
+      "name": "[variables('analytics').laWorkspaceName]",
+      "apiVersion": "[variables('apiVersion').la]",
+      "location": "[resourceGroup().location]",
+      "tags": "[ if(contains(parameters('tagsByResource'), 'Microsoft.ContainerService/managedClusters'), parameters('tagsByResource')['Microsoft.ContainerService/managedClusters'], json('{}')) ]",
+      "properties": {
+        "sku": {
+          "name": "pergb2018"
+        },
+        "retentionInDays": 120,
+        "features": {
+          "searchVersion": 1,
+          "legacy": 0,
+          "enableLogAccessUsingOnlyResourcePermissions": true
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "sku": {
+        "name": "Standard_LRS",
+        "tier": "Standard"
+      },
+      "kind": "StorageV2",
+      "name": "[variables('storageAccounts').aifStorage]",
+      "apiVersion": "[variables('apiVersion').storage]",
+      "location": "[resourceGroup().location]",
+      "tags": "[ if(contains(parameters('tagsByResource'), 'Microsoft.ContainerService/managedClusters'), parameters('tagsByResource')['Microsoft.ContainerService/managedClusters'], json('{}')) ]",
+      "resources": [
+        {
+          "type": "blobServices/containers",
+          "apiVersion": "[variables('apiVersion').blobContainer]",
+          "name": "[concat('default/', variables('logContainer'))]",
+          "tags": "[ if(contains(parameters('tagsByResource'), 'Microsoft.ContainerService/managedClusters'), parameters('tagsByResource')['Microsoft.ContainerService/managedClusters'], json('{}')) ]",
+          "dependsOn": [
+            "[variables('storageAccounts').aifStorage]"
+          ],
+          "properties": {
+            "publicAccess": "None"
+          }
+        },
+        {
+          "type": "blobServices/containers",
+          "apiVersion": "[variables('apiVersion').blobContainer]",
+          "tags": "[ if(contains(parameters('tagsByResource'), 'Microsoft.ContainerService/managedClusters'), parameters('tagsByResource')['Microsoft.ContainerService/managedClusters'], json('{}')) ]",
+          "name": "[concat('default/', variables('container1Name'))]",
+          "dependsOn": [
+            "[variables('storageAccounts').aifStorage]"
+          ],
+          "properties": {
+            "publicAccess": "None"
+          }
+        },
+        {
+          "type": "blobServices/containers",
+          "apiVersion": "[variables('apiVersion').blobContainer]",
+          "tags": "[ if(contains(parameters('tagsByResource'), 'Microsoft.ContainerService/managedClusters'), parameters('tagsByResource')['Microsoft.ContainerService/managedClusters'], json('{}')) ]",
+          "name": "[concat('default/', variables('Container2Name'))]",
+          "dependsOn": [
+            "[variables('storageAccounts').aifStorage]"
+          ],
+          "properties": {
+            "publicAccess": "None"
+          }
+        }
+      ],
+      "dependsOn": [
+
+      ]
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/blobServices",
+      "apiVersion": "[variables('apiVersion').storage]",
+      "name": "[concat(variables('storageAccounts').aifStorage, '/default')]",
+      "tags": "[ if(contains(parameters('tagsByResource'), 'Microsoft.ContainerService/managedClusters'), parameters('tagsByResource')['Microsoft.ContainerService/managedClusters'], json('{}')) ]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccounts').aifStorage)]"
+      ],
+      "sku": {
+        "name": "Standard_LRS",
+        "tier": "Standard"
+      },
+      "properties": {
+        "cors": {
+          "corsRules": [
+            {
+              "allowedOrigins": [
+                "*"
+              ],
+              "allowedMethods": [
+                "DELETE",
+                "GET",
+                "HEAD",
+                "POST",
+                "MERGE",
+                "OPTIONS",
+                "PUT",
+                "PATCH"
+              ],
+              "maxAgeInSeconds": 0,
+              "exposedHeaders": [
+                "*"
+              ],
+              "allowedHeaders": [
+                "*"
+              ]
+            }
+          ]
+        },
+        "deleteRetentionPolicy": {
+          "enabled": false
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "sku": {
+        "name": "Standard_LRS",
+        "tier": "Standard"
+      },
+      "kind": "StorageV2",
+      "name": "[variables('storageAccounts').aifTraining]",
+      "apiVersion": "[variables('apiVersion').storage]",
+      "location": "[resourceGroup().location]",
+      "tags": "[ if(contains(parameters('tagsByResource'), 'Microsoft.ContainerService/managedClusters'), parameters('tagsByResource')['Microsoft.ContainerService/managedClusters'], json('{}')) ]",
+      "resources": [
+
+      ],
+      "dependsOn": [
+
+      ]
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/blobServices",
+      "apiVersion": "[variables('apiVersion').storage]",
+      "name": "[concat(variables('storageAccounts').aifTraining, '/default')]",
+      "tags": "[ if(contains(parameters('tagsByResource'), 'Microsoft.ContainerService/managedClusters'), parameters('tagsByResource')['Microsoft.ContainerService/managedClusters'], json('{}')) ]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccounts').aifTraining)]"
+      ],
+      "sku": {
+        "name": "Standard_LRS",
+        "tier": "Standard"
+      },
+      "properties": {
+        "cors": {
+          "corsRules": [
+            {
+              "allowedOrigins": [
+                "*"
+              ],
+              "allowedMethods": [
+                "DELETE",
+                "GET",
+                "HEAD",
+                "POST",
+                "MERGE",
+                "OPTIONS",
+                "PUT",
+                "PATCH"
+              ],
+              "maxAgeInSeconds": 0,
+              "exposedHeaders": [
+                "*"
+              ],
+              "allowedHeaders": [
+                "*"
+              ]
+            }
+          ]
+        },
+        "deleteRetentionPolicy": {
+          "enabled": false
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "sku": {
+        "name": "Standard_LRS",
+        "tier": "Standard"
+      },
+      "kind": "StorageV2",
+      "name": "[variables('storageAccounts').aifTrainingArtifacts]",
+      "apiVersion": "[variables('apiVersion').storage]",
+      "location": "[resourceGroup().location]",
+      "tags": "[ if(contains(parameters('tagsByResource'), 'Microsoft.ContainerService/managedClusters'), parameters('tagsByResource')['Microsoft.ContainerService/managedClusters'], json('{}')) ]",
+      "resources": [
+
+      ],
+      "dependsOn": [
+
+      ]
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/blobServices",
+      "apiVersion": "[variables('apiVersion').storage]",
+      "name": "[concat(variables('storageAccounts').aifTrainingArtifacts, '/default')]",
+      "tags": "[ if(contains(parameters('tagsByResource'), 'Microsoft.ContainerService/managedClusters'), parameters('tagsByResource')['Microsoft.ContainerService/managedClusters'], json('{}')) ]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccounts').aifTrainingArtifacts)]"
+      ],
+      "sku": {
+        "name": "Standard_LRS",
+        "tier": "Standard"
+      },
+      "properties": {
+        "cors": {
+          "corsRules": [
+            {
+              "allowedOrigins": [
+                "*"
+              ],
+              "allowedMethods": [
+                "DELETE",
+                "GET",
+                "HEAD",
+                "POST",
+                "MERGE",
+                "OPTIONS",
+                "PUT",
+                "PATCH"
+              ],
+              "maxAgeInSeconds": 0,
+              "exposedHeaders": [
+                "*"
+              ],
+              "allowedHeaders": [
+                "*"
+              ]
+            }
+          ]
+        },
+        "deleteRetentionPolicy": {
+          "enabled": false
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Sql/servers",
+      "apiVersion": "2019-06-01-preview",
+      "name": "[variables('sqlServerName')]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "administratorLogin": "[parameters('sqlAdministratorLogin')]",
+        "administratorLoginPassword": "[parameters('sqlAdministratorLoginPassword')]",
+        "version": "12.0"
+      },
+      "resources": [
+        {
+          "type": "firewallRules",
+          "apiVersion": "2015-05-01-preview",
+          "name": "AllowAllWindowsAzureIps",
+          "location": "[resourceGroup().location]",
+          "dependsOn": [
+            "[resourceId('Microsoft.Sql/servers', variables('sqlServerName'))]"
+          ],
+          "properties": {
+            "endIpAddress": "0.0.0.0",
+            "startIpAddress": "0.0.0.0"
+          }
+        },
+        {
+          "type": "connectionPolicies",
+          "apiVersion": "2014-04-01",
+          "name": "Default",
+          "dependsOn": [
+            "[resourceId('Microsoft.Sql/servers', variables('sqlServerName'))]"
+          ],
+          "properties": {
+            "connectionType": "Default"
+          }
+        },
+        {
+          "type": "databases",
+          "apiVersion": "2019-06-01-preview",
+          "name": "aifabric",
+          "location": "[resourceGroup().location]",
+          "dependsOn": [
+            "[resourceId('Microsoft.Sql/servers', variables('sqlServerName'))]"
+          ],
+          "properties": {
+            "edition": "Basic",
+            "requestedServiceObjectiveName": "Basic",
+            "collation": "SQL_Latin1_General_CP1_CI_AS"
+          },
+          "sku": {
+            "name": "S2",
+            "tier": "Standard"
+          }
+        }
+      ]
+    },
+    {
+      "apiVersion": "[variables('apiVersion').network]",
+      "type": "Microsoft.Network/virtualNetworks",
+      "tags": "[ if(contains(parameters('tagsByResource'), 'Microsoft.ContainerService/managedClusters'), parameters('tagsByResource')['Microsoft.ContainerService/managedClusters'], json('{}')) ]",
+      "name": "[variables('vnetName')]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "[variables('vnetAddressPrefix')]"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "[variables('subnetName')]",
+            "properties": {
+              "addressPrefix": "[variables('subnetPrefix')]"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "[variables('apiVersion').acr]",
+      "type": "Microsoft.ContainerRegistry/registries",
+      "tags": "[ if(contains(parameters('tagsByResource'), 'Microsoft.ContainerService/managedClusters'), parameters('tagsByResource')['Microsoft.ContainerService/managedClusters'], json('{}')) ]",
+      "name": "[variables('acrName')]",
+      "location": "[resourceGroup().location]",
+      "sku": {
+        "name": "[parameters('acrSKU')]"
+      },
+      "properties": {
+        "adminUserEnabled": true
+      }
+    },
+    {
+      "apiVersion": "[variables('apiVersion').aks]",
+      "type": "Microsoft.ContainerService/managedClusters",
+      "tags": "[ if(contains(parameters('tagsByResource'), 'Microsoft.ContainerService/managedClusters'), parameters('tagsByResource')['Microsoft.ContainerService/managedClusters'], json('{}')) ]",
+      "name": "[parameters('resourceName')]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "nodeResourceGroup": "[concat(parameters('resourceName'),'-worker')]",
+        "kubernetesVersion": "[parameters('kubernetesVersion')]",
+        "enableRBAC": true,
+        "dnsPrefix": "[parameters('resourceName')]",
+        "addonProfiles": {
+          "kubeDashboard": {
+            "enabled": false
+          },
+          "omsagent": {
+            "enabled": true,
+            "config": {
+              "logAnalyticsWorkspaceResourceID": "[resourceId('Microsoft.OperationalInsights/workspaces/',variables('analytics').laWorkspaceName)]"
+            }
+          }
+        },
+        "copy": [
+          {
+            "name": "agentPoolProfiles",
+            "count": "[length(variables('agentPoolProfiles'))]",
+            "input": {
+              "name": "[concat('nodepool',add(copyIndex('agentPoolProfiles'),1))]",
+              "maxPods": "[variables('maxPods')]",
+              "osDiskSizeGB": "[variables('osDiskSizeGB')]",
+              "count": "[variables('agentPoolProfiles')[copyIndex('agentPoolProfiles')].nodeCount]",
+              "vmSize": "[variables('agentPoolProfiles')[copyIndex('agentPoolProfiles')].nodeVmSize]",
+              "osType": "Linux",
+              "vnetSubnetID": "[variables('netAgentPoolProfiles').vnetSubnetId]",
+              "nodeTaints": "[variables('agentPoolProfiles')[copyIndex('agentPoolProfiles')].taints]",
+              "enableAutoScaling": "[if(variables('agentPoolProfiles')[copyIndex('agentPoolProfiles')].enableAutoScaling, variables('agentPoolProfiles')[copyIndex('agentPoolProfiles')].enableAutoScaling, json('null'))]",
+              "maxCount": "[if(variables('agentPoolProfiles')[copyIndex('agentPoolProfiles')].enableAutoScaling, variables('agentPoolProfiles')[copyIndex('agentPoolProfiles')].maxCount, json('null'))]",
+              "minCount": "[if(variables('agentPoolProfiles')[copyIndex('agentPoolProfiles')].enableAutoScaling, variables('agentPoolProfiles')[copyIndex('agentPoolProfiles')].minCount, json('null'))]",
+              "type": "VirtualMachineScaleSets",
+              "mode": "[variables('agentPoolProfiles')[copyIndex('agentPoolProfiles')].mode]"
+            }
+          }
+        ],
+        "networkProfile": {
+          "loadBalancerSku": "standard",
+          "networkPlugin": "azure",
+          "networkPolicy": "azure",
+          "serviceCidr": "[variables('serviceCidr')]",
+          "dnsServiceIP": "[variables('dnsServiceIP')]",
+          "dockerBridgeCidr": "[variables('dockerBridgeCidr')]"
+        }
+      },
+      "identity": {
+        "type": "SystemAssigned"
+      }
+    },
+    {
+      "name": "ConnectAKStoACR",
+      "type": "Microsoft.Resources/deployments",
+      "tags": "[ if(contains(parameters('tagsByResource'), 'Microsoft.ContainerService/managedClusters'), parameters('tagsByResource')['Microsoft.ContainerService/managedClusters'], json('{}')) ]",
+      "apiVersion": "2019-10-01",
+      "resourceGroup": "[resourceGroup().name]",
+      "dependsOn": [
+        "[concat('Microsoft.ContainerService/managedClusters/', parameters('resourceName'))]",
+        "[concat('Microsoft.ContainerRegistry/registries/',variables('acrName'))]"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "resources": [
+            {
+              "apiVersion": "2018-09-01-preview",
+              "type": "Microsoft.ContainerRegistry/registries/providers/roleAssignments",
+              "name": "[concat(variables('acrName'), '/Microsoft.Authorization/', guid(variables('acrName')))]",
+              "properties": {
+                "principalId": "[reference(parameters('resourceName'), '2020-03-01').identityProfile.kubeletidentity.objectId]",
+                "roleDefinitionId": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]",
+                "scope": "[resourceId(resourceGroup().name,'Microsoft.ContainerRegistry/registries/', variables('acrName'))]"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deploymentScripts",
+      "tags": "[ if(contains(parameters('tagsByResource'), 'Microsoft.ContainerService/managedClusters'), parameters('tagsByResource')['Microsoft.ContainerService/managedClusters'], json('{}')) ]",
+      "apiVersion": "2019-10-01-preview",
+      "name": "deployAiFabric",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[concat('Microsoft.ContainerService/managedClusters/', parameters('resourceName'))]",
+        "[concat('Microsoft.Resources/deployments/','ConnectAKStoACR')]",
+        "[resourceId('Microsoft.Sql/servers', variables('sqlServerName'))]"
+      ],
+      "kind": "AzureCLI",
+      "identity": {
+        "type": "UserAssigned",
+        "userAssignedIdentities": "[parameters('identity')]"
+      },
+      "properties": {
+        "forceUpdateTag": "[parameters('utcValue')]",
+        "AzCliVersion": "2.2.0",
+        "timeout": "PT30M",
+        "arguments": "[format(concat(' -g {0} -k {1} -d {2} -c {3} -s {4} -p {5} -x {6} -z false -m {7} ', if(and(contains(variables('vNetPeerSelector'),'id'),not(equals(variables('vNetPeerSelector')['id'],json('null')) ) ) ,'-P -O {8} -V {9}','')), resourceGroup().name, parameters('resourceName'), parameters('resourceName'), variables('KS'), parameters('sqlAdministratorLogin'), parameters('sqlAdministratorLoginPassword'),  parameters('exposeKotsAdmin'), variables('databasetype'), if(and(contains(variables('vNetPeerSelector'),'id'),not(equals(variables('vNetPeerSelector')['id'],json('null')))),substring(variables('vNetPeerSelector')['id'], add(indexOf(variables('vNetPeerSelector')['id'], 'resourceGroups'),15),  sub(sub(indexOf(variables('vNetPeerSelector')['id'], 'providers'),indexOf(variables('vNetPeerSelector')['id'], 'resourceGroups')),16)),''), if(and(contains(variables('vNetPeerSelector'),'name'),not(equals(variables('vNetPeerSelector')['name'],json('null')))),variables('vNetPeerSelector')['name'],''))]",
+        "environmentVariables": [
+          {
+            "name": "controlPlaneFQDN",
+            "secureValue": "[reference(resourceId('Microsoft.ContainerService/managedClusters', parameters('resourceName'))).fqdn]"
+          },
+          {
+            "name": "URL",
+            "secureValue": "[parameters('licenseField')]"
+          },
+          {
+            "name": "acrName",
+            "secureValue": "[variables('acrName')]"
+          },
+          {
+            "name": "cpu_instance_type",
+            "secureValue": "[parameters('cpusize')]"
+          },
+          {
+            "name": "gpu_instance_type",
+            "secureValue": "[parameters('gputype')]"
+          },
+          {
+            "name": "acrLoginServer",
+            "secureValue": "[reference(resourceId('Microsoft.ContainerRegistry/registries',variables('acrName')),'2019-05-01').loginServer]"
+          },
+          {
+            "name": "acrLoginKey",
+            "secureValue": "[listCredentials(resourceId('Microsoft.ContainerRegistry/registries',variables('acrName')),'2017-10-01').passwords[0].value]"
+          },
+          {
+            "name": "storageAccountName1",
+            "secureValue": "[variables('storageAccounts').aifStorage]"
+          },
+          {
+            "name": "storageAccountKey1",
+            "secureValue": "[listKeys(resourceid(resourceGroup().name, 'Microsoft.Storage/storageAccounts', variables('storageAccounts').aifStorage), providers('Microsoft.Storage', 'storageAccounts').apiVersions[0]).keys[0].value]"
+          },
+          {
+            "name": "storageAccountName2",
+            "secureValue": "[variables('storageAccounts').aifTraining]"
+          },
+          {
+            "name": "storageAccountKey2",
+            "secureValue": "[listKeys(resourceid(resourceGroup().name, 'Microsoft.Storage/storageAccounts', variables('storageAccounts').aifTraining), providers('Microsoft.Storage', 'storageAccounts').apiVersions[0]).keys[0].value]"
+          },
+          {
+            "name": "storageAccountName3",
+            "secureValue": "[variables('storageAccounts').aifTrainingArtifacts]"
+          },
+          {
+            "name": "storageAccountKey3",
+            "secureValue": "[listKeys(resourceid(resourceGroup().name, 'Microsoft.Storage/storageAccounts', variables('storageAccounts').aifTrainingArtifacts), providers('Microsoft.Storage', 'storageAccounts').apiVersions[0]).keys[0].value]"
+          },
+          {
+            "name": "applicationInsightsKey",
+            "secureValue": "[reference(resourceId('Microsoft.Insights/components', variables('analytics').aiName), '2014-04-01').InstrumentationKey]"
+          },
+          {
+            "name": "RESOURCEGROUP",
+            "secureValue": "[resourceGroup().name]"
+          },
+          {
+            "name": "vNetAddressSpace",
+            "secureValue": "[reference(resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))).addressSpace.addressPrefixes[0]]"
+          },
+          {
+            "name": "db_creation_option",
+            "secureValue": "new"
+          },
+          {
+            "name": "sqlhost",
+            "secureValue": "[concat(variables('sqlServerName'),'.database.windows.net')]"
+          },
+          {
+            "name": "SQL_USERNAME",
+            "secureValue": "[parameters('sqlAdministratorLogin')]"
+          },
+          {
+            "name": "SQL_PASSWORD",
+            "secureValue": "[parameters('sqlAdministratorLoginPassword')]"
+          },
+          {
+            "name": "vnetname",
+            "secureValue": "[variables('vnetName')]"
+          },
+          {
+            "name": "currentVnetAddressSpace",
+            "secureValue": "[variables('vnetAddressPrefix')]"
+          },
+          {
+            "name": "currentSubnetPrefix",
+            "secureValue": "[variables('subnetPrefix')]"
+          },
+          {
+            "name": "kotsAdminPassword",
+            "secureValue": "[parameters('kotsAdminPassword')]"
+          },
+          {
+            "name": "current_aks_version",
+            "secureValue": "[parameters('kubernetesVersion')]"
+          },
+          {
+            "name": "orchestratorEndpoint",
+            "secureValue": "[parameters('orchestratorEndpoint')]"
+          },
+          {
+            "name": "identityEndpoint",
+            "secureValue": "[parameters('identityEndpoint')]"
+          },
+          {
+            "name": "jwtToken",
+            "secureValue": "[parameters('jwtToken')]"
+          },
+          {
+            "name": "licenseField",
+            "secureValue": "[parameters('licenseField')]"
+          }
+        ],
+        "primaryScriptURI": "https://raw.githubusercontent.com/AndreiBarbuOz/uipath-ai-fabric/master/aks-arm/deploy-aks-infrastructure.sh",
+        "cleanupPreference": "OnSuccess",
+        "retentionInterval": "P1D"
+      }
+    }
+  ],
+  "outputs": {
+    "controlPlaneFQDN": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.ContainerService/managedClusters', parameters('resourceName'))).fqdn]"
+    },
+    "acrName": {
+      "type": "string",
+      "value": "[variables('acrName')]"
+    },
+    "acrLoginServer": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.ContainerRegistry/registries',variables('acrName')),'2019-05-01').loginServer]"
+    },
+    "acrLoginKey": {
+      "type": "string",
+      "value": "[listCredentials(resourceId('Microsoft.ContainerRegistry/registries',variables('acrName')),'2017-10-01').passwords[0].value]"
+    },
+    "storageAccountName1": {
+      "type": "string",
+      "value": "[variables('storageAccounts').aifStorage]"
+    },
+    "storageAccountKey1": {
+      "type": "string",
+      "value": "[listKeys(resourceid(resourceGroup().name, 'Microsoft.Storage/storageAccounts', variables('storageAccounts').aifStorage), providers('Microsoft.Storage', 'storageAccounts').apiVersions[0]).keys[0].value]"
+    },
+    "storageAccountName2": {
+      "type": "string",
+      "value": "[variables('storageAccounts').aifTraining]"
+    },
+    "storageAccountKey2": {
+      "type": "string",
+      "value": "[listKeys(resourceid(resourceGroup().name, 'Microsoft.Storage/storageAccounts', variables('storageAccounts').aifTraining), providers('Microsoft.Storage', 'storageAccounts').apiVersions[0]).keys[0].value]"
+    },
+    "storageAccountName3": {
+      "type": "string",
+      "value": "[variables('storageAccounts').aifTrainingArtifacts]"
+    },
+    "storageAccountKey3": {
+      "type": "string",
+      "value": "[listKeys(resourceid(resourceGroup().name, 'Microsoft.Storage/storageAccounts', variables('storageAccounts').aifTrainingArtifacts), providers('Microsoft.Storage', 'storageAccounts').apiVersions[0]).keys[0].value]"
+    },
+    "applicationInsightsKey": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Insights/components', variables('analytics').aiName), '2014-04-01').InstrumentationKey]"
+    },
+    "RESOURCEGROUP": {
+      "type": "string",
+      "value": "[resourceGroup().name]"
+    },
+    "sqlhost": {
+      "type": "string",
+      "value": "[concat(variables('sqlServerName'),'.database.windows.net')]"
+    },
+    "vnetname": {
+      "type": "string",
+      "value": "[variables('vnetName')]"
+    },
+    "vNetAddresses": {
+      "type": "array",
+      "value": "[reference(resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))).addressSpace.addressPrefixes]"
+    },
+    "vNetAddressSpace": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))).addressSpace.addressPrefixes[0]]"
+    }
+  }
+}

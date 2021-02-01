@@ -1,0 +1,53 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "resourceName": {
+      "value": "aifabric"
+    },
+    "licenseField": {
+      "value": ""
+    },
+    "cpusize": {
+      "value": "Standard_D8s_v3"
+    },
+    "gputype": {
+      "value": "Standard_NC6"
+    },
+    "orchestratorEndpoint": {
+      "value": ""
+    },
+    "identityEndpoint": {
+      "value": ""
+    },
+    "jwtToken": {
+      "value": ""
+    },
+    "sqlAdministratorLogin": {
+      "value": ""
+    },
+    "sqlAdministratorLoginPassword": {
+      "value": ""
+    },
+    "exposeKotsAdmin": {
+      "value": "yes"
+    },
+    "kotsAdminPassword": {
+      "value": ""
+    },
+    "acrSKU": {
+      "value": "Basic"
+    },
+    "identity": {
+      "value": {
+        "/subscriptions/==sub-guid==/resourceGroups/==rg==/providers/Microsoft.ManagedIdentity/userAssignedIdentities/==msi==": {}
+      }
+    },
+    "kubernetesVersion": {
+      "value": "1.19.6"
+    },
+    "tagsByResource": {
+      "value": {}
+    }
+  }
+}
