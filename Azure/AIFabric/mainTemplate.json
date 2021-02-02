@@ -42,14 +42,14 @@
       "type": "string",
       "defaultValue": "",
       "metadata": {
-        "description": "URL of the Orchestrator instance"
+        "description": "Hostname of the Orchestrator instance. Use format www.example.com"
       }
     },
     "identityEndpoint": {
       "type": "string",
       "defaultValue": "",
       "metadata": {
-        "description": "URL of the Identity server instance"
+        "description": "Hostname of the Identity server instance. Use format www.example.com"
       }
     },
     "jwtToken": {
@@ -63,14 +63,14 @@
       "type": "string",
       "defaultValue": "",
       "metadata": {
-        "description": "The administrator username of the SQL logical server."
+        "description": "The administrator username of the SQL logical server"
       }
     },
     "sqlAdministratorLoginPassword": {
       "type": "securestring",
       "defaultValue": "",
       "metadata": {
-        "description": "The administrator password of the SQL logical server."
+        "description": "The administrator password of the SQL logical server"
       }
     },
     "exposeKotsAdmin": {
@@ -80,40 +80,27 @@
         "no"
       ],
       "metadata": {
-        "description": "Expose kots admin"
+        "description": "Expose Kots admin"
       }
     },
     "kotsAdminPassword": {
       "type": "securestring",
       "defaultValue": "",
       "metadata": {
-        "description": "The administrator password of the kots admin interface."
-      }
-    },
-    "acrSKU": {
-      "type": "string",
-      "defaultValue": "Basic",
-      "allowedValues": [
-        "Basic",
-        "Standard",
-        "Premium"
-      ],
-      "metadata": {
-        "description": "Container Registry SKU"
+        "description": "The administrator password of the Kots admin interface"
       }
     },
     "identity": {
       "type": "object",
-      "defaultValue": {}
+      "defaultValue": {},
+      "metadata": {
+        "description" :"Azure User assigned managed identity under which to execute the the deployment script. Please refer to README for more info"
+      }
     },
     "kubernetesVersion": {
-      "defaultValue": "1.19.6",
+      "defaultValue": "1.17.16",
       "type": "string",
       "allowedValues": [
-        "1.19.6",
-        "1.19.3",
-        "1.18.14",
-        "1.18.10",
         "1.17.16",
         "1.16.15",
         "1.16.13"
@@ -125,10 +112,6 @@
     "tagsByResource": {
       "type": "object",
       "defaultValue": {}
-    },
-    "utcValue": {
-      "type": "string",
-      "defaultValue": "[utcNow()]"
     }
   },
   "variables": {
@@ -158,6 +141,7 @@
     "dnsServiceIP": "10.0.10.10",
     "vnetAddressPrefix": "10.0.0.0/16",
     "dockerBridgeCidr": "172.17.0.1/16",
+    "acrSKU": "Premium",
     "KS": "aif-core/azureunstable",
     "sqlServerName": "[uniqueString('sql', resourceGroup().id)]",
     "vnetName": "[concat(variables('resourceRoot'),'-vnet')]",
@@ -537,7 +521,7 @@
       "name": "[variables('acrName')]",
       "location": "[resourceGroup().location]",
       "sku": {
-        "name": "[parameters('acrSKU')]"
+        "name": "[variables('acrSKU')]"
       },
       "properties": {
         "adminUserEnabled": true
@@ -646,7 +630,6 @@
         "userAssignedIdentities": "[parameters('identity')]"
       },
       "properties": {
-        "forceUpdateTag": "[parameters('utcValue')]",
         "AzCliVersion": "2.2.0",
         "timeout": "PT30M",
         "arguments": "[format(concat(' -g {0} -k {1} -d {2} -c {3} -s {4} -p {5} -x {6} -z false -m {7} ', if(and(contains(variables('vNetPeerSelector'),'id'),not(equals(variables('vNetPeerSelector')['id'],json('null')) ) ) ,'-P -O {8} -V {9}','')), resourceGroup().name, parameters('resourceName'), parameters('resourceName'), variables('KS'), parameters('sqlAdministratorLogin'), parameters('sqlAdministratorLoginPassword'),  parameters('exposeKotsAdmin'), variables('databasetype'), if(and(contains(variables('vNetPeerSelector'),'id'),not(equals(variables('vNetPeerSelector')['id'],json('null')))),substring(variables('vNetPeerSelector')['id'], add(indexOf(variables('vNetPeerSelector')['id'], 'resourceGroups'),15),  sub(sub(indexOf(variables('vNetPeerSelector')['id'], 'providers'),indexOf(variables('vNetPeerSelector')['id'], 'resourceGroups')),16)),''), if(and(contains(variables('vNetPeerSelector'),'name'),not(equals(variables('vNetPeerSelector')['name'],json('null')))),variables('vNetPeerSelector')['name'],''))]",

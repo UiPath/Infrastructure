@@ -55,15 +55,15 @@ az deployment group create --resource-group resource-group --template-file mainT
 | kubernetesVersion | string | AKS kubernetes version |
 | cpusize | string | Azure VM size for cluster nodes without GPU |
 | gputype | string | Azure VM size for cluster nodes with GPU |
-| orchestratorEndpoint | string | URL of orchestrator |
-| identityEndpoint | string | URL of identity server |
+| orchestratorEndpoint | string | Hostname of Orchestrator |
+| identityEndpoint | string | Hostname of Identity Server |
 | jwtToken | string | Orchestrator installation access token |
 | sqlAdministratorLogin | string | SQL admin login |
 | sqlAdministratorLoginPassword | string | SQL admin password |
 | exposeKotsAdmin | string | yes/no |
 | kotsAdminPassword | string | Password for KOTS access |
 | acrSKU | string | ACR SKU |
-| identity | object | User assigned identity. Please see [sample](mainTemplate.parameters.json) for format |
+| identity | object | User assigned identity. Please see [sample](mainTemplate.parameters.json) for format. More information in the ARM docs [here](https://docs.microsoft.com/en-us/azure/templates/microsoft.resources/deploymentscripts#userassignedidentities-object) |
 | tagsByResource | object | sample: "Microsoft.ContainerService/managedClusters": { "Project": "projectName", "Owner": "john.doe@example.com"} |
 
 ## Troubleshooting
