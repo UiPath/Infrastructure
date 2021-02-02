@@ -35,16 +35,13 @@
     "kotsAdminPassword": {
       "value": ""
     },
-    "acrSKU": {
-      "value": "Basic"
-    },
     "identity": {
       "value": {
         "/subscriptions/==sub-guid==/resourceGroups/==rg==/providers/Microsoft.ManagedIdentity/userAssignedIdentities/==msi==": {}
       }
     },
     "kubernetesVersion": {
-      "value": "1.19.6"
+      "value": "1.17.16"
     },
     "tagsByResource": {
       "value": {}
