@@ -78,6 +78,12 @@
                 "description": "SQL connection type."
             }
         },
+        "isTestAutomationEnabled": {
+            "type": "bool",
+            "metadata": {
+                "description": "Flag to enable Test Automation feature in Orchestrator"
+            }
+        },
         "EnableHAA": {
             "type": "Bool",
             "metadata": {
@@ -86,9 +92,9 @@
         },
         "orchestratorVersion": {
             "type": "string",
-            "defaultValue": "20.10.1",
+            "defaultValue": "20.10.5",
             "allowedValues": [
-                "20.10.1"
+                "20.10.5"
             ],
             "metadata": {
                 "description": "Version of the Orchestrator"
@@ -166,7 +172,7 @@
             "type": "Microsoft.Storage/storageAccounts",
             "name": "[parameters('storageAccountName')]",
             "tags": "[ if(contains(parameters('tagsByResource'), 'Microsoft.Storage/storageAccounts'), parameters('tagsByResource')['Microsoft.Storage/storageAccounts'], json('{}')) ]",
-            "apiVersion": "2018-11-01",
+            "apiVersion": "2019-06-01",
             "location": "[parameters('location')]",
             "sku": {
                 "name": "[variables('storageAccountType')]"
@@ -213,12 +219,35 @@
                             "name": "Default",
                             "ConnectionString": "[parameters('SQLconnectionString')]",
                             "type": "[parameters('SQLconnectionType')]"
+                        },
+                        {
+                            "name": "TestAutomation",
+                            "ConnectionString": "[if(parameters('isTestAutomationEnabled'), parameters('SQLconnectionString'), '')]",
+                            "type": "[parameters('SQLconnectionType')]"
                         }
                     ],
                     "appSettings": [
                         {
                             "name": "Orchestrator version",
                             "value": "[parameters('orchestratorVersion')]"
+                        },
+                        {
+                            "name": "APPINSIGHTS_INSTRUMENTATIONKEY",
+                            "value": "[reference(resourceId('microsoft.insights/components', parameters('appInsight')), '2020-02-02-preview').InstrumentationKey]"
+                        },
+                        {
+                            "name": "TestAutomation.ModuleEnabled",
+                            "value": "[if(parameters('isTestAutomationEnabled'), 'True', 'False')]"
+                        },
+                        {
+                            "name": "TestAutomation.FeatureEnabledByDefault",
+                            "value": "[if(parameters('isTestAutomationEnabled'), 'True', 'False')]"
+                        }
+                    ],
+                    "metadata": [
+                        {
+                            "name": "CURRENT_STACK",
+                            "value": "dotnet"
                         }
                     ],
                     "phpVersion": "off",
@@ -246,6 +275,19 @@
                     "properties": {
                         "subnetResourceId": "[parameters('webSubnetRef')]",
                         "swiftSupported": true
+                    }
+                },
+                {
+                    "type": "config",
+                    "apiVersion": "2019-08-01",
+                    "name": "slotconfignames",
+                    "condition": "[parameters('isTestAutomationEnabled')]",
+                    "dependsOn": [
+                        "[resourceId('Microsoft.Web/Sites', parameters('appName'))]"
+                    ],
+                    "properties": {
+                        "connectionStringNames": [ "TestAutomation" ],
+                        "appSettingNames": [ "TestAutomation.ModuleEnabled", "TestAutomation.FeatureEnabledByDefault" ]
                     }
                 }
             ]
@@ -325,7 +367,7 @@
             }
         },
         {
-            "apiVersion": "2018-11-01",
+            "apiVersion": "2020-06-01",
             "name": "[parameters('identityAppName')]",
             "type": "Microsoft.Web/Sites",
             "location": "[parameters('location')]",
@@ -344,6 +386,12 @@
                             "name": "DefaultConnection",
                             "ConnectionString": "[parameters('SQLconnectionString')]",
                             "type": "[parameters('SQLconnectionType')]"
+                        }
+                    ],
+                    "metadata": [
+                        {
+                            "name": "CURRENT_STACK",
+                            "value": "dotnetcore"
                         }
                     ],
                     "phpVersion": "off",
@@ -375,7 +423,7 @@
             ]
         },
         {
-            "apiVersion": "2018-11-01",
+            "apiVersion": "2020-06-01",
             "name": "[parameters('webhookAppName')]",
             "type": "Microsoft.Web/Sites",
             "location": "[parameters('location')]",
@@ -390,19 +438,25 @@
                 "serverFarmId": "[resourceId('Microsoft.Web/serverfarms/', parameters('appServicePlanName'))]",
                 "enabled": true,
                 "siteConfig": {
+                    "appSettings": [
+                        {
+                            "name": "APPINSIGHTS_INSTRUMENTATIONKEY",
+                            "value": "[reference(resourceId('microsoft.insights/components', parameters('appInsight')), '2020-02-02-preview').InstrumentationKey]"
+                        }
+                    ],
+                    "metadata": [
+                        {
+                            "name": "CURRENT_STACK",
+                            "value": "dotnetcore"
+                        }
+                    ],
                     "phpVersion": "off",
                     "netFrameworkVersion": "v4.5",
                     "use32BitWorkerProcess": "false",
                     "webSocketsEnabled": true,
                     "alwaysOn": "true",
                     "httpLoggingEnabled": true,
-                    "logsDirectorySizeLimit": 40,
-                    "metadata": [
-                        {
-                            "name": "CURRENT_STACK",
-                            "value": "dotnetcore"
-                        }
-                    ]
+                    "logsDirectorySizeLimit": 40
                 }
             }
         },
@@ -431,10 +485,11 @@
             "properties": {
                 "WEBSITE_LOAD_CERTIFICATES": "[reference(resourceId('Microsoft.Web/certificates', parameters('certificateName'))).thumbprint]",
                 "AppSettings__SigningCredentialSettings__StoreLocation__Name": "[reference(resourceId('Microsoft.Web/certificates', parameters('certificateName'))).thumbprint]",
-                "AppSettings__IdentityServerAddress": "[concat('https://',parameters('identityAppName'),'.azurewebsites.net/identity')]",
-                "AppSettings__OrchestratorUrl": "[concat('https://',parameters('appName'),'.azurewebsites.net')]",
+                "AppSettings__IdentityServerAddress": "[concat('https://',reference(resourceId('Microsoft.Web/sites', parameters('identityAppName'))).defaultHostName,'/identity')]",
+                "AppSettings__OrchestratorUrl": "[concat('https://',reference(resourceId('Microsoft.Web/sites', parameters('appName'))).defaultHostName)]",
                 "AppSettings__SigningCredentialSettings__StoreLocation__Location": "CurrentUser",
-                "AppSettings__SigningCredentialSettings__StoreLocation__NameType": "Thumbprint"
+                "AppSettings__SigningCredentialSettings__StoreLocation__NameType": "Thumbprint",
+                "APPINSIGHTS_INSTRUMENTATIONKEY": "[reference(resourceId('microsoft.insights/components', parameters('appInsight')), '2020-02-02-preview').InstrumentationKey]"
             }
         },
         {
@@ -467,6 +522,14 @@
         "insightsKey": {
             "type": "string",
             "value": "[reference(resourceId('Microsoft.Insights/components', parameters('appInsight'))).InstrumentationKey]"
+        },
+        "orchIdentityServerHostName": {
+            "type": "string",
+            "value": "[reference(resourceId('Microsoft.Web/sites', parameters('identityAppName'))).defaultHostName]"
+        },
+        "orchestratorHostName": {
+            "type": "string",
+            "value": "[reference(resourceId('Microsoft.Web/sites', parameters('appName'))).defaultHostName]"
         }
     }
 }

@@ -1,5 +1,5 @@
 {
-	"$schema": "https://schema.management.azure.com/schemas/0.1.2-preview/CreateUIDefinition.ProviderControl.json#",
+	"$schema": "https://schema.management.azure.com/schemas/0.1.2-preview/CreateUIDefinition.MultiVm.json#",
 	"handler": "Microsoft.Azure.CreateUIDef",
 	"version": "0.1.2-preview",
 	"parameters": {
@@ -30,7 +30,8 @@
 			"microsoft.insights/autoscalesettings",
 			"Microsoft.ManagedIdentity/userAssignedIdentities",
 			"Microsoft.Authorization/roleAssignments",
-			"Microsoft.Resources/deploymentScripts"
+			"Microsoft.Resources/deploymentScripts",
+			"Microsoft.ContainerInstance"
 		],
 		"basics": [],
 		"steps": [
@@ -455,12 +456,12 @@
 						"name": "orchestratorVersion",
 						"label": "Orchestrator version",
 						"type": "Microsoft.Common.DropDown",
-						"defaultValue": "20.10.1",
+						"defaultValue": "20.10.5",
 						"constraints": {
 							"allowedValues": [
 								{
-									"label": "20.10.1",
-									"value": "20.10.1"
+									"label": "20.10.5",
+									"value": "20.10.5"
 								}
 							]
 						},
@@ -521,6 +522,11 @@
 							]
 						},
 						"toolTip": "This will deploy different versions of the SQL DataBase. Small: 0-100 robots (Standard S1) Medium: 100-500 robots (Standard S3) Large: 500 or more robots (Premium P4)"
+					},
+					{
+						"name": "testAutomation",
+						"type": "Microsoft.Common.CheckBox",
+						"label": "Enable Test Automation feature?"
 					}
 				]
 			},
@@ -879,6 +885,7 @@
 			"orchestratorAdminPassword": "[steps('OrchSetup').orchestratorAdminPassword.password]",
 			"orchestratorVersion": "[steps('OrchSetup').orchestratorVersion]",
 			"orchestratorSize": "[steps('OrchSetup').orchestratorSize]",
+			"isTestAutomationEnabled" : "[steps('OrchSetup').testAutomation]",
 			"orchestratorInstances": "[int(steps('OrchSetup').orchestratorInstances)]",
 			"EnableHAA": "[or(greater(int(steps('OrchSetup').orchestratorInstances), 1), equals(steps('HAAServer').HighAvailabilityAddon, 'Yes'))]",
 			"HAAVMAdminLogin": "[steps('HAAServer').HAADetails.HAAVMAdminLogin]",
