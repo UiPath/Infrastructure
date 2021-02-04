@@ -1,0 +1,28 @@
+The CloudFormation stack can be launched in the following regions, based on availability of EC2 AMIs:
+
+* us-east-1 (N. Virginia)
+* us-east-2 (Ohio)
+* us-west-1 (N. California)
+* us-west-2 (Oregon)
+* af-south-1 (Cape Town)
+* ap-northeast-1 (Tokyo)
+* ap-northeast-2 (Seoul)
+* ap-southeast-1 (Singapore)
+* ap-southeast-2 (Sydney)
+* ap-east-1 (Hong Kong)
+* ap-south-1 (Mumbai)
+* ap-northeast-3 (Osaka-Local)
+* ca-central-1 (Canada)
+* eu-central-1 (Frankfurt)
+* eu-west-1 (Ireland)
+* eu-west-2 (London)
+* eu-south-1 (Milan)
+* eu-west-3 (Paris)
+* eu-north-1 (Stockholm)
+* me-south-1 (Bahrain)
+* sa-east-1 (São Paulo)
+
+For a current list of supported Regions, see Service Endpoints and Quotas in the AWS documentation.
+
+
+//Full list: https://docs.aws.amazon.com/general/latest/gr/rande.html

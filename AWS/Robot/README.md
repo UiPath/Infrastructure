@@ -11,4 +11,4 @@ The AWS CloudFormation templates included with the Quick Start automate the foll
 
 You can also use the AWS CloudFormation templates as a starting point for your own implementation.
 
-![Quick Start architecture for UiPath Robot on AWS](./UIPath-Robot-arch.png)
+![Quick Start architecture for UiPath Robot on AWS](UiPath-Robot-arch.png)
