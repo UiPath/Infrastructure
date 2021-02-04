@@ -75,7 +75,7 @@
     "resources": [
         {
             "type": "Microsoft.Resources/deploymentScripts",
-            "apiVersion": "2019-10-01-preview",
+            "apiVersion": "2020-10-01",
             "tags": "[if(contains(parameters('tagsByResource'), 'Microsoft.Resources/deploymentScripts'), parameters('tagsByResource')['Microsoft.Resources/deploymentScripts'], json('{}'))]",
             "name": "CleanUpOrchResources",
             "location": "[parameters('location')]",

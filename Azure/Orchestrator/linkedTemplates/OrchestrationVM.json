@@ -90,6 +90,24 @@
                 "description": "Orchestrator Identity name."
             }
         },
+        "OrchIdentityServerHostName": {
+            "type": "string",
+            "minLength": 4,
+            "maxLength": 60,
+            "defaultValue":"",
+            "metadata": {
+                "description": "Orchestrator Identity Host name."
+            }
+        },
+        "OrchestratorHostName": {
+            "type": "string",
+            "minLength": 4,
+            "maxLength": 60,
+            "defaultValue":"",
+            "metadata": {
+                "description": "Orchestrator Host name."
+            }
+        },
         "OrchWebhooksAppServiceName": {
             "type": "string",
             "minLength": 4,
@@ -99,29 +117,41 @@
                 "description": "Orchestrator Webhooks name."
             }
         },
+        "vmSize": {
+            "type": "string",
+            "defaultValue": "Standard_D2_v3",
+            "metadata": {
+                "description": "VMSize (for ttk to pass)"
+            }
+        },
+        "isTestAutomationEnabled": {
+            "type": "bool",
+            "metadata": {
+                "description": "Flag to enable Test Automation feature in Orchestrator"
+            }
+        },
         "tagsByResource": {
             "type": "object",
             "defaultValue": {}
         }
     },
     "variables": {
-        "tempStorageAccountName": "[concat('orchst', toLower(last(split(parameters('appName'),'-'))))]",
+        "tempStorageAccountName": "[concat('orchst', substring(uniqueString(parameters('appName')), 0, 4))]",
         "storageAccountName": "[if(greaterOrEquals(length(variables('tempStorageAccountName')), 25), substring(variables('tempStorageAccountName'),0,22), variables('tempStorageAccountName'))]",
-        "nicName": "[concat('orch-nic', last(split(parameters('appName'),'-')))]",
+        "nicName": "[concat('orch-nic', substring(uniqueString(parameters('appName')), 0, 4))]",
         "addressPrefix": "10.0.0.0/16",
-        "subnetName": "[concat('orch-subnet-', last(split(parameters('appName'),'-')))]",
+        "subnetName": "[concat('orch-subnet-', substring(uniqueString(parameters('appName')), 0, 4))]",
         "subnetPrefix": "10.0.0.0/24",
-        "virtualNetworkName": "[concat('orch-vnet-', last(split(parameters('appName'),'-')))]",
+        "virtualNetworkName": "[concat('orch-vnet-', substring(uniqueString(parameters('appName')), 0, 4))]",
         "subnetRef": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), variables('subnetName'))]",
-        "networkSecurityGroupName": "[concat('orch-nsg-', last(split(parameters('appName'),'-')))]",
+        "networkSecurityGroupName": "[concat('orch-nsg-', substring(uniqueString(parameters('appName')), 0, 4))]",
         "MSIName": "[parameters('OrchMSIName')]",
         "subscriptionId": "[subscription().subscriptionId]",
         "tenantId": "[subscription().tenantId]",
         "vmUserName": "admnc",
         "RGName": "[resourceGroup().name]",
         "OSVersion":"2019-Datacenter",
-        "vmSize":"Standard_D2_v3",
-        "vmName":"[concat('orchvm-', last(split(parameters('appName'),'-')))]"
+        "vmName":"[concat('orchvm-', substring(uniqueString(parameters('appName')), 0, 4))]"
     },
     "resources": [
         {
@@ -232,7 +262,7 @@
             },
             "properties": {
                 "hardwareProfile": {
-                    "vmSize": "[variables('vmSize')]"
+                    "vmSize": "[parameters('vmSize')]"
                 },
                 "osProfile": {
                     "computerName": "configvm",
@@ -297,7 +327,8 @@
                         "[parameters('WebhooksArtifactsPaaS').WebhookMigratePackage]",
                         "[parameters('UtilityArtifactsPaaS').PSUtilsZip]",
                         "[parameters('UtilityArtifactsPaaS').AzModulesZip]",
-                        "[parameters('UtilityArtifactsPaaS').DeployOrchestratorMainScript]"
+                        "[parameters('UtilityArtifactsPaaS').DeployOrchestratorMainScript]",
+                        "[parameters('UtilityArtifactsPaaS').AzureUtils]"
 
                     ]
                 },
@@ -315,9 +346,10 @@
                     ' -defaultTenantAdminPassword ', parameters('orchestratorAdminPassword'),
                     ' -storageLocation ', concat('DefaultEndpointsProtocol=https;AccountName=',parameters('mainStorageAccountName'),';AccountKey=',listKeys(parameters('mainStorageid'), '2019-04-01').keys[0].value,';','EndpointSuffix=',replace(split(reference(parameters('mainStorageid'),'2019-06-01').primaryEndpoints.blob, 'blob.')[1], '/', '')),
                     if(empty(parameters('HAAconnectionString')),'',concat(' -redisConnectionString ',parameters('HAAconnectionString'))),
-                    ' -identityServerUrl ', concat('https://',parameters('OrchIdentityAppServiceName'),'.azurewebsites.net/identity'),
-                    ' -orchestratorUrl ', concat('https://',parameters('appName'),'.azurewebsites.net'),
-                    ' -insightsKey ', parameters('InsightsKey')
+                    ' -identityServerUrl ', concat('https://',parameters('OrchIdentityServerHostName'),'/identity'),
+                    ' -orchestratorUrl ', concat('https://',parameters('OrchestratorHostName')),
+                    ' -insightsKey ', parameters('InsightsKey'),
+                    ' -isTestAutomationEnabled ', parameters('isTestAutomationEnabled')
                     )]",
                     "managedIdentity": {
                         "clientId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('MSIName')), '2018-11-30').clientId]"
