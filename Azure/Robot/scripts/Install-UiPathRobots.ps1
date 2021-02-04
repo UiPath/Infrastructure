@@ -1,24 +1,24 @@
 [CmdletBinding()]
 Param (
-  [Parameter(Mandatory = $true)]
+  [Parameter(Mandatory = $false)]
   [string] $orchestratorUrl,
 
-  [Parameter(Mandatory = $true)]
+  [Parameter(Mandatory = $false)]
   [string] $tenant,
 
-  [Parameter(Mandatory = $true)]
+  [Parameter(Mandatory = $false)]
   [string] $orchAdmin,
 
-  [Parameter(Mandatory = $true)]
+  [Parameter(Mandatory = $false)]
   [string] $orchPassword,
 
-  [Parameter(Mandatory = $true)]
-  [string] $adminUsername,
+  [Parameter(Mandatory = $false)]
+  [string] $machineAdminUsername,
 
   [Parameter(Mandatory = $false)]
   [string] $machinePassword,
 
-  [Parameter(Mandatory = $true)]
+  [Parameter(Mandatory = $false)]
   [string] $hostingType,
 
   [Parameter(Mandatory = $true)]
@@ -28,7 +28,7 @@ Param (
   [Parameter(Mandatory = $true)]
   [string] $artifactFileName,
 
-  [Parameter(Mandatory = $true)]
+  [Parameter(Mandatory = $false)]
   [ValidateSet('Azure', 'AWS', 'GCP', 'Oracle')]
   [string] $cloudName,
 
@@ -39,14 +39,18 @@ Param (
   [switch] $doNotTrustSelfSigned
 
 )
+#region Utils Section
+function Generate-RandomString {
+  $str = -join ((48..57) + (97..122) | Get-Random -Count 4 | ForEach-Object { [char]$_ })
+  return $str
+}
+#endregion
+
 $ErrorActionPreference = "Stop"
 $logFile = "Installation.log"
 Start-Transcript -Path $logFile -Append -IncludeInvocationHeader
 $script:workDirectory = Get-Location
-$script:FolderName = "$($cloudName)Deployed"
-$script:MachineTemplateName = "$($cloudName)Template-$($env:computername)"
-$script:randomString = -join ((48..57) + (97..122) | Get-Random -Count 4 | ForEach-Object { [char]$_ })
-$script:userName = "$($env:computername)-$($script:randomString)"
+
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 function Main {
@@ -54,6 +58,12 @@ function Main {
   $msiPath = Join-Path $script:workDirectory $artifactFileName
   $robotExePath = Get-UiRobotExePath
   
+  $folderName = "$($cloudName)Deployed"
+  $machineTemplateName = "$($cloudName)Template-$($env:computername)"
+  $randomString = Generate-RandomString
+  $userName = "$($env:computername)-$($randomString)"
+  $robotUserName = "$env:computername\$machineAdminUsername"
+
   if (!$doNotTrustSelfSigned) {
     [System.Net.ServicePointManager]::ServerCertificateValidationCallback = { $true }
   }
@@ -64,26 +74,43 @@ function Main {
   }
 
   Install-RobotWithMSI -msiPath $msiPath -robotInstallType $robotType
-  
-  if ($robotType -eq "Unattended") {
-    Add-LocalAdministrator
-  }
-  
-  $websession = Get-UiPathOrchestratorLoginSession
+
+  if ($orchestratorUrl -and $orchAdmin -and $orchPassword -and $tenant) {  
+    Write-Output "orchestratorUrl $orchestratorUrl"
+    Write-Output "orchAdmin $orchAdmin"
+    Write-Output "tenant $tenant"
+
+    $websession = Get-UiPathOrchestratorLoginSession
  
-  Add-UiPathRobotFolder -session $websession
-  Add-UiPathRobotUser -session $websession
-  $key = Add-UiPathMachineTemplate -session $websession
+    Add-UiPathRobotFolder -session $websession -folderName $folderName
+    if ($cloudName -eq "AWS") {
+      if ($robotType -eq "Unattended") {
+        Add-LocalAdministrator -userName $userName
+        Add-UiPathRobotUser -session $websession -robotUsername "$env:computername\$userName" -userName $userName 
+        Write-Output "Added AWS Robot: $userName"
+      }
+      elseif ($robotType -eq "Attended") {
+        Add-UiPathRobotUser -session $websession -robotUsername "$env:computername\Administrator" -userName $userName 
+        Write-Output "Added AWS Robot: $userName"
+      }
+    }
+    elseif ($cloudName -eq "Azure") {
+      Add-UiPathRobotUser -session $websession -userName $userName -robotUsername $robotUserName 
+      Write-Output "Added Azure Robot: $robotUserName"
+    }
 
-  Add-UserToFolder -session $websession
-  Write-Output "Creating UiPath machine template..."
-  Add-MachineTemplateToFolder -session $websession
+    $key = Add-UiPathMachineTemplate -session $websession -templateName $machineTemplateName
 
-  #Making sure the process is running before we connect to the orchestrator.
-  Start-Process -FilePath $robotExePath -Verb runas
-  Wait-Service -servicesName "UiPath Robot*"
-  & $robotExePath --connect -url $orchestratorUrl -key $key
+    Add-UserToFolder -session $websession -folderName $folderName -userName $userName
+    Write-Output "Creating UiPath machine template..."
+    Add-MachineTemplateToFolder -session $websession -folderName $folderName -templateName $machineTemplateName
 
+
+    #Making sure the process is running before we connect to the orchestrator.
+    Start-Process -FilePath $robotExePath -Verb runas
+    Wait-Service -servicesName "UiPath Robot*"
+    & $robotExePath --connect -url $orchestratorUrl -key $key
+  }
   Write-Output "Install completed Successfully."
 }
 
@@ -109,16 +136,16 @@ function Get-UiPathOrchestratorLoginSession {
   return $websession
 }
 
-function Add-UiPathRobotFolder ($session) {
+function Add-UiPathRobotFolder ($session, $folderName) {
   $orchFolders = "$orchestratorUrl/odata/Folders"
   $dataFolders = @{
-    DisplayName     = $script:FolderName
+    DisplayName     = $folderName
     ProvisionType   = "Automatic"
     PermissionModel = "FineGrained"
     FeedType        = "Processes"
   } | ConvertTo-Json -Depth 3
   
-  $getFolders = Invoke-RestMethod -Uri "$orchFolders`?`$filter=DisplayName eq `'$script:FolderName`'" `
+  $getFolders = Invoke-RestMethod -Uri "$orchFolders`?`$filter=DisplayName eq `'$folderName`'" `
     -Method GET `
     -ContentType "application/json" `
     -UseBasicParsing `
@@ -148,19 +175,19 @@ function Add-UiPathRobotFolder ($session) {
   }
 }
 
-function Add-LocalAdministrator {
+function Add-LocalAdministrator($userName) {
   
   Write-Output "Creating admin user for the robot to connect with."
   $userPassword = ConvertTo-SecureString $machinePassword -AsPlainText -Force
-  New-LocalUser -Name $script:userName -Description "$($cloudName) automatic robot deployment" -Password $userPassword
-  Add-LocalGroupMember -Group "Administrators" -Member $script:userName
+  New-LocalUser -Name $userName -Description "$($cloudName) automatic robot deployment" -Password $userPassword
+  Add-LocalGroupMember -Group "Administrators" -Member $userName
 }
 
-function Add-UiPathRobotUser ($session) {
+function Add-UiPathRobotUser ($session, $userName, $robotUserName) {
   
   if ($robotType -eq "Unattended") {
     $dataUser = @{
-      UserName                    = "$($cloudName)-$($script:userName)"
+      UserName                    = "$($cloudName)-$($userName)"
       Type                        = 'User'
       RolesList                   = @("Automation User")
       MayHaveRobotSession         = $true
@@ -169,9 +196,9 @@ function Add-UiPathRobotUser ($session) {
       MayHavePersonalWorkspace    = $false
       BypassBasicAuthRestriction  = $false
       UnattendedRobot             = @{
-        UserName          = ".\$($script:userName)"
+        UserName          = "$robotUserName"
         Password          = $machinePassword
-        CredentialType    = "Default"
+        CredentialType    = $credType
         ExecutionSettings = @{ }
       }
       IsExternalLicensed          = $false
@@ -181,7 +208,7 @@ function Add-UiPathRobotUser ($session) {
   else {
     if ($robotType -eq "Attended") {
       $dataUser = @{
-        UserName                    = "$($cloudName)-$($script:userName)"
+        UserName                    = "$($cloudName)-$($userName)"
         Type                        = 'User'
         RolesList                   = @("Automation User")
         MayHaveRobotSession         = $true
@@ -190,7 +217,7 @@ function Add-UiPathRobotUser ($session) {
         MayHavePersonalWorkspace    = $false
         BypassBasicAuthRestriction  = $false
         RobotProvision              = @{
-          UserName          = ".\$($script:userName)"
+          UserName          = "$robotUserName"
           RobotType         = "$robotType"
           ExecutionSettings = @{ }
         }
@@ -200,20 +227,19 @@ function Add-UiPathRobotUser ($session) {
       } | ConvertTo-Json -Depth 3
     }
     else {
-      Write-Error "Unknown robot type"
+      Write-Error "Unknown robot type $robotType"
       Exit 1
     }
   }
 
   $orchUsers = "$orchestratorUrl/odata/Users"
-  #$session.Headers.Add('X-UIPATH-FolderPath', $script:FolderName)
   Invoke-RestMethod -Uri $orchUsers -Method Post -Body $dataUser -ContentType "application/json" -UseBasicParsing -WebSession $session
 }
 
-function Add-UiPathMachineTemplate ($session) {
+function Add-UiPathMachineTemplate ($session, $templateName) {
 
   $orchMachines = "$orchestratorUrl/odata/Machines"
-  $getMachines = Invoke-RestMethod -Uri "$orchMachines`?`$filter=Name eq `'$($script:MachineTemplateName)`'" `
+  $getMachines = Invoke-RestMethod -Uri "$orchMachines`?`$filter=Name eq `'$($templateName)`'" `
     -Method GET `
     -ContentType "application/json" `
     -UseBasicParsing `
@@ -224,7 +250,7 @@ function Add-UiPathMachineTemplate ($session) {
   }
   else {
     $dataMachineTemplate = @{
-      Name                = $script:MachineTemplateName
+      Name                = $templateName
       Type                = "Template"
       LicenseKey          = $null
       NonProductionSlots  = 0
@@ -246,22 +272,25 @@ function Add-UiPathMachineTemplate ($session) {
     }
     catch {
       if ($_.ErrorDetails.Message.Contains("already taken")) {
-        $getMachines = Invoke-RestMethod -Uri "$orchMachines`?`$filter=Name eq `'$script:MachineTemplateName`'" `
+        $getMachines = Invoke-RestMethod -Uri "$orchMachines`?`$filter=Name eq `'$templateName`'" `
           -Method GET `
           -ContentType "application/json" `
           -UseBasicParsing `
           -WebSession $websession
         $key = $getMachines.value.LicenseKey
       }
-      else { Exit 1 }
+      else { 
+        Write-Error "An error was encountered when trying to performing the REST API call to add the machine template."
+        Exit 1 
+      }
     }
   }
   return $key
 }
 
-function Add-UserToFolder ($session) {
+function Add-UserToFolder ($session, $folderName, $userName) {
 
-  $orchUsers = "$orchestratorUrl/odata/Users`?`$filter=UserName eq `'$($cloudName)-$($script:userName)`'"
+  $orchUsers = "$orchestratorUrl/odata/Users`?`$filter=UserName eq `'$($cloudName)-$($userName)`'"
   $getUsers = Invoke-RestMethod -Uri $orchUsers `
     -Method Get `
     -ContentType "application/json" `
@@ -276,7 +305,7 @@ function Add-UserToFolder ($session) {
     -WebSession $session
 
   $orchFolders = "$orchestratorUrl/odata/Folders"
-  $getFolders = Invoke-RestMethod -Uri "$orchFolders`?`$filter=DisplayName eq `'$script:FolderName`'" `
+  $getFolders = Invoke-RestMethod -Uri "$orchFolders`?`$filter=DisplayName eq `'$folderName`'" `
     -Method GET `
     -ContentType "application/json" `
     -UseBasicParsing `
@@ -305,17 +334,17 @@ function Add-UserToFolder ($session) {
     -WebSession $session
 }
 
-function Add-MachineTemplateToFolder ($session) {
+function Add-MachineTemplateToFolder ($session, $folderName, $templateName) {
 
   $orchMachines = "$orchestratorUrl/odata/Machines"
-  $getMachines = Invoke-RestMethod -Uri "$orchMachines`?`$filter=Name eq `'$($script:MachineTemplateName)`'" `
+  $getMachines = Invoke-RestMethod -Uri "$orchMachines`?`$filter=Name eq `'$($templateName)`'" `
     -Method GET `
     -ContentType "application/json" `
     -UseBasicParsing `
     -WebSession $websession
 
   $orchFolders = "$orchestratorUrl/odata/Folders"
-  $getFolders = Invoke-RestMethod -Uri "$orchFolders`?`$filter=DisplayName eq `'$script:FolderName`'" `
+  $getFolders = Invoke-RestMethod -Uri "$orchFolders`?`$filter=DisplayName eq `'$folderName`'" `
     -Method GET `
     -ContentType "application/json" `
     -UseBasicParsing `

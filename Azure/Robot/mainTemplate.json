@@ -58,9 +58,9 @@
       }
     },
     "RobotVersion": {
-      "defaultValue": "20.10.2",
+      "defaultValue": "20.10.4",
       "allowedValues": [
-        "20.10.2"
+        "20.10.4"
       ],
       "type": "String",
       "metadata": {
@@ -231,7 +231,7 @@
           ' -orchPassword ', parameters('orchPassword'),
           ' -hostingType ', variables('HostingType'), 
           ' -robotType ', parameters('RobotType'),
-          ' -adminUsername ', parameters('adminUsername'),
+          ' -machineAdminUsername ', parameters('adminUsername'),
           ' -cloudName Azure'
           )]",
     "unattendedBot": "[concat ('powershell -ExecutionPolicy Unrestricted',
@@ -243,7 +243,7 @@
           ' -orchPassword ', parameters('orchPassword'),
           ' -hostingType ', variables('HostingType'),
           ' -robotType ', parameters('RobotType'),
-          ' -adminUsername ', parameters('adminUsername'),
+          ' -machineAdminUsername ', parameters('adminUsername'),
           ' -machinePassword ', parameters('adminPassword'),
           ' -credType ', variables('CredentialType'),
           ' -cloudName Azure'

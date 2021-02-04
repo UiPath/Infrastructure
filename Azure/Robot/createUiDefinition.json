@@ -1,5 +1,5 @@
 {
-  "$schema": "https://schema.management.azure.com/schemas/0.1.2-preview/CreateUIDefinition.ProviderControl.json#",
+  "$schema": "https://schema.management.azure.com/schemas/0.1.2-preview/CreateUIDefinition.MultiVm.json#",
   "handler": "Microsoft.Azure.CreateUIDef",
   "version": "0.1.2-preview",
   "parameters": {
@@ -164,13 +164,13 @@
             "name": "RobotVersion",
             "type": "Microsoft.Common.DropDown",
             "label": "Robot Version",
-            "defaultValue": "20.10.2",
+            "defaultValue": "20.10.4",
             "toolTip": "Please choose the robot version to be deployed. Please check this link for compatibility with Orchestrator: https://docs.uipath.com/robot/docs/about-backward-and-forward-compatibility",
             "constraints": {
               "allowedValues": [
                 {
-                  "label": "20.10.2",
-                  "value": "20.10.2"
+                  "label": "20.10.4",
+                  "value": "20.10.4"
                 }
               ],
               "required": true
