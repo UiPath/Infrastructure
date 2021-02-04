@@ -1,0 +1,44 @@
+---
+- name: Test Ansible on Azure base VM
+  hosts: all
+  gather_facts: yes
+  tasks:
+    - name: Set facts
+      set_fact:
+        src_folder: 'C:\UiPath\src\'
+
+    - name: Create src folder
+      win_file:
+        path: {{ src_folder }}
+        state: directory
+
+    - name: Download Orchestrator msi
+      get_url:
+        url: https://download.uipath.com/versions/20.10.3/UiPathOrchestrator.msi
+        dest: {{ src_folder }}/UiPathOrchestrator.msi
+
+#          files:
+#            c:\cfn\sources\UiPathOrchestrator.msi:
+#              source: !Sub 'https://download.uipath.com/versions/${OrchestratorVersion}/UiPathOrchestrator.msi'
+#            c:\cfn\sources\NDP472-KB4054530-x86-x64-AllOS-ENU.exe:
+#              source: https://download.microsoft.com/download/6/E/4/6E48E8AB-DC00-419E-9704-06DD46E5F81D/NDP472-KB4054530-x86-x64-AllOS-ENU.exe
+#            c:\cfn\sources\rewrite_amd64_en-US.msi:
+#              source: https://download.microsoft.com/download/1/2/8/128E2E22-C1B9-44A4-BE2A-5859ED1D4592/rewrite_amd64_en-US.msi
+#            c:\cfn\sources\dotnet-hosting-3.1.8-win.exe:
+#              source: https://download.visualstudio.microsoft.com/download/pr/854cbd11-4b96-4a44-9664-b95991c0c4f7/8ec4944a5bd770faba2f769e647b1e6e/dotnet-hosting-3.1.8-win.exe
+#          commands:
+#            a-install-dotnet-framework:
+#              command: start /wait c:\cfn\sources\NDP472-KB4054530-x86-x64-AllOS-ENU.exe /q /norestart
+#              waitAfterCompletion: '0'
+#            b-install-roles-and-features:
+#              command: powershell.exe -command C:\cfn\scripts\Install-RolesAndFeatures.ps1
+#              waitAfterCompletion: '0'
+#            c-install-rewrite:
+#              command: start /wait msiexec /i c:\cfn\sources\rewrite_amd64_en-US.msi /qn /quiet /passive /norestart
+#              waitAfterCompletion: '0'
+#              ignoreErrors: false
+#            d-install-dotnet-core:
+#              command: start /wait c:\cfn\sources\dotnet-hosting-3.1.8-win.exe OPT_NO_RUNTIME=1 /q /norestart
+#              waitAfterCompletion: '0'
+#              ignoreErrors: false
+
