@@ -288,14 +288,6 @@
             "location": "[parameters('location')]",
             "properties": {
                 "addressPrefix": "[parameters('webAppsubnetPrefix')]",
-                "serviceEndpoints": [
-                    {
-                        "service": "Microsoft.Storage"
-                    },
-                    {
-                        "service": "Microsoft.Web"
-                    }
-                ],
                 "delegations": [
                     {
                         "name": "[concat(parameters('webAppsubnetName'),'-delegation')]",

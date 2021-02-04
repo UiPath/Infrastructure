@@ -65,7 +65,7 @@
             "type": "Microsoft.Sql/servers",
             "tags": "[ if(contains(parameters('tagsByResource'), 'Microsoft.Sql/servers'), parameters('tagsByResource')['Microsoft.Sql/servers'], json('{}')) ]",
             "location": "[parameters('location')]",
-            "apiVersion": "2019-06-01-preview",
+            "apiVersion": "2020-08-01-preview",
             "properties": {
                 "administratorLogin": "[parameters('SQLServerAdminLogin')]",
                 "administratorLoginPassword": "[parameters('SQLServerAdminPassword')]",
@@ -73,7 +73,7 @@
             },
             "resources": [
                 {
-                    "apiVersion": "2019-06-01-preview",
+                    "apiVersion": "2020-08-01-preview",
                     "name": "[parameters('dbName')]",
                     "type": "databases",
                     "tags": "[ if(contains(parameters('tagsByResource'), 'Microsoft.Sql/servers/databases'), parameters('tagsByResource')['Microsoft.Sql/servers/databases'], json('{}')) ]",                    
@@ -95,7 +95,7 @@
                     }
                 },
                 {
-                    "apiVersion": "2019-06-01-preview",
+                    "apiVersion": "2020-08-01-preview",
                     "name": "AllowAllWindowsAzureIps",
                     "type": "firewallrules",
                     "location": "[parameters('location')]",
