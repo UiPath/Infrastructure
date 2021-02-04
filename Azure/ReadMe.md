@@ -20,12 +20,12 @@ These are the templates we use for the Azure marketplace deployment and we want 
 ## Steps
 1. Fork github repository:  
 https://docs.github.com/en/free-pro-team@latest/github/getting-started-with-github/fork-a-repo#fork-an-example-repository
-2. Create a folder a navigate to it using a command line tool
+2. Create a folder and navigate to it using a command line tool
 3. Clone the forked github repository to a folder of your choosing:
 ``` cmd
 git clone https://github.com/<github username>/Infrastructure.git
 ```
-4. Change directory to `Setup` and run script `Set-DeploymentConfiguration.ps1` with either -UiPathSolution Robot or -UiPathSolution Orchestrator, depending on what you need:
+4. Change directory to `Setup` and run script `Set-DeploymentConfiguration.ps1` with either `-UiPathSolution Robot` or `-UiPathSolution Orchestrator`, depending on what you need:
 ```powershell
 cd Setup
 ./Set-DeploymentConfiguration.ps1 -UiPathSolution Orchestrator #or Robot
@@ -54,30 +54,31 @@ az storage blob url --account-name azmktstorage --container-name container --nam
 
 | Variable Name | Value |
 | ------ | -------- |
-| `installPackageUri` | Copy the URL from the command that uploaded the `haa-2.0.0.tar.gz` file |
+| `installPackageUri` | Copy the URL from the command that uploaded the `HAA/haa-2.0.0.tar.gz` file |
 | `OrchestratorArtifactsPaaS.OrchestratorArtifact` | Copy the URL from the command that uploaded the `UiPath.Orchestrator.Web.zip` file |
 | `IdentityArtifactsPaaS.IdentityPackage` | Copy the URL from the command that uploaded the `UiPath.IdentityServer.Web.zip` file |
 | `IdentityArtifactsPaaS.IdentityCliMigrator` | Copy the URL from the command that uploaded the `UiPath.IdentityServer.Migrator.Cli.zip` file |
 | `WebhooksArtifactsPaaS.WebhookServicePackage` | Copy the URL from the command that uploaded the `UiPath.WebhookService.Web.zip` file |
 | `WebhooksArtifactsPaaS.WebhookMigratePackage` | Copy the URL from the command that uploaded the `UiPath.WebhookService.Migrator.Cli.zip` file |
-| `installScriptFileName` | **Text**: Copy the URL forked repository in the `raw` format for the `install-haa.sh` file. See example below. |
+| `installScriptUri` | **Text**: Copy the URL forked repository in the `raw` format for the `HAA/install-haa.sh` file. See example below. |
 | `SQLTemplateUri` | **Text**: Copy the URL forked repository in the `raw` format for the `linkedTemplates/SQL.json` file. See example below. |
 | `HAATemplateUri` | **Text**: Copy the URL forked repository in the `raw` format for the `linkedTemplates/HAA.json` file. See example below. |
 | `PaaSWithIdentityTemplateUri` | **Text**: Copy the URL forked repository in the `raw` format for the `linkedTemplates/PaaSWithIdentity.json` file. See example below. |
 | `OrchestrationVMUri` | **Text**: Copy the URL forked repository in the `raw` format for the `linkedTemplates/OrchestrationVM.json` file. See example below. |
 | `CleanUpOrchestrationScriptUri` | **Text**: Copy the URL forked repository in the `raw` format for the `linkedTemplates/CleanUpScriptsTemplate.json` file. See example below. |
 | `OrchestratorArtifactsPaaS.PublishOrchestratorScript` | **Text**: Copy the URL forked repository in the `raw` format for the `<orchestratorVersion>/Publish-Orchestrator.ps1` file. See example below. |
-| `OrchestratorArtifactsPaaS.WebDeployPackage` | **Binary**: Copy the URL forked repository in the `raw` format for the `<orchestratorVersion>/WebDeploy_amd64_en-US.msi` file. See example below. |
+| `OrchestratorArtifactsPaaS.WebDeployPackage` | **Binary**: Copy the URL forked repository in the `raw` format for the `Other/WebDeploy_amd64_en-US.msi` file. See example below. |
 | `IdentityArtifactsPaaS.PublishIdentityScript` | **Text**: Copy the URL forked repository in the `raw` format for the `<orchestratorVersion>/Publish-IdentityServer.ps1` file. See example below. |
 | `IdentityArtifactsPaaS.MigrateToIdentityScript` | **Text**: Copy the URL forked repository in the `raw` format for the `<orchestratorVersion>/MigrateTo-IdentityServer.ps1` file. See example below. |
 | `WebhooksArtifactsPaaS.PublishWebhooksScript` | **Text**: Copy the URL forked repository in the `raw` format for the `<orchestratorVersion>/Publish-Webhooks.ps1` file. See example below. |
 | `WebhooksArtifactsPaaS.MigrateToWebhooksScript` | **Text**: Copy the URL forked repository in the `raw` format for the `<orchestratorVersion>/MigrateTo-Webhooks.ps1` file. See example below. |
 | `UtilityArtifactsPaaS.PSUtilsZip` | **Binary**: Copy the URL forked repository in the `raw` format for the `<orchestratorVersion>/ps_utils.zip` file. See example below. |
-| `UtilityArtifactsPaaS.AzModulesZip` | **Binary**: Copy the URL forked repository in the `raw` format for the `<orchestratorVersion>/AzModules.zip` file. See example below. |
+| `UtilityArtifactsPaaS.AzModulesZip` | **Binary**: Copy the URL forked repository in the `raw` format for the `Other/AzModules.zip` file. See example below. |
 | `UtilityArtifactsPaaS.CleanUpOrchestrationResources` | **Binary**: Copy the URL forked repository in the `raw` format for the `<orchestratorVersion>/CleanUpOrchestrationResources.ps1` file. See example below. |
 | `UtilityArtifactsPaaS.DeployOrchestratorMainScript` | **Binary**: Copy the URL forked repository in the `raw` format for the `<orchestratorVersion>/Deploy-UiPathOrchestratorPaaS.ps1` file. See example below. |
+| `UtilityArtifactsPaaS.AzureUtils` | **Text**: Copy the URL forked repository in the `raw` format for the `<orchestratorVersion>/AzureUtils.psm1` file. See example below. |
 
-Example (text files) for raw github files (you can `right-click` -> `copy link` on the `raw` button):  
+Example (text files) for raw github files (you can `right-click` -> `copy link` on the `raw` button): 
 `https://raw.githubusercontent.com/<github username>/Infrastructure/main/Azure/<filename>.<text>`  
 Example (binary files) for raw github files (you can `right-click` -> `copy link` on the `download` button):  
 `https://github.com/UiPath/<github username>/raw/main/<PathToFile>/<filename>.<binary>`
