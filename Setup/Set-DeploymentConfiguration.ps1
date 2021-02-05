@@ -4,9 +4,11 @@ param(
     [Parameter()]
     [ValidateSet('Robot', 'Orchestrator')]
     [string] $UiPathSolution
+   
 )
 
 $filesPath = "./Upload"
+$solutionVersionFile = "../Azure/$UiPathSolution/mainTemplate.json"
 
 function Main {
     
@@ -15,30 +17,45 @@ function Main {
         Exit 1
     }
 
+    if (!(Test-Path -Path $solutionVersionFile)) {
+        Write-Error "Current solution versions file not found."
+        Exit 1
+    }
+
+    $mainTemplateParams = (Get-Content $solutionVersionFile | Out-String | ConvertFrom-Json -AsHashtable -Depth 100)["parameters"]
+    $solutionVersionKeyName = $mainTemplateParams.Keys | Where-Object { $_ -like "*Version"}
+    $uiPathSolutionVersion = $mainTemplateParams[$solutionVersionKeyName].defaultValue
+
     if (!(Test-Path -Path $filesPath)) {
         New-Item $filesPath -ItemType Directory
     }
 
     if ($UiPathSolution -eq "Robot") {
-        Copy-UiPathRobot
+        Copy-UiPathRobot -uiPathSolutionVersion $uiPathSolutionVersion
     }
     
     if ($UiPathSolution -eq "Orchestrator") {
-        Copy-UiPathOrchestrator
+        Copy-UiPathOrchestrator -uiPathSolutionVersion $uiPathSolutionVersion
     }
 }
 
 function Copy-UiPathRobot {
-
-    $robotDownloadUri = "https://download.uipath.com/versions/20.10.2/UiPathStudio.msi"
+    Param (
+        [Parameter(Mandatory = $true)]
+        [String] $uiPathSolutionVersion
+    )
+    $robotDownloadUri = "https://download.uipath.com/versions/$uiPathSolutionVersion/UiPathStudio.msi"
     Invoke-WebRequest $robotDownloadUri -OutFile "$filesPath\UiPathStudio.msi"
     Write-Output "The UiPath robot file is here: `n$(Resolve-Path $filesPath\UiPathStudio.msi)"
     Write-Output "Please upload to blob storage!"
 }
 
 function Copy-UiPathOrchestrator {
-
-    $orchestratorDownloadUri = "http://download.uipath.com/versions/20.10.1/UiPathOrchestrator.zip"
+    Param (
+        [Parameter(Mandatory = $true)]
+        [String] $uiPathSolutionVersion
+    )
+    $orchestratorDownloadUri = "http://download.uipath.com/versions/$uiPathSolutionVersion/UiPathOrchestrator.zip"
     $haaUri = "https://download.uipath.com/haa/2020/2.0/haa-2.0.0.tar.gz"
     Invoke-WebRequest $orchestratorDownloadUri -OutFile "$filesPath\UiPathOrchestrator.zip"
     Invoke-WebRequest $haaUri -OutFile "$filesPath\haa-2.0.0.tar.gz"
