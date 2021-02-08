@@ -1,17 +1,43 @@
-# AI Fabric deployment
+# AI Center deployment
 
 ## Prerequisites
 
 ### Orchestrator
 
-An instance of UiPath Orchestrator is needed and it needs to be configured as described [here](https://docs.uipath.com/ai-fabric/docs/3-configure-orchestrator).
-There are several options to deploy an instance on Azure:
+
+#### Deployment
+
+An instance of UiPath Orchestrator is required to configure AI Center. There are several options to deploy an instance on Azure:
 1. One click deployment using the Azure marketplace [here](https://azuremarketplace.microsoft.com/en-us/marketplace/apps/uipath-5054924.uipath_orchestrator_automated_deployment_webapp?tab=Overview)
 2. Command line deployment using the instructions found [here](https://github.com/UiPath/Infrastructure/tree/main/Azure/Orchestrator)
 
+
+#### Configuration
+The Orchestrator needs to be configured as described [here](https://docs.uipath.com/ai-fabric/docs/3-configure-orchestrator).
+
+For this configuration, the AI Center IP should be replaced with the fully qualified domain name in the form of: 
+
+```
+<<resourceName>>.<<region>>.cloudapp.azure.com
+```
+For example, if the input parameters file contains:
+
+```json
+[
+  "resourceName": {
+    "value": "aicenter123"
+  }
+]
+``` 
+and the deployment region was East US, then the Orchestrator configuration should be performed using:
+
+```
+aicenter123.eastus.cloudapp.azure.com
+```
+
 ### Azure Resource Group
 
-The deployment is created inside an existing **Azure Resource Group**. The user deploying AI Fabric needs to have the proper permissions. This means either:
+The deployment is created inside an existing **Azure Resource Group**. The user deploying AI Center needs to have the proper permissions. This means either:
 - The `Owner` role over the RG, or
 - Alternatively, a `Constributor` role can be used, if it is augmented  with `Microsoft.Authorization/roleAssignments/write` over resources created inside the resource group.
 
@@ -29,13 +55,13 @@ Generate an installation access token (JWT) on the Orchestrator, as described [h
 The deployment is comprised of several steps:
 1. Resources are provisioned inside the resource group via the [mainTemplate.json](mainTemplate.json)
 2. The deployment script configures the AKS
-3. Finally, Replicated installs the AI Fabric application
+3. Finally, Replicated installs the AI Center application
 
 Please allow anywhere up to 1 hour for the whole process to complete
 
 ### Console deployment
 
-[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FUiPath%2FInfrastructure%2Fmain%2FAzure%2FAIFabric%2FmainTemplate.json)
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FUiPath%2FInfrastructure%2Fmain%2FAzure%2FAICenter%2FmainTemplate.json)
 
 
 ### Command line deployment
@@ -50,8 +76,8 @@ az deployment group create --resource-group resource-group --template-file mainT
 
 | Parameter name | Type | Description |
 | --- | --- | --- |
-| resourceName | string | Name of the AI Fabric deployment AKS cluster |
-| licenseField | string | AI Fabric license |
+| resourceName | string | Name of the AI Center deployment AKS cluster |
+| licenseField | string | AI Center license |
 | kubernetesVersion | string | AKS kubernetes version |
 | cpusize | string | Azure VM size for cluster nodes without GPU |
 | gputype | string | Azure VM size for cluster nodes with GPU |

@@ -11,7 +11,7 @@
     "licenseField": {
       "type": "string",
       "metadata": {
-        "description": "AI Fabric license"
+        "description": "AI Center license"
       }
     },
     "cpusize": {
