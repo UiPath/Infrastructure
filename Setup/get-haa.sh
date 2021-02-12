@@ -58,8 +58,8 @@ done
 download_haa(){
 echo -e "\e[32mDownloading High Availability Add-On for Orchestrator"
 tput sgr0
-wget http://download.uipath.com/haa/2020/2.0/haa-2.0.0.tar.gz
-tar -xf haa-2.0.0.tar.gz
+wget https://download.uipath.com/haa/2.0.1/haa-2.0.1.tar.gz
+tar -xf haa-2.0.1.tar.gz
 chmod a+x install.sh
 }
 
