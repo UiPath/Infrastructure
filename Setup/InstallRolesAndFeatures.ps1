@@ -18,8 +18,6 @@ function Main {
         'IIS-HttpErrors',
         'IIS-StaticContent',
         'IIS-RequestFiltering',
-        'IIS-CertProvider',
-        'IIS-IPSecurity',
         'IIS-URLAuthorization',
         'IIS-ApplicationInit',
         'IIS-WindowsAuthentication',
@@ -29,7 +27,6 @@ function Main {
         'IIS-ISAPIFilter',
         'IIS-WebSockets',
         'IIS-ManagementConsole',
-        'IIS-ManagementScriptingTools',
         'ClientForNFS-Infrastructure'
     )
 
