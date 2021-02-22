@@ -32,3 +32,27 @@ function Get-AzCloudEnvironment {
     
     return $azEnvironment
 }
+
+function Send-LogFileToInsights ($insightsKey, $logFile) {
+    $TelClient = New-Object "Microsoft.ApplicationInsights.TelemetryClient"
+    $TelClient.InstrumentationKey = $insightsKey
+    
+    foreach ($row in Get-Content $logFile) {
+        $TelClient.TrackEvent("[PSConfig] $row")
+    }
+    $TelClient.Flush()
+}
+
+function Send-TelemetryToInsights ($insightsKey, $name, $properties) {
+    $TelClient = New-Object "Microsoft.ApplicationInsights.TelemetryClient"
+    $TelClient.InstrumentationKey = $insightsKey
+    $telemetryEvent = New-Object Microsoft.ApplicationInsights.DataContracts.EventTelemetry
+    $telemetryEvent.Name = $name;
+    
+    foreach ($item in $properties.GetEnumerator()) {
+        $telemetryEvent.Properties[$item.Name] = $item.Value
+    }
+    
+    $TelClient.TrackEvent($telemetryEvent)
+    $TelClient.Flush()
+}

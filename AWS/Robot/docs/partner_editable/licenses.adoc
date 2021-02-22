@@ -1,0 +1,9 @@
+// Include details about the license and how they can sign up. If no license is required, clarify that. 
+
+This Quick Start does not require to have an Orchestrator instance, it will only install UiPath Robot. However, the configuration of the Robot will need to be done manually once you decide to connect it to Orchestrator. The minimum version for Orchestrator is 20.4.x
+
+The Quick Start uses only uses AWS provided Windows images and does not require any subscription to the Amazon Machine Image (AMI). For instructions, see step 2 in the deployment section.
+
+
+// Or, if the deployment uses an AMI, update this paragraph. If it doesn’t, remove the paragraph.
+// _<AMI information>The Quick Start requires a subscription to the Amazon Machine Image (AMI) for {partner-product-short-name}, which is available from https://aws.amazon.com/marketplace/[AWS Marketplace^]. Additional pricing, terms, and conditions may apply. For instructions, see link:#step-2.-subscribe-to-the-software-ami[step 2] in the deployment section._

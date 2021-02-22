@@ -1,0 +1,26 @@
+// Replace the content in <>
+// Briefly describe the software. Use consistent and clear branding. 
+// Include the benefits of using the software on AWS, and provide details on usage scenarios.
+
+UiPath Robot is UiPath’s execution agent that enables you to run processes developed in Studio.
+The Robot is split into several components, each being dedicated to a particular task in your automation. The Robot components are as follows:
+
+*	https://docs.uipath.com/robot/docs/robot-service[Service]
+**	Service Mode
+**	User Mode
+*	https://docs.uipath.com/robot/docs/robot-executor[Executor]
+*	https://docs.uipath.com/robot/docs/robot-agent[Tray]
+*	https://docs.uipath.com/robot/docs/robot-command-line-interface[Command Line Interface]
+*	https://docs.uipath.com/robot/docs/uipath-assistant[UiPath Assistant]
+
+Having the Robot components split as explained above helps developers, support users, and computers easily run, identify, and track what each component is executing. Special behaviors can be configured per component this way, such as setting up different Firewall rules for the Executor and the Service.
+
+This Quick Start reference deployment allow you to deploy the following types of Robots:
+
+*	Attended - This type of Robot is triggered by user events, and operates alongside a human user, sharing the same workstation. Attended Robots are used with Orchestrator for centralized process deployment and logging. They can also add data into a queue, to be processed by Unattended robots.
+*	Unattended - Robots run unattended in virtual environments and can automate any number of processes. On top of the Attended Robot capabilities, the Orchestrator is responsible for remote execution, monitoring, scheduling and providing support for work queues.
+
+You are able to run debugging in UiPath Studio with all types of Robots.
+
+Please know that we may share who uses AWS Quick Starts with the AWS partner that collaborated with AWS on the content of the Quick Start.
+
