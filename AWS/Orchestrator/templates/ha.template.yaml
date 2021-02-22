@@ -151,7 +151,7 @@ Resources:
           - - '#!/bin/bash'
             - yum update -y
             - yum install -y wget
-            - 'wget http://download.uipath.com/haa/get-haa.sh'
+            - 'wget https://raw.githubusercontent.com/UiPath/Infrastructure/main/Setup/get-haa.sh'
             - chmod +x get-haa.sh
             - !Join
               - ' '
@@ -189,7 +189,7 @@ Resources:
           - - '#!/bin/bash'
             - yum update -y
             - yum install -y wget
-            - 'wget http://download.uipath.com/haa/get-haa.sh'
+            - 'wget https://raw.githubusercontent.com/UiPath/Infrastructure/main/Setup/get-haa.sh'
             - chmod +x get-haa.sh
             - !Join
               - ' '
@@ -224,7 +224,7 @@ Resources:
           - - '#!/bin/bash'
             - yum update -y
             - yum install -y wget
-            - 'wget http://download.uipath.com/haa/get-haa.sh'
+            - 'wget https://raw.githubusercontent.com/UiPath/Infrastructure/main/Setup/get-haa.sh'
             - chmod +x get-haa.sh
             - !Join
               - ' '
