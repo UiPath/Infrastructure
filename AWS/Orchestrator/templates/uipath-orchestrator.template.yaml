@@ -5,25 +5,17 @@ Description: >-
   public subnets. (qs-1r2g41245)
 Metadata:
   QuickStartDocumentation:
-    EntrypointName: "Launch into a new VPC"
+    EntrypointName: "Launch into an existing VPC"
     Order: "1"
   'AWS::CloudFormation::Interface':
     ParameterGroups:
       - Label:
-          default: Availability Zone Configuration
-        Parameters:
-          - AvailabilityZones
-          - NumberOfAZs
-      - Label:
           default: Network Configuration
         Parameters:
           - VPCCIDR
-          - PublicSubnetTag1
-          - PublicSubnetTag2
-          - PublicSubnetTag3
-          - PrivateSubnetTag1
-          - PrivateSubnetTag2
-          - PrivateSubnetTag3
+          - VPCID
+          - PublicSubnetIDs
+          - PrivateSubnetIDs
       - Label:
           default: Orchestrator Instance Configuration
         Parameters:
@@ -67,24 +59,14 @@ Metadata:
           - QSS3BucketName
           - QSS3KeyPrefix
     ParameterLabels:
-      AvailabilityZones:
-        default: Availability Zone(s) selection
-      NumberOfAZs:
-        default: Number of AZs to use
       VPCCIDR:
         default: VPC CIDR
-      PrivateSubnetTag1:
-        default: Private subnet 1 tag
-      PrivateSubnetTag2:
-        default: Private subnet 2 tag
-      PrivateSubnetTag3:
-        default: Private subnet 3 tag
-      PublicSubnetTag1:
-        default: Public subnet 1 tag
-      PublicSubnetTag2:
-        default: Public subnet 2 tag
-      PublicSubnetTag3:
-        default: Public subnet 3 tag
+      VPCID:
+        default: VPC ID
+      PublicSubnetIDs:
+        default: VPC CIDR
+      PrivateSubnetIDs:
+        default: VPC CIDR
       KeyPairName:
         default: Instance Key pair
       InstanceType:
@@ -126,75 +108,21 @@ Metadata:
       QSS3KeyPrefix:
         default: Template folder
 Parameters:
-  AvailabilityZones:
-    Description: >-
-      List of Availability Zones to use for the subnets in the VPC - maximum of
-      3 AZs are used for this deployment (logical order of your selections is
-      preserved).
-    Type: 'List<AWS::EC2::AvailabilityZone::Name>'
-  NumberOfAZs:
-    AllowedValues:
-      - '2'
-      - '3'
-    Default: '2'
-    Description: >-
-      Number of Availability Zones to use in the VPC (upto 3), must match your
-      selections in the list of Availability Zones parameter.
-    Type: String
   VPCCIDR:
     AllowedPattern: '^([0-9]{1,3}\.){2}([0]{1}.)[0]{1}(\/[16]{2})$'
     ConstraintDescription: CIDR block parameter must be in the form x.x.0.0/16
     Default: 10.0.0.0/16
     Description: 'CIDR block for the VPC, must be in the form x.x.0.0/16.'
     Type: String
-  PrivateSubnetTag1:
-    AllowedPattern: '^([a-zA-Z0-9+\-._:/@]+=[a-zA-Z0-9+\-.,_:/@ *\\"''\[\]\{\}]*)?$'
-    ConstraintDescription: >-
-      tags must be in format "Key=Value" keys can only contain
-      [a-zA-Z0-9+\-._:/@], values can contain [a-zA-Z0-9+\-._:/@ *\\"'\[\]\{\}]
-    Default: Network=Private1
-    Description: Tag to add to private subnet 1 in format Key=Value (Optional).
-    Type: String
-  PrivateSubnetTag2:
-    AllowedPattern: '^([a-zA-Z0-9+\-._:/@]+=[a-zA-Z0-9+\-.,_:/@ *\\"''\[\]\{\}]*)?$'
-    ConstraintDescription: >-
-      tags must be in format "Key=Value" keys can only contain
-      [a-zA-Z0-9+\-._:/@], values can contain [a-zA-Z0-9+\-._:/@ *\\"'\[\]\{\}]
-    Default: Network=Private2
-    Description: Tag to add to private subnet 2 in format Key=Value (Optional).
-    Type: String
-  PrivateSubnetTag3:
-    AllowedPattern: '^([a-zA-Z0-9+\-._:/@]+=[a-zA-Z0-9+\-.,_:/@ *\\"''\[\]\{\}]*)?$'
-    ConstraintDescription: >-
-      tags must be in format "Key=Value" keys can only contain
-      [a-zA-Z0-9+\-._:/@], values can contain [a-zA-Z0-9+\-._:/@ *\\"'\[\]\{\}]
-    Default: Network=Private3
-    Description: Tag to add to private subnet 3 in format Key=Value (Optional).
-    Type: String
-  PublicSubnetTag1:
-    AllowedPattern: '^([a-zA-Z0-9+\-._:/@]+=[a-zA-Z0-9+\-.,_:/@ *\\"''\[\]\{\}]*)?$'
-    ConstraintDescription: >-
-      tags must be in format "Key=Value" keys can only contain
-      [a-zA-Z0-9+\-._:/@], values can contain [a-zA-Z0-9+\-._:/@ *\\"'\[\]\{\}]
-    Default: Network=Public1
-    Description: Tag to add to public subnet 1 in format Key=Value (Optional)
-    Type: String
-  PublicSubnetTag2:
-    AllowedPattern: '^([a-zA-Z0-9+\-._:/@]+=[a-zA-Z0-9+\-.,_:/@ *\\"''\[\]\{\}]*)?$'
-    ConstraintDescription: >-
-      tags must be in format "Key=Value" keys can only contain
-      [a-zA-Z0-9+\-._:/@], values can contain [a-zA-Z0-9+\-._:/@ *\\"'\[\]\{\}]
-    Default: Network=Public2
-    Description: Tag to add to public subnet 2 in format Key=Value (Optional).
-    Type: String
-  PublicSubnetTag3:
-    AllowedPattern: '^([a-zA-Z0-9+\-._:/@]+=[a-zA-Z0-9+\-.,_:/@ *\\"''\[\]\{\}]*)?$'
-    ConstraintDescription: >-
-      tags must be in format "Key=Value" keys can only contain
-      [a-zA-Z0-9+\-._:/@], values can contain [a-zA-Z0-9+\-._:/@ *\\"'\[\]\{\}]
-    Default: Network=Public3
-    Description: Tag to add to public subnet 3 in format Key=Value (Optional).
-    Type: String
+  VPCID:
+    Type: 'AWS::EC2::VPC::Id'
+    Description: 'VPC ID'
+  PublicSubnetIDs:
+    Description: 'List of public subnet IDs'
+    Type: 'List<AWS::EC2::Subnet::Id>'
+  PrivateSubnetIDs:
+    Description: 'List of private subnet IDs'
+    Type: 'List<AWS::EC2::Subnet::Id>'
   KeyPairName:
     Description: 'Existing Key Pair, which is to be used to Log in to VM instances.'
     Type: 'AWS::EC2::KeyPair::KeyName'
@@ -932,16 +860,119 @@ Conditions:
   UsingDefaultBucket: !Equals
     - !Ref QSS3BucketName
     - aws-quickstart
-  3AZCondition: !Equals
-    - !Ref NumberOfAZs
-    - '3'
 Resources:
-  NetworkStack:
+  FindAmiLambdaRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      Description: >-
+        IAM Role to be assumed by Lambda functions which find AMI ids
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'ec2:DescribeImages'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                Resource: 'arn:aws:logs:*:*:*'
+              - Effect: Allow
+                Action:
+                  - 'xray:PutTraceSegments'
+                Resource: '*'
+  FindAMIFunction:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Description: Finds a matching AMI Id
+      Handler: index.handler
+      Role: !GetAtt FindAmiLambdaRole.Arn
+      Code:
+        ZipFile: !Join
+          - |+
+
+          - - import boto3
+            - import json
+            - import cfnresponse
+            - 'def create(properties, physical_id):'
+            - '    regionName = properties[''RegionName'']'
+            - '    imageName = properties[''ImageName'']'
+            - '    architecture = properties[''Architecture'']'
+            - '    virtualizationType = properties[''VirtualizationType'']'
+            - '    owners = properties[''Owners'']'
+            - '    imageId = '''''
+            - '    ec2 = boto3.client(''ec2'', regionName)'
+            - '    images = ec2.describe_images('
+            - '        ExecutableUsers=[''all''],'
+            - '        Filters=['
+            - '            { ''Name'': ''name'', ''Values'': [imageName] },'
+            - '            { ''Name'': ''state'', ''Values'': [''available''] },'
+            - '            { ''Name'': ''architecture'', ''Values'': [architecture] },'
+            - '            { ''Name'': ''virtualization-type'', ''Values'': [virtualizationType] }'
+            - '        ],'
+            - '        Owners=[owners]'
+            - '    )[''Images'']'
+            - '    if len(images) > 0:'
+            - '        imageId = images[0][''ImageId'']'
+            - '    print(regionName, imageId)'
+            - '    returnAttribute = {}'
+            - '    returnAttribute[''ImageId''] = imageId'
+            - '    returnAttribute[''Action''] = ''CREATE'''
+            - '    return cfnresponse.SUCCESS, imageId, returnAttribute'
+            - 'def update(properties, physical_id):'
+            - '    imageId = physical_id'
+            - '    returnAttribute = {}'
+            - '    returnAttribute[''ImageId''] = imageId'
+            - '    returnAttribute[''Action''] = ''UPDATE'''
+            - '    return cfnresponse.SUCCESS, imageId, returnAttribute'
+            - 'def delete(properties, physical_id):'
+            - '    imageId = physical_id'
+            - '    returnAttribute = {}'
+            - '    returnAttribute[''ImageId''] = imageId'
+            - '    returnAttribute[''Action''] = ''DELETE'''
+            - '    return cfnresponse.SUCCESS, imageId, returnAttribute'
+            - 'def handler(event, context):'
+            - '    print(''Received event: '' + json.dumps(event))'
+            - '    status = cfnresponse.FAILED'
+            - '    new_physical_id = None'
+            - '    returnAttribute = {}'
+            - '    try:'
+            - '        properties = event.get(''ResourceProperties'')'
+            - '        physical_id = event.get(''PhysicalResourceId'')'
+            - '        status, new_physical_id, returnAttribute = {'
+            - '            ''Create'': create,'
+            - '            ''Update'': update,'
+            - '            ''Delete'': delete'
+            - '        }.get(event[''RequestType''], lambda x, y: (cfnresponse.FAILED, None))(properties, physical_id)'
+            - '    except Exception as e:'
+            - '        print(''Exception: '' + str(e))'
+            - '        status = cfnresponse.FAILED'
+            - '    finally:'
+            - '        cfnresponse.send(event, context, status, returnAttribute, new_physical_id)'
+      Runtime: python3.6
+      Timeout: 30
+      TracingConfig:
+        Mode: Active
+  StorageStack:
     Type: 'AWS::CloudFormation::Stack'
     Properties:
       TemplateURL: !Sub
         - >-
-          https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}submodules/quickstart-aws-vpc/templates/aws-vpc.template
+          https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/storage.template.yaml
         - S3Bucket: !If
             - UsingDefaultBucket
             - !Sub '${QSS3BucketName}-${AWS::Region}'
@@ -951,66 +982,156 @@ Resources:
             - !Ref 'AWS::Region'
             - !Ref QSS3BucketRegion
       Parameters:
-        AvailabilityZones: !Join
-          - ','
-          - !Ref AvailabilityZones
-        NumberOfAZs: !Ref NumberOfAZs
-        VPCCIDR: !Ref VPCCIDR
-        PublicSubnetTag1: !Ref PublicSubnetTag1
-        PublicSubnetTag2: !Ref PublicSubnetTag2
-        PublicSubnetTag3: !Ref PublicSubnetTag3
-        PrivateSubnetATag1: !Ref PrivateSubnetTag1
-        PrivateSubnetBTag1: !Ref PrivateSubnetTag2
-        PrivateSubnetBTag2: !Ref PrivateSubnetTag3
-  OrchestratorStack:
-    Type: 'AWS::CloudFormation::Stack'
-    Properties:
-      TemplateURL: !Sub
-        - >-
-          https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/uipath-orchestrator.template.yaml
-        - S3Bucket: !If
-            - UsingDefaultBucket
-            - !Sub '${QSS3BucketName}-${AWS::Region}'
-            - !Ref QSS3BucketName
-          S3Region: !If
-            - UsingDefaultBucket
-            - !Ref 'AWS::Region'
-            - !Ref QSS3BucketRegion
-      Parameters:
-        VPCCIDR: !Ref VPCCIDR
-        VPCID: !GetAtt NetworkStack.Outputs.VPCID
+        SubnetId: !Select [0, !Ref PrivateSubnetIDs]
         KeyPairName: !Ref KeyPairName
-        PrivateSubnetIDs: !Join
-          - ','
-          - - !GetAtt NetworkStack.Outputs.PrivateSubnet1AID
-            - !GetAtt NetworkStack.Outputs.PrivateSubnet2AID
-            - !If [ 3AZCondition, !GetAtt NetworkStack.Outputs.PrivateSubnet3AID, !Ref "AWS::NoValue" ]
-        PublicSubnetIDs: !Join
-          - ','
-          - - !GetAtt NetworkStack.Outputs.PublicSubnet1ID
-            - !GetAtt NetworkStack.Outputs.PublicSubnet2ID
-            - !If [ 3AZCondition, !GetAtt NetworkStack.Outputs.PublicSubnet3ID, !Ref "AWS::NoValue" ]
-        InstanceType: !Ref InstanceType
         GatewayName: !Ref GatewayName
         GatewayTimezone: !Ref GatewayTimezone
-        UiPathFQDN: !Ref UiPathFQDN
+        VPCID: !Ref VPCID
+        VPCCIDR: !Ref VPCCIDR
+  RoutingStack:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL: !Sub
+        - >-
+          https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/routing.template.yaml
+        - S3Bucket: !If
+            - UsingDefaultBucket
+            - !Sub '${QSS3BucketName}-${AWS::Region}'
+            - !Ref QSS3BucketName
+          S3Region: !If
+            - UsingDefaultBucket
+            - !Ref 'AWS::Region'
+            - !Ref QSS3BucketRegion
+      Parameters:
+        VPCID: !Ref VPCID
+        VPCCIDR: !Ref VPCCIDR
+        SubnetIDs: !Join [",", !Ref PublicSubnetIDs]
+        Fqdn: !Ref UiPathFQDN
         HostedZoneID: !Ref HostedZoneID
+        SSLCertificateArn: !GetAtt ConfigureSSLStack.Outputs.ACMCertificate
+  HAStack:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL: !Sub
+        - >-
+          https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/ha.template.yaml
+        - S3Bucket: !If
+            - UsingDefaultBucket
+            - !Sub '${QSS3BucketName}-${AWS::Region}'
+            - !Ref QSS3BucketName
+          S3Region: !If
+            - UsingDefaultBucket
+            - !Ref 'AWS::Region'
+            - !Ref QSS3BucketRegion
+      Parameters:
+        VPCID: !Ref VPCID
+        VPCCIDR: !Ref VPCCIDR
+        SubnetIDs: !Join [",", !Ref PrivateSubnetIDs]
+        KeyPairName: !Ref KeyPairName
         HAAUser: !Ref HAAUser
         HAAPassword: !Ref HAAPassword
-        HAPort: !Ref HAPort
         HAALicense: !Ref HAALicense
+        FindAMIFunctionArn: !GetAtt
+          - FindAMIFunction
+          - Arn
+  DatabaseStack:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL: !Sub
+        - >-
+          https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/database.template.yaml
+        - S3Bucket: !If
+            - UsingDefaultBucket
+            - !Sub '${QSS3BucketName}-${AWS::Region}'
+            - !Ref QSS3BucketName
+          S3Region: !If
+            - UsingDefaultBucket
+            - !Ref 'AWS::Region'
+            - !Ref QSS3BucketRegion
+      Parameters:
+        VPCID: !Ref VPCID
+        VPCCIDR: !Ref VPCCIDR
+        SubnetIDs: !Join [",", !Ref PrivateSubnetIDs]
         RDSDBName: !Ref RDSDBName
         RDSAllocatedStorage: !Ref RDSAllocatedStorage
         RDSMaxAllocatedStorage: !Ref RDSMaxAllocatedStorage
         RDSUsername: !Ref RDSUsername
         RDSPassword: !Ref RDSPassword
+  ServerStack:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL: !Sub
+        - >-
+          https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/server.template.yaml
+        - S3Bucket: !If
+            - UsingDefaultBucket
+            - !Sub '${QSS3BucketName}-${AWS::Region}'
+            - !Ref QSS3BucketName
+          S3Region: !If
+            - UsingDefaultBucket
+            - !Ref 'AWS::Region'
+            - !Ref QSS3BucketRegion
+      Parameters:
+        VPCID: !Ref VPCID
+        VPCCIDR: !Ref VPCCIDR
+        PrivateSubnetIDs: !Join [",", !Ref PrivateSubnetIDs]
+        PublicSubnetIDs: !Join [",", !Ref PublicSubnetIDs]
+        TargetGroupARN: !GetAtt
+          - RoutingStack
+          - Outputs.TargetGroupARN
+        KeyPairName: !Ref KeyPairName
+        InstanceType: !Ref InstanceType
+        FindAMIFunctionArn: !GetAtt
+          - FindAMIFunction
+          - Arn
         OrchestratorVersion: !Ref OrchestratorVersion
         OrchestratorInstanceCount: !Ref OrchestratorInstanceCount
         OrchestratorLicense: !Ref OrchestratorLicense
         OrchestratorPassword: !Ref OrchestratorPassword
+        DatabaseServerName: !GetAtt
+          - DatabaseStack
+          - Outputs.RDSDBInstanceEndpointAddress
+        DatabaseName: !Ref RDSDBName
+        DatabaseUsername: !Ref RDSUsername
+        DatabasePassword: !Ref RDSPassword
+        NugetStorageBucketName: !GetAtt
+          - StorageStack
+          - Outputs.NugetStorageBucketName
+        NugetStorageBucketArn: !GetAtt
+          - StorageStack
+          - Outputs.NugetStorageBucketArn
+        GatewayPrivateIP: !GetAtt
+          - StorageStack
+          - Outputs.GatewayVMPrivateIP1
+        HAMasterPrivateIP: !GetAtt
+          - HAStack
+          - Outputs.HAMasterPrivateIP
+        HASlave1PrivateIP: !GetAtt
+          - HAStack
+          - Outputs.HASlave1PrivateIP
+        HASlave2PrivateIP: !GetAtt
+          - HAStack
+          - Outputs.HASlave2PrivateIP
+        HAPort: !Ref HAPort
+        HAAPassword: !Ref HAAPassword
         QSS3BucketName: !Ref QSS3BucketName
-        QSS3KeyPrefix: !Ref QSS3KeyPrefix
         QSS3BucketRegion: !Ref QSS3BucketRegion
+        QSS3KeyPrefix: !Ref QSS3KeyPrefix
+        Fqdn: !Ref UiPathFQDN
+  ConfigureSSLStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub
+        - "https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}submodules/quickstart-aws-acm-certificate/templates/quickstart-aws-acm-certificate.template.yml"
+        - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+          S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
+      Parameters:
+        QSS3BucketName: !Ref QSS3BucketName
+        QSS3BucketRegion: !Ref QSS3BucketRegion
+        QSS3KeyPrefix: !Sub "${QSS3KeyPrefix}submodules/quickstart-aws-acm-certificate/"
+        DomainName: !Ref UiPathFQDN
+        HostedZoneID: !Ref HostedZoneID
+
 Outputs:
   FQDNLoadBalancer:
     Description: UiPath Orchestrator Login page
@@ -1018,15 +1139,23 @@ Outputs:
   BastionHost:
     Description: Bastion Host's Public IP address
     Value: !GetAtt
-      - OrchestratorStack
-      - Outputs.BastionHost
+      - ServerStack
+      - Outputs.BastionHostPublicIP
   HaaNodesIPs:
     Description: High Availability Add-on's list of IP addresses
-    Value: !GetAtt
-      - OrchestratorStack
-      - Outputs.HaaNodesIPs
+    Value: !Join
+      - ','
+      - - !GetAtt
+          - HAStack
+          - Outputs.HAMasterPrivateIP
+        - !GetAtt
+          - HAStack
+          - Outputs.HASlave1PrivateIP
+        - !GetAtt
+          - HAStack
+          - Outputs.HASlave2PrivateIP
   NugetStorageS3Bucket:
     Description: S3 bucket name that contains Orchestrator's Nuget packages
     Value: !GetAtt
-      - OrchestratorStack
-      - Outputs.NugetStorageS3Bucket
+      - StorageStack
+      - Outputs.NugetStorageBucketName
