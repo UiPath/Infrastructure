@@ -10,3 +10,6 @@
 	path = AWS/Orchestrator/submodules/quickstart-aws-acm-certificate
 	url = https://github.com/aws-quickstart/quickstart-aws-acm-certificate.git
 	branch = main
+[submodule "AWS/Orchestrator/docs/boilerplate"]
+	path = AWS/Orchestrator/docs/boilerplate
+	url = https://github.com/aws-quickstart/quickstart-documentation-base-common.git

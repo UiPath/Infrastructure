@@ -1,0 +1,68 @@
+---
+- name: Test Ansible on Azure base VM
+  hosts: all
+  gather_facts: yes
+  tasks:
+    - name: Set facts
+      set_fact:
+        version: '20.10.5'
+
+    - name: Set facts
+      set_fact:
+        src_folder: 'c:\cfn\sources'
+
+    - name: Create src folder
+      win_file:
+        path: '{{ src_folder }}'
+        state: directory
+
+    - name: Download Orchestrator msi
+      win_get_url:
+        url: 'https://download.uipath.com/versions/{{version}}/UiPathOrchestrator.msi'
+        dest: '{{ src_folder }}\UiPathOrchestrator.msi'
+
+    - name: Copy RolesAndFeatures script to remote
+      win_copy:
+        src: ../../Install-RolesAndFeatures.ps1
+        dest: '{{ src_folder }}\Install-RolesAndFeatures.ps1'
+
+    - name: Install roles and features
+      win_shell: '{{ src_folder }}\Install-RolesAndFeatures.ps1'
+
+    - name: Install chocolatey
+      win_chocolatey:
+          name:
+           - chocolatey
+           - chocolatey-core.extension
+          state: present
+
+    - name: Install Orchestrator Prerequsites - NetFramework
+      win_chocolatey:
+        name: dotnet4.7.2
+        state: present
+      register: install_response
+
+    - name: Reboot if needed
+      win_reboot:
+      when: install_response.changed == true and install_response.rc == 3010
+
+    - name: Install Orchestrator Prerequsites - URLRewrite
+      win_chocolatey:
+        name: urlrewrite
+        state: present
+      register: install_response
+
+    - name: Reboot if needed
+      win_reboot:
+      when: install_response.changed == true and install_response.rc == 3010
+
+    - name: Install Orchestrator Prerequsites - DotNetCore Hosting Bundle
+      win_chocolatey:
+        name: dotnetcore-windowshosting
+        version: 3.1.8
+        state: present
+      register: install_response
+
+    - name: Reboot if needed
+      win_reboot:
+      when: install_response.changed == true and install_response.rc == 3010

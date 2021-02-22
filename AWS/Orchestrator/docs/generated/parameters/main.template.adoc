@@ -1,0 +1,76 @@
+
+.Availability Zone Configuration
+[width="100%",cols="16%,11%,73%",options="header",]
+|===
+|Parameter label (name) |Default value|Description|Availability Zone(s) selection
+(`AvailabilityZones`)|`**__Requires input__**`|List of Availability Zones to use for the subnets in the VPC - maximum of 3 AZs are used for this deployment (logical order of your selections is preserved).|Number of AZs to use
+(`NumberOfAZs`)|`2`|Number of Availability Zones to use in the VPC (upto 3), must match your selections in the list of Availability Zones parameter.
+|===
+.Network Configuration
+[width="100%",cols="16%,11%,73%",options="header",]
+|===
+|Parameter label (name) |Default value|Description|VPC CIDR
+(`VPCCIDR`)|`10.0.0.0/16`|CIDR block for the VPC, must be in the form x.x.0.0/16.|Public subnet 1 tag
+(`PublicSubnetTag1`)|`Network=Public1`|Tag to add to public subnet 1 in format Key=Value (Optional)|Public subnet 2 tag
+(`PublicSubnetTag2`)|`Network=Public2`|Tag to add to public subnet 2 in format Key=Value (Optional).|Public subnet 3 tag
+(`PublicSubnetTag3`)|`Network=Public3`|Tag to add to public subnet 3 in format Key=Value (Optional).|Private subnet 1 tag
+(`PrivateSubnetTag1`)|`Network=Private1`|Tag to add to private subnet 1 in format Key=Value (Optional).|Private subnet 2 tag
+(`PrivateSubnetTag2`)|`Network=Private2`|Tag to add to private subnet 2 in format Key=Value (Optional).|Private subnet 3 tag
+(`PrivateSubnetTag3`)|`Network=Private3`|Tag to add to private subnet 3 in format Key=Value (Optional).
+|===
+.Orchestrator Instance Configuration
+[width="100%",cols="16%,11%,73%",options="header",]
+|===
+|Parameter label (name) |Default value|Description|Instance Key pair
+(`KeyPairName`)|`**__Requires input__**`|Existing Key Pair, which is to be used to Log in to VM instances.|Instance type
+(`InstanceType`)|`m4.xlarge`|EC2 instance type
+|===
+.Storage Gateway Configuration
+[width="100%",cols="16%,11%,73%",options="header",]
+|===
+|Parameter label (name) |Default value|Description|Storage Gateway
+(`GatewayName`)|`uipathgateway`|Name of S3 File Storage Gateway.|**NO_LABEL**
+(`GatewayTimezone`)|`US/Eastern`|Timezone to choose for File Gateway
+|===
+.DNS or SSL Configuration
+[width="100%",cols="16%,11%,73%",options="header",]
+|===
+|Parameter label (name) |Default value|Description|Hosting FQDN
+(`UiPathFQDN`)|`**__Requires input__**`|The fully qualified domain name where the UiPath Orchestrator should be installed|Route 53 Hosted Zone Id
+(`HostedZoneID`)|`**__Requires input__**`|The Route 53 hosted zone Id
+|===
+.High Availability Configuration
+[width="100%",cols="16%,11%,73%",options="header",]
+|===
+|Parameter label (name) |Default value|Description|HA Addon Username
+(`HAAUser`)|`**__Requires input__**`|High Availability Add-on username. A valid email must be used as username|HA Addon Password
+(`HAAPassword`)|`**__Requires input__**`|High Availability Add-on password.|HA Addon Port
+(`HAPort`)|`10000`|Port on which High Availability Add-on listens to|HA Addon License Key
+(`HAALicense`)|`**__Blank string__**`|License key, purchased from UIPath, to be used with the High Availability Add-on.
+|===
+.RDS Database Configuration
+[width="100%",cols="16%,11%,73%",options="header",]
+|===
+|Parameter label (name) |Default value|Description|RDS Database Name
+(`RDSDBName`)|`uipathdb`|Name for UIPath Database to be created.|RDS Allocated Storage
+(`RDSAllocatedStorage`)|`200`|Storage amount to be allocated to RDS DB Instance.|Maximum allocated storage
+(`RDSMaxAllocatedStorage`)|`1000`|The upper limit to which Amazon RDS can automatically scale the storage of the DB instance.|DB Username
+(`RDSUsername`)|`**__Requires input__**`|Username to be used to log on to Database.|DB Password
+(`RDSPassword`)|`**__Requires input__**`|Password to be used to log on to Database.
+|===
+.Orchestrator Server Configuration
+[width="100%",cols="16%,11%,73%",options="header",]
+|===
+|Parameter label (name) |Default value|Description|Orchestrator Version Number
+(`OrchestratorVersion`)|`20.10.2`|UIPath Orchestrator Version to be installed.|Orchestrator Instance Count
+(`OrchestratorInstanceCount`)|`2`|Desired Capacity (instance count) for Orchestrator instances.|Orchestrator License Key
+(`OrchestratorLicense`)|`**__Blank string__**`|License key, purchased from UiPath, or trial key. If not provided, Orchestrator will be unlicensed|Orchestrator Password
+(`OrchestratorPassword`)|`**__Requires input__**`|Orchestrator Administrator password to login as.
+|===
+.Quickstart Bucket configuration
+[width="100%",cols="16%,11%,73%",options="header",]
+|===
+|Parameter label (name) |Default value|Description|Template hosting Bucket
+(`QSS3BucketName`)|`aws-quickstart`|S3 bucket name hosting the Quickstart templates.|Template folder
+(`QSS3KeyPrefix`)|`quickstart-uipath-orchestrator/`|S3 key prefix under which Quick Start templates are hosted.
+|===

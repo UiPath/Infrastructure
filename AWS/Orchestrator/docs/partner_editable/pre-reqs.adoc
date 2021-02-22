@@ -1,0 +1,15 @@
+==== Prepare your AWS account 
+
+===== Key Pair 
+Make sure that at least one Amazon EC2 key pair exists in your AWS account in the Region where you plan to deploy the Quick Start. Make note of the key pair name. You need it during deployment. To create a key pair, follow the instructions in the https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html[AWS documentation]. +
+For testing or proof-of-concept purposes, we recommend creating a new key pair instead of using one that’s already being used by a production instance.
+
+===== SSL Certificate
+This QuickStart request a certificate from AWS Certificate Manager, and uses DNS validation to automatically validate the certificate using the DNS for hosted zone that you have set up. If you do already have a public cert that you want to bring on, you can do so by providing the ARN of your certificate.
+
+===== Valid Domain Name 
+This Quickstart assumes you have established ownership of the parent domain you want to use under which the web-application will be served. In order to do so, you should have a Hosted Zone setup within your AWS account, with required NS, SOA, CNAME, and TXT records. For further details on how to create a public hosted zone, refer to https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/AboutHZWorkingWith.html[Route53 documentation].
+
+==== Prepare your {partner-company-name} account
+
+This Quick Start uses AWS owned AMI. However, during initiation of EC2 VMs, it downloads, installs and configures UiPath Orchestrator and HA Addon software. In order to do so, you need to first purchase the license keys by contacting UiPath directly.

@@ -1,0 +1,26 @@
+// Replace the <n> in each row to specify the number of resources used in this deployment. Remove the rows for resources that aren’t used.
+|===
+|Resource |This deployment uses
+
+// Space needed to maintain table headers
+|VPCs |1
+|Subnets | Up to 6
+|NAT Gateways | 2
+|VPC Endpoints | 1
+|Internet Gateways | 1
+|Elastic IP addresses | Up to 6
+|IAM security groups | 1
+|IAM roles | Up to 8
+|Storage Gateway | 1
+|Auto Scaling groups | 1
+|Application Load Balancers | 1
+|Public CA | 1
+|Hosted Zone |1
+|RDS Instance | 1
+|RHEL instances | 3
+|Bastion Hosts | 1
+|===
+
+
+
+
