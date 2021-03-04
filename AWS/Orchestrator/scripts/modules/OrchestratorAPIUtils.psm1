@@ -193,10 +193,10 @@ function Remove-ChangePasswordOnFirstLoginPolicy {
 
     $orchSettingsURL = "$orchUrl/odata/Settings"
     $body = @{
-        Name = "Auth.Password.ShouldChangePasswordAfterFirstLogin"
+        Name  = "Auth.Password.ShouldChangePasswordAfterFirstLogin"
         Value = "false"
         Scope = "All"
-        Id = "Auth.Password.ShouldChangePasswordAfterFirstLogin"
+        Id    = "Auth.Password.ShouldChangePasswordAfterFirstLogin"
     } | ConvertTo-Json
     Invoke-RestMethod -Uri "$orchSettingsURL('Auth.Password.ShouldChangePasswordAfterFirstLogin')" `
         -Method Put `
@@ -204,4 +204,71 @@ function Remove-ChangePasswordOnFirstLoginPolicy {
         -UseBasicParsing `
         -WebSession $websession `
         -Body $body
+}
+function Get-IdentityInstallationToken {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$identityUrl,
+        [Parameter(Mandatory = $true)]
+        [string]$hostUserName,
+        [Parameter(Mandatory = $true)]
+        [string]$password
+    )
+    $antifUrl = $identityUrl + "/api/antiforgery/generate"
+    $loginUrl = $identityUrl + "/api/Account/Login"
+    $tokenUrl = $identityUrl + "/api/Account/ClientAccessToken"
+    
+    Invoke-WebRequest -Uri $antifUrl -Method Get -ContentType "application/json" -UseBasicParsing -Session websession
+    $websession.Cookies.GetCookies($antifUrl)[1].Name = "XSRF-TOKEN"
+    $dataLogin = @{
+        tenant          = "host"         
+        usernameOrEmail = $hostUserName         
+        password        = $password         
+        rememberLogin   = $true     
+    } | ConvertTo-Json
+    $temp = $websession.Cookies.GetCookies($antifUrl)[1].Value
+    $websession.Headers.'X-XSRF-TOKEN' = $temp
+    Invoke-WebRequest -Uri $loginUrl -Method Post -Body $dataLogin -ContentType "application/json" -UseBasicParsing -WebSession $websession
+    $webresponse3 = Invoke-WebRequest -Uri $tokenUrl -Method Get  -ContentType "application/json" -UseBasicParsing -WebSession $websession
+    return $webresponse3.Content
+}
+
+function Convert-FileToJson() {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$filePath
+    )
+    $object = Get-Content -Path $filePath | ConvertFrom-Json -AsHashtable -Depth 10
+    return $object
+}
+function Write-JsonToFile() {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$filePath,
+        [Parameter(Mandatory = $true)]
+        [string]$jsonObject
+    )
+    
+    $jsonObject | Out-File -FilePath $filePath
+}
+
+function Generate-IdentityTokenAndInsertIntoFile {
+    Param (
+        [Parameter(Mandatory = $true)]
+        [string] $identityUrl,
+        [Parameter(Mandatory = $true)]
+        [string] $hostUserName,
+        [Parameter(Mandatory = $true)]
+        [string] $password,
+        [Parameter(Mandatory = $true)]
+        [string] $parameterFilePath,
+        [Parameter(Mandatory = $true)]
+        [string] $parameterKey
+    )
+    $token = Get-IdentityInstallationToken -identityUrl $identityUrl -hostUserName $hostUserName -password $password
+    $parameters = Convert-FileToJson -filePath $parameterFilePath
+    $parameters[$parameterKey] = @{value = $token }
+    $jsonParamters = $parameters | ConvertTo-Json 
+    Write-JsonToFile -filePath $parameterFilePath -jsonObject $jsonParamters
+    return
 }

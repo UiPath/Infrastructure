@@ -223,9 +223,24 @@ function Install-UiPathOrchestratorEnterprise {
     Write-Verbose "Installing Features: $msiFeatures"
     Write-Verbose "Installing Args: $msiExecArgs"
 
-    $process = Start-Process "msiexec" -ArgumentList $msiExecArgs -Wait -PassThru
+    $tries = 3
+    while ($tries -ge 1) {
+        Write-Host "Starting the installation with $tries tries remaining"
+        $process = Start-Process "msiexec" -ArgumentList $msiExecArgs -Wait -PassThru
 
-    Write-Verbose "Process exit code: $($process.ExitCode)"
+        Write-Host "Process exit code: $($process.ExitCode)"
+        if ($($process.ExitCode) -ne 0) {
+            Write-Host "Installation failed"
+            if ($($process.ExitCode) -eq 1620) {
+                $tries--
+                Start-Sleep 10
+            } else {
+                throw "Installation failed and will not be retried"
+            }
+        } else {
+            $tries = 0
+        }
+    }
 }
 
 function Remove-WebSite ($webSiteName, $port) {
