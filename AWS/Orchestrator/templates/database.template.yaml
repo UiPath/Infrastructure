@@ -61,7 +61,7 @@ Resources:
       AllocatedStorage: !Ref RDSAllocatedStorage
       MaxAllocatedStorage: !Ref RDSMaxAllocatedStorage
       BackupRetentionPeriod: 1
-      DBInstanceClass: db.m4.large
+      DBInstanceClass: db.m5.large
       DBInstanceIdentifier: !Ref RDSDBName
       DBSubnetGroupName: !Ref DBSubnetGroup
       Engine: sqlserver-se

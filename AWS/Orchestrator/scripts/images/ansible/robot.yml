@@ -1,0 +1,23 @@
+---
+- name: Test Ansible on Azure base VM
+  hosts: all
+  gather_facts: yes
+  tasks:
+    - name: Set facts
+      set_fact:
+        version: '20.10.2'
+
+    - name: Install UiPath Studio
+      win_package:
+        path: https://download.uipath.com/versions/{{version}}/UiPathStudio.msi
+        arguments:
+          - /quiet
+          - ADDLOCAL=DesktopFeature,Robot,Packages,Studio,StartupLauncher,RegisterService,JavaBridge,ChromeExtension
+        state: present
+        creates_path: 'C:\Program Files (x86)\UiPath'
+
+    - name: Set service startup mode to auto and ensure it is started
+      win_service:
+        name: UiRobotSvc
+        start_mode: auto
+        state: started

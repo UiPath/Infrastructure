@@ -1,0 +1,81 @@
+trigger:
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - images/*
+
+pr:
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - images/*
+
+variables:
+  AzureConnectionName: 'AzureDevTest-EA'
+  DockerConnectionName: 'DevTest-EA-docker'
+  AcrName: 'imagebuild'
+  ConfigKeyVault: 'cloud-automation-kv'
+
+stages:
+  - stage: Build
+    displayName: Build image
+    jobs:
+      - job: image_build
+        pool:
+          vmImage: 'ubuntu-18.04'
+        container:
+          image: ${{ variables.AcrName }}.azurecr.io/imagebuild:latest
+          endpoint: ${{ variables.DockerConnectionName }}
+        timeoutInMinutes: 360
+        steps:
+          - bash: 'sudo chown -R "$(whoami):" .'
+            displayName: 'Changing the owner of /ansible folder to AzureDevops user'
+            failOnStderr: true
+
+          - task: AzureCLI@2
+            displayName: "Environment: add secrets"
+            inputs:
+              azureSubscription: ${{ variables.AzureConnectionName }}
+              scriptType: pscore
+              scriptLocation: inlineScript
+              inlineScript: |
+                Write-Output "Retrieving secrets from ${{ variables.ConfigKeyVault }}"
+                $secretList = (az keyvault secret list --vault-name ${{ variables.configKeyVault }} | ConvertFrom-Json)
+                $secrets = $secretList | ForEach-Object  { "export $(($_.name -creplace '(?<!^)\p{Lu}', '_$&').ToUpper())=$(((az keyvault secret show --id $($_.id)) | ConvertFrom-Json).value )" }
+
+                Write-Output "Secrets extracted:"
+                $secretList | ForEach-Object { "$($_.name)" }
+                $secretList = ""
+
+                if  ($secrets) {
+                  $secrets > $(Pipeline.Workspace)/secrets.env
+                }
+                else {
+                  Write-Error "No secrets retrieved. Halting execution!"
+                  Exit1
+                }
+
+                Write-Output "Cleaning up secrets..."
+                $secrets = ""
+                Write-Output "All done!"
+
+          - bash: |
+              export $(cat $(Pipeline.Workspace)/secrets.env | xargs)
+              packer build -var 'ansible_playbook=ansible/orchestrator.yml' -on-error=cleanup packer/aws.json
+            workingDirectory: '$(Build.SourcesDirectory)/images'
+            displayName: 'Run Packer'
+            timeoutInMinutes: 360
+
+          - task: CopyFiles@2
+            inputs:
+              targetFolder: $(Build.ArtifactStagingDirectory)
+              contents: '$(Build.SourcesDirectory)/manifest.json'
+
+          - task: PublishBuildArtifacts@1
+            inputs:
+              pathToPublish: $(Build.ArtifactStagingDirectory)
+              artifactName: manifest
