@@ -5,8 +5,6 @@ $features = @(
     'IIS-HttpErrors',
     'IIS-StaticContent',
     'IIS-RequestFiltering',
-    'IIS-CertProvider',
-    'IIS-IPSecurity',
     'IIS-URLAuthorization',
     'IIS-ApplicationInit',
     'IIS-WindowsAuthentication',
@@ -16,7 +14,6 @@ $features = @(
     'IIS-ISAPIFilter',
     'IIS-WebSockets',
     'IIS-ManagementConsole',
-    'IIS-ManagementScriptingTools',
     'ClientForNFS-Infrastructure'
 )
 

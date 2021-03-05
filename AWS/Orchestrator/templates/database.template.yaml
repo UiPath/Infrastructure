@@ -61,7 +61,7 @@ Resources:
       AllocatedStorage: !Ref RDSAllocatedStorage
       MaxAllocatedStorage: !Ref RDSMaxAllocatedStorage
       BackupRetentionPeriod: 1
-      DBInstanceClass: db.m4.large
+      DBInstanceClass: db.m5.large
       DBInstanceIdentifier: !Ref RDSDBName
       DBSubnetGroupName: !Ref DBSubnetGroup
       Engine: sqlserver-se
@@ -69,7 +69,7 @@ Resources:
       LicenseModel: license-included
       MasterUsername: !Ref RDSUsername
       MasterUserPassword: !Ref RDSPassword
-      MultiAZ: false
+      MultiAZ: true
       StorageType: gp2
       VPCSecurityGroups:
         - !Ref DbSecurityGroup

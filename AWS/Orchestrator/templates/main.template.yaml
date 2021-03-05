@@ -1,21 +1,21 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: >-
   This template creates a Multi-AZ, multi-subnet VPC infrastructure with UIPath
-  Orchestrator deployed in private Subnets, with an ALB behind a Route53 in
+  Orchestrator deployed in private subnets, with an Application Load Balancer behind Route 53 in
   public subnets. (qs-1r2g41245)
 Metadata:
   QuickStartDocumentation:
-    EntrypointName: "Launch into a new VPC"
+    EntrypointName: Launch into a new VPC
     Order: "1"
   'AWS::CloudFormation::Interface':
     ParameterGroups:
       - Label:
-          default: Availability Zone Configuration
+          default: Availability Zone configuration
         Parameters:
           - AvailabilityZones
           - NumberOfAZs
       - Label:
-          default: Network Configuration
+          default: Network configuration
         Parameters:
           - VPCCIDR
           - PublicSubnetTag1
@@ -25,29 +25,29 @@ Metadata:
           - PrivateSubnetTag2
           - PrivateSubnetTag3
       - Label:
-          default: Orchestrator Instance Configuration
+          default: UiPath Orchestrator instance configuration
         Parameters:
           - KeyPairName
           - InstanceType
       - Label:
-          default: Storage Gateway Configuration
+          default: AWS Storage Gateway configuration
         Parameters:
           - GatewayName
           - GatewayTimezone
       - Label:
-          default: DNS or SSL Configuration
+          default: DNS or SSL configuration
         Parameters:
           - UiPathFQDN
           - HostedZoneID
       - Label:
-          default: High Availability Configuration
+          default: High-availability add-on configuration
         Parameters:
           - HAAUser
           - HAAPassword
           - HAPort
           - HAALicense
       - Label:
-          default: RDS Database Configuration
+          default: RDS database configuration
         Parameters:
           - RDSDBName
           - RDSAllocatedStorage
@@ -55,22 +55,22 @@ Metadata:
           - RDSUsername
           - RDSPassword
       - Label:
-          default: Orchestrator Server Configuration
+          default: UiPath Orchestrator server configuration
         Parameters:
           - OrchestratorVersion
           - OrchestratorInstanceCount
           - OrchestratorLicense
           - OrchestratorPassword
       - Label:
-          default: Quickstart Bucket configuration
+          default: Quick Start S3 bucket configuration
         Parameters:
           - QSS3BucketName
           - QSS3KeyPrefix
     ParameterLabels:
       AvailabilityZones:
-        default: Availability Zone(s) selection
+        default: Availability Zones
       NumberOfAZs:
-        default: Number of AZs to use
+        default: Number of Availability Zones
       VPCCIDR:
         default: VPC CIDR
       PrivateSubnetTag1:
@@ -86,51 +86,49 @@ Metadata:
       PublicSubnetTag3:
         default: Public subnet 3 tag
       KeyPairName:
-        default: Instance Key pair
+        default: Instance key pair
       InstanceType:
         default: Instance type
       GatewayName:
-        default: Storage Gateway
+        default: Storage gateway name
       UiPathFQDN:
         default: Hosting FQDN
       HostedZoneID:
-        default: Route 53 Hosted Zone Id
+        default: ID of Route 53 hosted zone
       HAAUser:
-        default: HA Addon Username
+        default: High-availability add-on user name
       HAAPassword:
-        default: HA Addon Password
+        default: High-availability add-on password
       HAPort:
-        default: HA Addon Port
+        default: High-availability add-on port
       HAALicense:
-        default: HA Addon License Key
+        default: High-availability add-on license key
       RDSDBName:
-        default: RDS Database Name
+        default: RDS database name
       RDSAllocatedStorage:
-        default: RDS Allocated Storage
+        default: RDS allocated storage
       RDSMaxAllocatedStorage:
         default: Maximum allocated storage
       RDSUsername:
-        default: DB Username
+        default: RDS DB user name
       RDSPassword:
-        default: DB Password
+        default: RDS DB password
       OrchestratorVersion:
-        default: Orchestrator Version Number
+        default: UiPath Orchestrator version
       OrchestratorInstanceCount:
-        default: Orchestrator Instance Count
+        default: Number of UiPath Orchestrator instances
       OrchestratorLicense:
-        default: Orchestrator License Key
+        default: UiPath Orchestrator license key
       OrchestratorPassword:
-        default: Orchestrator Password
+        default: UiPath Orchestrator password
       QSS3BucketName:
-        default: Template hosting Bucket
+        default: Template-hosting S3 bucket
       QSS3KeyPrefix:
         default: Template folder
 Parameters:
   AvailabilityZones:
     Description: >-
-      List of Availability Zones to use for the subnets in the VPC - maximum of
-      3 AZs are used for this deployment (logical order of your selections is
-      preserved).
+      Choose up to three Availability Zones to use for the VPC subnets.
     Type: 'List<AWS::EC2::AvailabilityZone::Name>'
   NumberOfAZs:
     AllowedValues:
@@ -138,65 +136,76 @@ Parameters:
       - '3'
     Default: '2'
     Description: >-
-      Number of Availability Zones to use in the VPC (upto 3), must match your
-      selections in the list of Availability Zones parameter.
+      Choose the number of Availability Zones to use in the VPC (1-3). This must match the number of AZs selected in the *Availability Zones* parameter.
     Type: String
   VPCCIDR:
     AllowedPattern: '^([0-9]{1,3}\.){2}([0]{1}.)[0]{1}(\/[16]{2})$'
-    ConstraintDescription: CIDR block parameter must be in the form x.x.0.0/16
+    ConstraintDescription: Must be in format x.x.0.0/16.
     Default: 10.0.0.0/16
-    Description: 'CIDR block for the VPC, must be in the form x.x.0.0/16.'
+    Description: VPC CIDR block, in format x.x.0.0/16.
     Type: String
   PrivateSubnetTag1:
     AllowedPattern: '^([a-zA-Z0-9+\-._:/@]+=[a-zA-Z0-9+\-.,_:/@ *\\"''\[\]\{\}]*)?$'
     ConstraintDescription: >-
-      tags must be in format "Key=Value" keys can only contain
-      [a-zA-Z0-9+\-._:/@], values can contain [a-zA-Z0-9+\-._:/@ *\\"'\[\]\{\}]
+      Tags must be in format Key=Value. Key valid characters: *A-Z*, *a-z*, *0-9*, and *+ \ - . _ : / @*
+      Value valid characters: *A-Z*, *a-z*, *0-9*, and *+ \ - . _ : / @ * \*
     Default: Network=Private1
-    Description: Tag to add to private subnet 1 in format Key=Value (Optional).
+    Description: >-
+      (Optional) Tag for private subnet 1, in format Key=Value. Key valid characters: *A-Z*, *a-z*, *0-9*, and *+ \ - . _ : / @*.
+      Value valid characters: *A-Z*, *a-z*, *0-9*, and *+ \ - . _ : / @ * \*.
     Type: String
   PrivateSubnetTag2:
     AllowedPattern: '^([a-zA-Z0-9+\-._:/@]+=[a-zA-Z0-9+\-.,_:/@ *\\"''\[\]\{\}]*)?$'
     ConstraintDescription: >-
-      tags must be in format "Key=Value" keys can only contain
-      [a-zA-Z0-9+\-._:/@], values can contain [a-zA-Z0-9+\-._:/@ *\\"'\[\]\{\}]
+       Tags must be in format Key=Value. Key valid characters: *A-Z*, *a-z*, *0-9*, and *+ \ - . _ : / @*.
+       Value valid characters: *A-Z*, *a-z*, *0-9*, and *+ \ - . _ : / @ * \*.
     Default: Network=Private2
-    Description: Tag to add to private subnet 2 in format Key=Value (Optional).
+    Description: >-
+      (Optional) Tag for private subnet 2, in format Key=Value. Key valid characters: *A-Z*, *a-z*, *0-9*, and *+ \ - . _ : / @*.
+      Value valid characters: *A-Z*, *a-z*, *0-9*, and *+ \ - . _ : / @ * \*.
     Type: String
   PrivateSubnetTag3:
     AllowedPattern: '^([a-zA-Z0-9+\-._:/@]+=[a-zA-Z0-9+\-.,_:/@ *\\"''\[\]\{\}]*)?$'
     ConstraintDescription: >-
-      tags must be in format "Key=Value" keys can only contain
-      [a-zA-Z0-9+\-._:/@], values can contain [a-zA-Z0-9+\-._:/@ *\\"'\[\]\{\}]
+       Tags must be in format Key=Value. Key valid characters: *A-Z*, *a-z*, *0-9*, and *+ \ - . _ : / @*.
+       Value valid characters: *A-Z*, *a-z*, *0-9*, and *+ \ - . _ : / @ * \*.
     Default: Network=Private3
-    Description: Tag to add to private subnet 3 in format Key=Value (Optional).
+    Description: >-
+      (Optional) Tag for private subnet 3, in format Key=Value. Key valid characters: *A-Z*, *a-z*, *0-9*, and *+ \ - . _ : / @*.
+      Value valid characters: *A-Z*, *a-z*, *0-9*, and *+ \ - . _ : / @ * \*.
     Type: String
   PublicSubnetTag1:
     AllowedPattern: '^([a-zA-Z0-9+\-._:/@]+=[a-zA-Z0-9+\-.,_:/@ *\\"''\[\]\{\}]*)?$'
     ConstraintDescription: >-
-      tags must be in format "Key=Value" keys can only contain
-      [a-zA-Z0-9+\-._:/@], values can contain [a-zA-Z0-9+\-._:/@ *\\"'\[\]\{\}]
+      Tags must be in format Key=Value. Key valid characters: *A-Z*, *a-z*, *0-9*, and *+ \ - . _ : / @*.
+      Value valid characters: *A-Z*, *a-z*, *0-9*, and *+ \ - . _ : / @ * \*.
     Default: Network=Public1
-    Description: Tag to add to public subnet 1 in format Key=Value (Optional)
+    Description: >-
+      (Optional) Tag for public subnet 1, in format Key=Value. Key valid characters: *A-Z*, *a-z*, *0-9*, and *+ \ - . _ : / @*.
+      Value valid characters: *A-Z*, *a-z*, *0-9*, and *+ \ - . _ : / @ * \*.
     Type: String
   PublicSubnetTag2:
     AllowedPattern: '^([a-zA-Z0-9+\-._:/@]+=[a-zA-Z0-9+\-.,_:/@ *\\"''\[\]\{\}]*)?$'
     ConstraintDescription: >-
-      tags must be in format "Key=Value" keys can only contain
-      [a-zA-Z0-9+\-._:/@], values can contain [a-zA-Z0-9+\-._:/@ *\\"'\[\]\{\}]
+      Tags must be in format Key=Value. Key valid characters: *A-Z*, *a-z*, *0-9*, and *+ \ - . _ : / @*.
+      Value valid characters: *A-Z*, *a-z*, *0-9*, and *+ \ - . _ : / @ * \*.
     Default: Network=Public2
-    Description: Tag to add to public subnet 2 in format Key=Value (Optional).
+    Description: >-
+      (Optional) Tag for public subnet 2, in format Key=Value. Key valid characters: *A-Z*, *a-z*, *0-9*, and *+ \ - . _ : / @*.
+      Value valid characters: *A-Z*, *a-z*, *0-9*, and *+ \ - . _ : / @ * \*.
     Type: String
   PublicSubnetTag3:
     AllowedPattern: '^([a-zA-Z0-9+\-._:/@]+=[a-zA-Z0-9+\-.,_:/@ *\\"''\[\]\{\}]*)?$'
     ConstraintDescription: >-
-      tags must be in format "Key=Value" keys can only contain
-      [a-zA-Z0-9+\-._:/@], values can contain [a-zA-Z0-9+\-._:/@ *\\"'\[\]\{\}]
+      Tags must be in format Key=Value. Key valid characters: *A-Z*, *a-z*, *0-9*, and *+ \ - . _ : / @*.
+      Value valid characters: *A-Z*, *a-z*, *0-9*, and *+ \ - . _ : / @ * \*.
     Default: Network=Public3
-    Description: Tag to add to public subnet 3 in format Key=Value (Optional).
+    Description: >-
+      (Optional) Tag for public subnet 3, in format Key=Value. Key valid characters: *A-Z*, *a-z*, *0-9*, and *+ \ - . _ : / @*.
+      Value valid characters: *A-Z*, *a-z*, *0-9*, and *+ \ - . _ : / @ * \*.
     Type: String
   KeyPairName:
-    Description: 'Existing Key Pair, which is to be used to Log in to VM instances.'
+    Description: Existing key pair to connect to virtual machine (VM) instances.
     Type: 'AWS::EC2::KeyPair::KeyName'
   InstanceType:
     AllowedValues:
@@ -216,20 +225,19 @@ Parameters:
       - r4.2xlarge
       - r4.4xlarge
       - r4.8xlarge
-    ConstraintDescription: 'Class of instance, must be a valid EC2 instance type from the list.'
+    ConstraintDescription: Must be a valid Amazon EC2 instance type from the list.
     Default: m4.xlarge
-    Description: EC2 instance type
+    Description: EC2 instance type.
     Type: String
   GatewayName:
-    Description: Name of S3 File Storage Gateway.
+    Description: S3 file storage gateway name.
     Type: String
     Default: uipathgateway
     AllowedPattern: '^[a-zA-Z]*$'
     ConstraintDescription: >-
-      Gateway name should contain alphabetic characters only, and cannot be left
-      blank.
+      Gateway name can only contain *a–z* and *A–Z*. It cannot be left blank.
   GatewayTimezone:
-    Description: Timezone to choose for File Gateway
+    Description: File gateway time zone.
     Type: String
     AllowedValues:
       - Africa/Abidjan
@@ -809,18 +817,18 @@ Parameters:
       - Zulu
     Default: US/Eastern
   UiPathFQDN:
-    Description: The fully qualified domain name where the UiPath Orchestrator should be installed
+    Description: Fully qualified domain name (FQDN) to which UiPath Orchestrator is installed.
     Type: String
   HostedZoneID:
-    Description: The Route 53 hosted zone Id
+    Description: ID of Route 53 hosted zone.
     Type: AWS::Route53::HostedZone::Id
   HAAUser:
-    Description: High Availability Add-on username. A valid email must be used as username
+    Description: High-availability add-on user name. Must be a valid email address.
     Type: String
     AllowedPattern: '^([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,5})$'
-    ConstraintDescription: A valid email must be used as HA username
+    ConstraintDescription: Must be a valid email address.
   HAAPassword:
-    Description: High Availability Add-on password.
+    Description: High-availability add-on password.
     Type: String
     NoEcho: 'true'
     MinLength: '6'
@@ -828,73 +836,68 @@ Parameters:
     AllowedPattern: >-
       (?=^.{6,124}$)((?=.*\d)(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[^A-Za-z0-9])(?=.*[a-z])|(?=.*[^A-Za-z0-9])(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[A-Z])(?=.*[^A-Za-z0-9]))^.*
     ConstraintDescription: >-
-      HA Password must contain at least one uppercase letter and be longer than
-      six charaters.
+      Password must contain more than six characters and include at least one uppercase letter.
   HAPort:
-    Description: Port on which High Availability Add-on listens to
+    Description: High-availability add-on port.
     Type: String
     Default: 10000
     AllowedValues:
       - 10000
   HAALicense:
-    Description: >-
-      License key, purchased from UIPath, to be used with the High
-      Availability Add-on.
+    Description: High-availability add-on license key.
     Default: ''
     Type: String
   RDSDBName:
-    Description: Name for UIPath Database to be created.
+    Description: UIPath database name.
     Type: String
     Default: uipathdb
     AllowedPattern: '^[a-zA-Z]*$'
     ConstraintDescription: >-
-      Database name should contain alphabetic characters only, and cannot be
-      left blank.
+      UIPath database name can only contain characters *a–z* and *A–Z*. It cannot be left blank.
   RDSAllocatedStorage:
-    Description: Storage amount to be allocated to RDS DB Instance.
+    Description: RDS DB instance storage amount.
     Type: String
     Default: '200'
     AllowedPattern: '^(?:[1-9]\d{0,3}|1[0-5]\d{3}|16[0-2]\d{2}|163[0-7]\d|1638[0-4])$'
-    ConstraintDescription: RDS Allocated storage should be less or equal to 16384 GB
+    ConstraintDescription: RDS DB instance storage amount should be less or equal to 16,384 GB.
   RDSMaxAllocatedStorage:
-    Description: The upper limit to which Amazon RDS can automatically scale the storage of the DB instance.
+    Description: Maximum storage threshold. The limit to which the DB instance can be autoscaled.
     Type: Number
     Default: '1000'
     MaxValue: '16384'
-    ConstraintDescription: RDS Max Allocated storage should be less or equal to RDS Allocated Storage
+    ConstraintDescription: Should be less than or equal to RDS allocated storage.
   RDSUsername:
-    Description: Username to be used to log on to Database.
+    Description: RDS DB username.
     Type: String
     AllowedPattern: '^[0-9a-zA-Z]*$'
-    ConstraintDescription: Database username cannot be left blank.
+    ConstraintDescription: RDS DB username cannot be left blank.
   RDSPassword:
-    Description: Password to be used to log on to Database.
+    Description: RDS DB password.
     Type: String
     NoEcho: 'true'
     MinLength: '8'
     AllowedPattern: '^(?=.*[0-9]+.*)(?=.*[a-zA-Z]+.*)[0-9a-zA-Z]{8,}$'
     ConstraintDescription: >-
-      Database Password must contain at least one letter, at least one number,
-      and be longer than eight characters.
+      RDS DB password must contain a minimum of eight characters and include at least one letter and one number.
   OrchestratorVersion:
-    Description: UIPath Orchestrator Version to be installed.
+    Description: UIPath Orchestrator version.
     Type: String
-    Default: 20.10.2
+    Default: 20.10.7
     AllowedValues:
-      - 20.10.2
-    ConstraintDescription: 'Orchestrator version number can contain only digits and dot(.), and must .'
+      - 20.10.7
+    ConstraintDescription: UIPath Orchestrator version can only contain characters *0–9* and *.* (period).
   OrchestratorInstanceCount:
-    Description: Desired Capacity (instance count) for Orchestrator instances.
+    Description: Number of UiPath Orchestrator instances (1–20).
     Type: String
     Default: '2'
     AllowedPattern: '^(?:[1-9]|0[1-9]|1[0-9]|20)$'
-    ConstraintDescription: Orchestrator Instances can be between 1 to 20.
+    ConstraintDescription: Number of UiPath Orchestrator instances can be 1–20.
   OrchestratorLicense:
-    Description: 'License key, purchased from UiPath, or trial key. If not provided, Orchestrator will be unlicensed'
+    Description: UiPath Orchestrator license key or trial key.
     Default: ''
     Type: String
   OrchestratorPassword:
-    Description: Orchestrator Administrator password to login as.
+    Description: UiPath Orchestrator administrator password.
     Type: String
     NoEcho: 'true'
     MinLength: '6'
@@ -902,31 +905,41 @@ Parameters:
     AllowedPattern: >-
       (?=^.{6,124}$)((?=.*\d)(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[^A-Za-z0-9])(?=.*[a-z])|(?=.*[^A-Za-z0-9])(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[A-Z])(?=.*[^A-Za-z0-9]))^.*
     ConstraintDescription: >-
-      Orchestrator Password must contain at least one uppercase letter and be
-      longer than six characters.
+      UiPath Orchestrator administrator password must contain more than six characters and include at least one uppercase letter.
   QSS3BucketName:
     AllowedPattern: '^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$'
     ConstraintDescription: >-
       Quick Start bucket name can include numbers, lowercase letters, uppercase
       letters, and hyphens (-). It cannot start or end with a hyphen (-).
-    Description: S3 bucket name hosting the Quickstart templates.
+    Description: Name of the S3 bucket for your copy of the Quick Start assets.
+      Keep the default name unless you are customizing the template.
+      Changing the name updates code references to point to a new Quick
+      Start location. This name can include numbers, lowercase letters,
+      uppercase letters, and hyphens, but do not start or end with a hyphen (-).
+      See https://aws-quickstart.github.io/option1.html.
     Type: String
     Default: aws-quickstart
   QSS3BucketRegion:
     Default: us-east-1
     Description: >-
-      The AWS Region where the Quick Start S3 bucket (QSS3BucketName) is hosted.
-      When using your own bucket, you must specify this value.
+       AWS Region where the Quick Start S3 bucket (QSS3BucketName) is hosted. Keep the default Region unless you are customizing the template. Changing this Region updates code references to point to a new Quick Start location. When using your own bucket, specify the Region. See https://aws-quickstart.github.io/option1.html.
     Type: String
     AllowedPattern: (us(-gov)?|ap|ca|cn|eu|sa)-(central|(north|south)?(east|west)?)-\d
-    ConstraintDescription: Quick Start bucket region must be a valid AWS Region code.
+    ConstraintDescription: Must be a valid AWS Region code.
   QSS3KeyPrefix:
     AllowedPattern: '^[0-9a-zA-Z-/]*/$'
     ConstraintDescription: >-
-      Quick Start key prefix can include numbers, lowercase letters, uppercase
-      letters, and hyphens (-), and ending with a slash(/).
-    Default: quickstart-uipath-orchestrator/
-    Description: S3 key prefix under which Quick Start templates are hosted.
+      The Quick Start S3 key prefix can include numbers, lowercase letters,
+      uppercase letters, hyphens (-), and forward slashes (/).
+    Default: quickstart-uipath-robot/
+    Description: >-
+      S3 key prefix that is used to simulate a directory for your copy of the
+      Quick Start assets. Keep the default prefix unless you are customizing
+      the template. Changing this prefix updates code references to point to
+      a new Quick Start location. This prefix can include numbers, lowercase
+      letters, uppercase letters, hyphens (-), and forward slashes (/).
+      See https://docs.aws.amazon.com/AmazonS3/latest/dev/UsingMetadata.html
+      and https://aws-quickstart.github.io/option1.html.
     Type: String
 Conditions:
   UsingDefaultBucket: !Equals
@@ -1013,20 +1026,23 @@ Resources:
         QSS3BucketRegion: !Ref QSS3BucketRegion
 Outputs:
   FQDNLoadBalancer:
-    Description: UiPath Orchestrator Login page
+    Description: UiPath Orchestrator login page.
     Value: !Ref UiPathFQDN
   BastionHost:
-    Description: Bastion Host's Public IP address
+    Description: Bastion host public IP address.
     Value: !GetAtt
       - OrchestratorStack
       - Outputs.BastionHost
   HaaNodesIPs:
-    Description: High Availability Add-on's list of IP addresses
+    Description: High Availability Add-on IP addresses.
     Value: !GetAtt
       - OrchestratorStack
       - Outputs.HaaNodesIPs
   NugetStorageS3Bucket:
-    Description: S3 bucket name that contains Orchestrator's Nuget packages
+    Description: S3 bucket with UiPath Orchestrator NuGet packages.
     Value: !GetAtt
       - OrchestratorStack
       - Outputs.NugetStorageS3Bucket
+  Postdeployment:
+    Description: See the deployment guide for post-deployment steps.
+    Value: https://aws.amazon.com/quickstart/?quickstart-all.sort-by=item.additionalFields.sortDate&quickstart-all.sort-order=desc&awsm.page-quickstart-all=5

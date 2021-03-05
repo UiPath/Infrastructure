@@ -54,6 +54,7 @@ $script:workDirectory = Get-Location
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 function Main {
+
   Write-Output "Install-UiRobot starts"
   $msiPath = Join-Path $script:workDirectory $artifactFileName
   $robotExePath = Get-UiRobotExePath
@@ -111,7 +112,7 @@ function Main {
     Wait-Service -servicesName "UiPath Robot*"
     & $robotExePath --connect -url $orchestratorUrl -key $key
   }
-  Write-Output "Install completed Successfully."
+  Write-Output "Install completed successfully."
 }
 
 function Get-UiPathOrchestratorLoginSession {
