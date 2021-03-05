@@ -181,7 +181,7 @@ Resources:
       KeyName: !Ref KeyPairName
       SecurityGroupIds:
         - !Ref HaaSecurityGroup
-      SubnetId: !Select [ '0', !Ref SubnetIDs ]
+      SubnetId: !Select [ '1', !Ref SubnetIDs ]
       UserData: !Base64
         'Fn::Join':
           - |+
@@ -216,7 +216,7 @@ Resources:
       KeyName: !Ref KeyPairName
       SecurityGroupIds:
         - !Ref HaaSecurityGroup
-      SubnetId: !Select [ '0',  !Ref SubnetIDs ]
+      SubnetId: !Select [ '1',  !Ref SubnetIDs ]
       UserData: !Base64
         'Fn::Join':
           - |+

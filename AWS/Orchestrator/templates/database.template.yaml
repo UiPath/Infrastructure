@@ -69,7 +69,7 @@ Resources:
       LicenseModel: license-included
       MasterUsername: !Ref RDSUsername
       MasterUserPassword: !Ref RDSPassword
-      MultiAZ: false
+      MultiAZ: true
       StorageType: gp2
       VPCSecurityGroups:
         - !Ref DbSecurityGroup
