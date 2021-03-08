@@ -14,6 +14,8 @@ Param (
     [String] $appServiceNameIdentity,
     [Parameter(Mandatory = $true)]
     [String] $appServiceNameWebhooks,
+    [Parameter(Mandatory = $true)]
+    [String] $isTestAutomationEnabled,
     [Parameter(Mandatory = $false)]
     [String] $hostAdminPassword,
     [Parameter(Mandatory = $false)]
@@ -46,9 +48,7 @@ Param (
     [String] $webhookServicePackage = "UiPath.WebhookService.Web.zip",
     [Parameter(Mandatory = $false)]
     [ValidateScript( { if (-Not ($_ | Test-Path -PathType Leaf)) { throw "UiPath webhooks cli package is not valid." } return $true })]
-    [String] $webhookMigrateCliPackage = "UiPath.WebhookService.Migrator.Cli.zip",
-    [Parameter(Mandatory = $true)]
-    [String] $isTestAutomationEnabled
+    [String] $webhookMigrateCliPackage = "UiPath.WebhookService.Migrator.Cli.zip"    
 )
 $global:stepCount = 1
 
@@ -67,7 +67,6 @@ Import-Module -Name AzureRM.Profile -Global -Force
 Write-Output "$(Get-Date) Done importing AzureRM modules."
 
 Write-Output "$(Get-Date) Importing custom modules..."
-Import-Module ([System.IO.Path]::GetFullPath((Join-Path (Get-Location) "./ps_utils/CloudDeploymentUtils.ps1"))) -Global -Force
 Import-Module ([System.IO.Path]::GetFullPath((Join-Path (Get-Location) "./AzureUtils.psm1"))) -Global -Force
 Write-Output "$(Get-Date) Done importing custom modules..."
 
@@ -76,7 +75,19 @@ function Main {
     
     $logFile = "Installation.log"
     Start-Transcript -Path $logFile -Append -IncludeInvocationHeader
-    
+    $telemetryGuid = New-Guid
+    $telemetryProps = @{
+        ID = $telemetryGuid;
+        status = 'ConfigurationStarting';
+        isRedis = !([string]::IsNullOrEmpty($redisConnectionString));
+        isTestAutomationEnabled = ([System.Convert]::ToBoolean($isTestAutomationEnabled))
+    }
+    $azureUtilsFile = "./AzureUtils.psm1"
+    if ((Test-Path $azureUtilsFile)) {
+        Import-Module $azureUtilsFile
+        Send-TelemetryToInsights -name 'Orchestrator' -properties $telemetryProps
+    }
+
     InstallMSDeploy
     LoginToAzure
     PublishOrchestrator
@@ -86,7 +97,13 @@ function Main {
     MigrateToWebhooks
     Write-Output " ******* $(Get-Date) Orchestrator installation complete *******"
     Stop-Transcript
-    SendLogToInsights -insightsKey $insightsKey -logFile $logFile
+    Send-LogFileToInsights -insightsKey $insightsKey -logFile $logFile
+    
+    if ((Test-Path $azureUtilsFile)) {
+        Import-Module $azureUtilsFile
+        $telemetryProps.status = 'ConfigurationFinished'
+        Send-TelemetryToInsights -name 'Orchestrator' -properties $telemetryProps
+    }
 }
 
 function InstallMSDeploy {

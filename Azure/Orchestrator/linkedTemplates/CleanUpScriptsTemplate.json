@@ -92,7 +92,7 @@
                 "azPowerShellVersion": "3.0",
                 "timeout": "PT30M",
                 "supportingScriptUris": [
-                    "[parameters('UtilityArtifactsPaaS').PSUtilsZip]"
+                    "[parameters('UtilityArtifactsPaaS').AzureUtils]"
                 ],
                 "primaryScriptUri": "[parameters('UtilityArtifactsPaaS').CleanUpOrchestrationResources]",
                 "arguments": "[concat(

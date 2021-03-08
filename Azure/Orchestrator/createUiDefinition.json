@@ -456,12 +456,12 @@
 						"name": "orchestratorVersion",
 						"label": "Orchestrator version",
 						"type": "Microsoft.Common.DropDown",
-						"defaultValue": "20.10.5",
+						"defaultValue": "20.10.7",
 						"constraints": {
 							"allowedValues": [
 								{
-									"label": "20.10.5",
-									"value": "20.10.5"
+									"label": "20.10.7",
+									"value": "20.10.7"
 								}
 							]
 						},
