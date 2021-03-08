@@ -164,13 +164,13 @@
             "name": "RobotVersion",
             "type": "Microsoft.Common.DropDown",
             "label": "Robot Version",
-            "defaultValue": "20.10.4",
+            "defaultValue": "20.10.6",
             "toolTip": "Please choose the robot version to be deployed. Please check this link for compatibility with Orchestrator: https://docs.uipath.com/robot/docs/about-backward-and-forward-compatibility",
             "constraints": {
               "allowedValues": [
                 {
-                  "label": "20.10.4",
-                  "value": "20.10.4"
+                  "label": "20.10.6",
+                  "value": "20.10.6"
                 }
               ],
               "required": true
@@ -194,8 +194,7 @@
             "label": "Virtual machine size",
             "toolTip": "The size of virtual machine to provision.",
             "recommendedSizes": [
-              "Standard_B2s",
-              "Standard_F4s"
+              "Standard_DS2_v2"
             ],
             "osPlatform": "Windows",
             "count": "1"

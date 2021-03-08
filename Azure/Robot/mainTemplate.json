@@ -58,9 +58,9 @@
       }
     },
     "RobotVersion": {
-      "defaultValue": "20.10.4",
+      "defaultValue": "20.10.6",
       "allowedValues": [
-        "20.10.4"
+        "20.10.6"
       ],
       "type": "String",
       "metadata": {
@@ -193,20 +193,22 @@
       },
       "defaultValue": ""
     },
-    "tagsByResource": { 
-      "type": "object", 
-      "defaultValue": {} 
+    "tagsByResource": {
+      "type": "object",
+      "defaultValue": {}
     }
   },
   "variables": {
-    "scriptFileName": "Install-UiPathRobots.ps1",
+    "scriptFileName": "Install-AzureRobot.ps1",
     "artifactFileName": "UiPathStudio.msi",
     "robotPsUri": "[uri(parameters('_artifactsLocation'),concat('scripts','/',variables('scriptFileName'),parameters('_artifactsLocationSasToken')))]",
+    "azureUtils": "[uri(parameters('_artifactsLocation'),concat('scripts/AzureUtils.psm1',parameters('_artifactsLocationSasToken')))]",
+    "installRobotScript": "[uri(parameters('_artifactsLocation'),concat('scripts/Install-UiPathRobots.ps1',parameters('_artifactsLocationSasToken')))]",
     "robotArtifact": "[uri(parameters('_artifactsLocation'),concat('artifact','/',parameters('RobotVersion'),'/',variables('artifactFileName'),parameters('_artifactsLocationSasToken')))]",
     "HostingType": "Standard",
     "CredentialType": "Default",
     "vmName": "[trim(toLower(parameters('virtualMachineName')))]",
-    "windowsOSV": "2016-Datacenter",
+    "windowsOSV": "2019-Datacenter",
     "osType": {
       "publisher": "MicrosoftWindowsServer",
       "offer": "WindowsServer",
@@ -447,6 +449,11 @@
           },
           "imageReference": "[variables('imageReference')]"
         },
+        "diagnosticsProfile": {
+          "bootDiagnostics": {
+            "enabled": true
+          }
+        },
         "networkProfile": {
           "networkInterfaces": [
             {
@@ -487,6 +494,8 @@
         "settings": {
           "fileUris": [
             "[variables('robotPsUri')]",
+            "[variables('azureUtils')]",
+            "[variables('installRobotScript')]",
             "[variables('robotArtifact')]"
           ]
         },
