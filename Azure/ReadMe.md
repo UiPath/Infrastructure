@@ -48,7 +48,9 @@ az storage blob url --account-name azmktstorage --container-name container --nam
 | Variable Name | Value |
 | ------ | -------- |
 | `robotArtifact` | Copy the URL from the command that uploaded the `UiPathStudio.msi` file |
-| `robotPsUri` | Copy the URL forked repository in the `raw` format for the `Install-UiPathRobots.ps1` file. See example below. |
+| `robotPsUri` | Copy the URL forked repository in the `raw` format for the `Install-AzureRobot.ps1` file. See example below. |
+| `azureUtils` | Copy the URL forked repository in the `raw` format for the `AzureUtils.psm1` file. See example below. |
+| `installRobotScript` | Copy the URL forked repository in the `raw` format for the `Install-UiPathRobots.ps1` file. See example below. |
 
 ### Orchestrator:
 
