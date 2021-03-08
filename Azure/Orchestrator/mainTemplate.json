@@ -90,9 +90,9 @@
         },
         "orchestratorVersion": {
             "type": "string",
-            "defaultValue": "20.10.5",
+            "defaultValue": "20.10.7",
             "allowedValues": [
-                "20.10.5"
+                "20.10.7"
             ],
             "metadata": {
                 "description": "Version of the Orchestrator"
@@ -397,7 +397,7 @@
         "subnetRef": "[if(equals(parameters('HAAvirtualNetworkNewOrExistingPaaS'),'new'), resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('HAAVnetName'), parameters('HAAsubnetName')), resourceId(parameters('HAAvirtualNetworkResourceGroupNamePaaS'),'Microsoft.Network/virtualNetworks/subnets', parameters('HAAVnetName'), parameters('HAAsubnetName')))]",
         "webSubnetRef": "[if(equals(parameters('HAAvirtualNetworkNewOrExistingPaaS'),'new'), resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('HAAVnetName'), parameters('HAAWASubnetName')), resourceId(parameters('HAAvirtualNetworkResourceGroupNamePaaS'),'Microsoft.Network/virtualNetworks/subnets', parameters('HAAVnetName'), parameters('HAAWASubnetName')))]",
         "installScriptFileName": "install-haa.sh",
-        "installPackageUri": "[uri(parameters('_artifactsLocation'),concat('HAA/haa-2.0.0.tar.gz', parameters('_artifactsLocationSasToken')))]",
+        "installPackageUri": "[uri(parameters('_artifactsLocation'),concat('HAA/haa-2.0.1.tar.gz', parameters('_artifactsLocationSasToken')))]",
         "installScriptUri": "[uri(parameters('_artifactsLocation'),concat('HAA/', variables('installScriptFileName'), parameters('_artifactsLocationSasToken')))]",
         "SQLTemplateUri": "[uri(parameters('_artifactsLocation'),concat('LinkedTemplates/SQL.json', parameters('_artifactsLocationSasToken')))]",
         "HAATemplateUri": "[uri(parameters('_artifactsLocation'),concat('LinkedTemplates/HAA.json', parameters('_artifactsLocationSasToken')))]",

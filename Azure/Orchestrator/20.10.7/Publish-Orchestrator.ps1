@@ -119,6 +119,10 @@ param(
 
     [bool] $autoSwap = $true,
 
+    [string] $bucketsAvailableProviders,
+
+    [string] $bucketsFileSystemAllowlist,
+
     [switch] $noAzureAuthentication
 )
 
@@ -387,6 +391,8 @@ function Set-ScriptConstants {
     $script:azureSignalRConnectionString = $azureSignalRConnectionString
     $script:runPackageMigrator = $false;
     $script:instanceKey
+    $script:bucketsFileSystemAllowlist = $bucketsFileSystemAllowlist
+    $script:bucketsAvailableProviders = $bucketsAvailableProviders
 
     Extract-FilesFromZip -zip $package -destinationFolder $script:tempDirectory -filePattern "parameters.xml"
     $script:defaultParameterXmlValues = Get-AllDefaultParameterValues -parametersXmlPath $script:parametersXmlPath
@@ -459,6 +465,12 @@ function Set-ScriptConstants {
             }
             if (!($azureSignalRConnectionString)) {
                 $script:azureSignalRConnectionString = (Get-WDParameterValue "azureSignalRConnectionString" $script:parametersXmlPath $script:webConfigPath)
+            }
+            if (!($bucketsFileSystemAllowlist)) {
+                $script:bucketsFileSystemAllowlist = (Get-WDParameterValue "bucketsFileSystemAllowlist" $script:parametersXmlPath $script:webConfigPath)
+            }
+            if (!($bucketsAvailableProviders)) {
+                $script:bucketsAvailableProviders = (Get-WDParameterValue "bucketsAvailableProviders" $script:parametersXmlPath $script:webConfigPath)
             }
 
             $script:nugetRepositoryType = Get-SettingValue "NuGet.Repository.Type" $script:webConfigPath
@@ -641,6 +653,11 @@ function Validate-Parameters {
         }
 
         $script:packageMigratorPath = Extract-PackageMigratorToTempFolder
+    }
+
+    if(($script:bucketsAvailableProviders -like '*FileSystem*') -and ($null -eq $script:bucketsFileSystemAllowlist)){
+        Write-Error "The -bucketsFileSystemAllowlist is mandatory when -bucketsAvailableProviders contains FileSystem provider"
+        Exit 1
     }
 }
 
@@ -854,6 +871,12 @@ function Get-WDParameters {
     if ($script:azureSignalRConnectionString) {
         $wdParameters.azureSignalRConnectionString = $script:azureSignalRConnectionString
     }
+    if ($script:bucketsFileSystemAllowlist) {
+        $wdParameters.bucketsFileSystemAllowlist = $script:bucketsFileSystemAllowlist
+    }
+    if ($script:bucketsAvailableProviders) {
+        $wdParameters.bucketsAvailableProviders = $script:bucketsAvailableProviders
+    }
     return $wdParameters
 }
 
@@ -1029,6 +1052,8 @@ function Get-PublishParameters($wdParameters, $appSettings) {
         serverElasticSearchDiagnosticsUsername = $wdParameters.elasticSearchDiagnosticsUsername;
         serverElasticSearchDiagnosticsPassword = $wdParameters.elasticSearchDiagnosticsPassword;
         azureSignalRConnectionString = $wdParameters.azureSignalRConnectionString;
+        bucketsFileSystemAllowlist = $wdParameters.bucketsFileSystemAllowlist;
+        bucketsAvailableProviders = $wdParameters.bucketsAvailableProviders;
     }
 
     $publishParameters.machineKeyDecryption = $wdParameters.machineKeyDecryption;

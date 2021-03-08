@@ -1,6 +1,7 @@
 #!/bin/bash
 
 echo -e "\e[32mConfiguring High Availability Add-On for Orchestrator"
+# tput sgr0 should be commented (Azure specific)
 # tput sgr0
 usage() {
     cat <<EOF
@@ -60,7 +61,7 @@ download_haa(){
 echo -e "\e[32mDownloading High Availability Add-On for Orchestrator"
 wget $WEBLINK 1> /dev/null
 # tput sgr0
-tar -xf haa-2.0.0.tar.gz
+tar -xf haa-2.0.1.tar.gz
 chmod a+x install.sh
 }
 
@@ -186,7 +187,7 @@ else
     # tput sgr0
     curl -u "${USERNAME}:${PASSWORD}" -k -i -H "Accept: application/json" -H "Content-Type:application/json" -X PUT --data "$(put_update_db)" "https://${CLUSTER}:9443/v1/bdbs/3"
 fi
-
+# For azure specific, the operator should be !-z (http://www.gnu.org/software/bash/manual/bash.html#Bash-Conditional-Expressions)
 if [[ ! -z "$LICENSE" ]]; then
     
     curl -u "${USERNAME}:${PASSWORD}" -k -i -H "Accept: application/json" -H "Content-Type:application/json" -X PUT --data "$(put_license)" "https://127.0.0.1:9443/v1/license"

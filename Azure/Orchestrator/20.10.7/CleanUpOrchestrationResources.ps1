@@ -27,11 +27,8 @@ $ErrorActionPreference = "Stop"
 $logFile = "Installation.log"
 Start-Transcript -Path $logFile -Append -IncludeInvocationHeader
 
-Write-Output "$(Get-Date) Unzipping ps_utils..."
-Expand-Archive -LiteralPath "./ps_utils.zip" -DestinationPath . -Force
-
 Write-Output "$(Get-Date) Importing custom modules..."
-Import-Module ([System.IO.Path]::GetFullPath((Join-Path (Get-Location) "./ps_utils/CloudDeploymentUtils.ps1"))) -Global -Force
+Import-Module ([System.IO.Path]::GetFullPath((Join-Path (Get-Location) "./AzureUtils.psm1"))) -Global -Force
 
 Write-Output " ******* $(Get-Date) Orchestrator installation cleanup started *******"
 
@@ -48,4 +45,4 @@ Remove-AzDisk -ResourceGroupName $RGName -DiskName $OSDiskName -Force
 Write-Output " ******* $(Get-Date) Orchestrator installation cleanup finished *******"
 Stop-Transcript
 
-SendLogToInsights -insightsKey $insightsKey -logFile $logFile
+Send-LogFileToInsights -insightsKey $insightsKey -logFile $logFile
