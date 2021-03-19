@@ -1,0 +1,74 @@
+{
+  "variables": {
+    "aws_access_key": "{{env `AWS_ACCESS_KEY_ID`}}",
+    "aws_secret_key": "{{env `AWS_SECRET_ACCESS_KEY`}}",
+    "ansible_playbook": ""
+  },
+  "builders": [
+    {
+      "type": "amazon-ebs",
+      "access_key": "{{user `access_key`}}",
+      "secret_key": "{{user `secret_key`}}",
+      "region": "us-west-2",
+      "source_ami_filter": {
+        "filters": {
+          "virtualization-type": "hvm",
+          "name": "*Windows_Server-2019-English-Full-Base-*",
+          "root-device-type": "ebs"
+        },
+        "owners": [
+          "amazon"
+        ],
+        "most_recent": true
+      },
+      "instance_type": "m4.2xlarge",
+      "force_deregister": true,
+      "communicator": "winrm",
+      "winrm_username": "Administrator",
+      "winrm_insecure": true,
+      "winrm_use_ssl": true,
+      "ami_name": "{{user `ansible_playbook`}}-{{timestamp}}",
+      "user_data_file": "{{template_dir}}/common/aws_userdata_winrm.txt"
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "powershell",
+      "scripts": [
+        "{{template_dir}}/common/SetupAnsibleInventory.ps1"
+      ],
+      "environment_vars": [
+        "PACKER_WINRMINSEC=True",
+        "PACKER_PASSWORD={{.WinRMPassword}}",
+        "PACKER_USESSL=True"
+      ]
+    },
+    {
+      "type": "file",
+      "source": "inventory.txt",
+      "destination": "inventory.txt",
+      "direction": "download"
+    },
+    {
+      "type": "shell-local",
+      "command": "ansible-playbook {{user `ansible_playbook`}} -i ./inventory.txt -e disable_reboot=True -v"
+    },
+    {
+      "type": "windows-restart"
+    },
+    {
+      "type": "powershell",
+      "inline": [
+        "C:/ProgramData/Amazon/EC2-Windows/Launch/Scripts/InitializeInstance.ps1 -Schedule",
+        "C:/ProgramData/Amazon/EC2-Windows/Launch/Scripts/SysprepInstance.ps1 -NoShutdown"
+      ]
+    }
+  ],
+  "post-processors": [
+    {
+      "type": "manifest",
+      "output": "manifest.json",
+      "strip_path": true
+    }
+  ]
+}

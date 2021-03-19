@@ -33,7 +33,7 @@ tests:
   default-orchestrator:
     template: ./templates/main.template.yaml
     regions:
-    - us-east-2
+    - eu-central-1
     parameters:
       AvailabilityZones: "$[taskcat_getaz_2]"
       UiPathFQDN: testone.uipathmarketplace.net
@@ -45,6 +45,7 @@ tests:
     parameters:
       AvailabilityZones: "$[taskcat_getaz_3]"
       UiPathFQDN: testtwo.uipathmarketplace.net
+      NumberOfAZs: 3
 
   add-license-orchestrator:
     template: ./templates/main.template.yaml
@@ -63,3 +64,11 @@ tests:
       AvailabilityZones: "$[taskcat_getaz_2]"
       UiPathFQDN: testfour.uipathmarketplace.net
       OrchestratorInstanceCount: "3"
+
+  existing-vpc:
+    template: ./templates/uipath-orchestrator.template.yaml
+    regions:
+      - us-west-2
+    parameters:
+      AvailabilityZones: "$[taskcat_getaz_2]"
+      UiPathFQDN: testfive.uipathmarketplace.net
