@@ -33,6 +33,14 @@ Import-Module ([System.IO.Path]::GetFullPath((Join-Path (Get-Location) "./AzureU
 Write-Output " ******* $(Get-Date) Orchestrator installation cleanup started *******"
 
 $vm = Get-AzVm -Name $VMName
+
+$count = 1
+while (!$vm.StorageProfile.OSDisk.Name -and ($count -lt 30)) {
+    Start-Sleep -Seconds 3
+    Write-Host "The value of the disk name is: $($vm.StorageProfile.OSDisk.Name)"
+    $count++
+}
+
 $OSDiskName = $vm.StorageProfile.OSDisk.Name
 
 Remove-AzVM -Name $VMName -ResourceGroupName $RGName -Force

@@ -90,9 +90,9 @@
         },
         "orchestratorVersion": {
             "type": "string",
-            "defaultValue": "20.10.7",
+            "defaultValue": "20.10.8",
             "allowedValues": [
-                "20.10.7"
+                "20.10.8"
             ],
             "metadata": {
                 "description": "Version of the Orchestrator"
@@ -430,21 +430,6 @@
         }
     },
     "resources": [
-        {
-            "apiVersion": "2019-10-01",
-            "name": "pid-5b5efb37-e388-4862-add1-0be0d6d0d45b",
-            "tags": "[ if(contains(parameters('tagsByResource'), 'Microsoft.Resources/deployments'), parameters('tagsByResource')['Microsoft.Resources/deployments'], json('{}')) ]",
-            "type": "Microsoft.Resources/deployments",
-            "properties": {
-                "mode": "Incremental",
-                "template": {
-                    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
-                    "contentVersion": "1.0.0.0",
-                    "resources": [
-                    ]
-                }
-            }
-        },
         {
             "name": "SQLTemplate",
             "type": "Microsoft.Resources/deployments",
