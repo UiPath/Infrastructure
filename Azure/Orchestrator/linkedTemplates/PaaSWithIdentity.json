@@ -92,9 +92,9 @@
         },
         "orchestratorVersion": {
             "type": "string",
-            "defaultValue": "20.10.7",
+            "defaultValue": "20.10.8",
             "allowedValues": [
-                "20.10.7"
+                "20.10.8"
             ],
             "metadata": {
                 "description": "Version of the Orchestrator"
