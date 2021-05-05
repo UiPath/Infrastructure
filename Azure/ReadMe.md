@@ -56,7 +56,7 @@ az storage blob url --account-name azmktstorage --container-name container --nam
 
 | Variable Name | Value |
 | ------ | -------- |
-| `installPackageUri` | Copy the URL from the command that uploaded the `HAA/haa-2.0.0.tar.gz` file |
+| `installPackageUri` | Copy the URL from the command that uploaded the `HAA/haa-2.0.1.tar.gz` file |
 | `OrchestratorArtifactsPaaS.OrchestratorArtifact` | Copy the URL from the command that uploaded the `UiPath.Orchestrator.Web.zip` file |
 | `IdentityArtifactsPaaS.IdentityPackage` | Copy the URL from the command that uploaded the `UiPath.IdentityServer.Web.zip` file |
 | `IdentityArtifactsPaaS.IdentityCliMigrator` | Copy the URL from the command that uploaded the `UiPath.IdentityServer.Migrator.Cli.zip` file |
