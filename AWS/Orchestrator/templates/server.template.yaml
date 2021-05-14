@@ -93,6 +93,48 @@ Conditions:
   UsingDefaultBucket: !Equals
     - !Ref QSS3BucketName
     - aws-quickstart
+  IsMarketplaceDeployment: !Equals
+    - !Ref QSS3BucketName
+    - !Join
+      - ""
+      - - "uipath-marketplace"
+        - !Ref "AWS::Region"
+Mappings: 
+  RegionMap: 
+    ap-northeast-1:
+      x8664: "ami-0cd7548f41e94c7c3"
+    ap-northeast-2:
+      x8664: "ami-09daec357c044db89"
+    ap-northeast-3: 
+      x8664: "ami-065db20ffac337944"
+    ap-south-1:
+      x8664: "ami-0703f52ebe65d78d1"
+    ap-southeast-1:
+      x8664: "ami-00dfabbb673c6aafd"
+    ap-southeast-2:
+      x8664: "ami-0d4eeffc41d875eb6"
+    ca-central-1: 
+      x8664: "ami-01f4139e9e2776bf3"
+    eu-central-1: 
+      x8664: "ami-0396ccac19ad21e30"
+    eu-north-1:
+      x8664: "ami-06caa0e4ba75ad035"
+    eu-west-1:
+      x8664: "ami-0f0bcea5c4dadf8dd"
+    eu-west-2: 
+      x8664: "ami-0130b30b871519e80"
+    eu-west-3:
+      x8664: "ami-00910c0c13bd24d06"
+    sa-east-1:
+      x8664: "ami-005363a6adac20686"
+    us-east-1:
+      x8664: "ami-063aef39a9148edf6"
+    us-east-2:
+      x8664: "ami-0a0237616454b3b5c"
+    us-west-1:
+      x8664: "ami-01d436d3f5dd65455"
+    us-west-2: 
+      x8664: "ami-0c61cea817720d195"
 Resources:
   OrchestratorSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
@@ -381,6 +423,12 @@ Resources:
             - setup
             - prerequisites
             - install
+          marketplaceConfig:
+            - cloudwatch_install
+            - cloudwatch_setup
+            - cloudwatch_agent_restart
+            - setup
+            - install
         cloudwatch_install:
           files:
             C:\cfn\sources\amazon-cloudwatch-agent.msi:
@@ -599,7 +647,13 @@ Resources:
             Encrypted: false
             VolumeSize: 100
             VolumeType: gp2
-      ImageId: !GetAtt HostInstanceAMI.ImageId
+      ImageId: !If 
+        - IsMarketplaceDeployment
+        - !FindInMap
+          - RegionMap
+          - !Ref 'AWS::Region'
+          - x8664
+        - !GetAtt HostInstanceAMI.ImageId 
       IamInstanceProfile: !GetAtt OrchestratorInstanceProfile.Arn
       InstanceType: !Ref InstanceType
       KeyName: !Ref KeyPairName
@@ -610,12 +664,21 @@ Resources:
       PlacementTenancy: default
       SecurityGroups:
         - !Ref OrchestratorSecurityGroup
-      UserData: !Base64
-        Fn::Sub: |
-          <script>
-          cfn-init.exe -v -c config -s ${AWS::StackId} -r LaunchConfiguration --region ${AWS::Region}
-          cfn-signal.exe -e %errorlevel% --stack ${AWS::StackId} --resource AutoScalingGroup --region ${AWS::Region}
-          </script>
+      UserData: 
+        !If 
+          - IsMarketplaceDeployment
+          - !Base64
+              Fn::Sub: | 
+                <script>
+                cfn-init.exe -v -c marketplaceConfig -s ${AWS::StackId} -r LaunchConfiguration --region ${AWS::Region}
+                cfn-signal.exe -e %errorlevel% --stack ${AWS::StackId} --resource AutoScalingGroup --region ${AWS::Region}
+                </script>
+          - !Base64
+              Fn::Sub: | 
+                <script>
+                cfn-init.exe -v -c config -s ${AWS::StackId} -r LaunchConfiguration --region ${AWS::Region}
+                cfn-signal.exe -e %errorlevel% --stack ${AWS::StackId} --resource AutoScalingGroup --region ${AWS::Region}
+                </script>     
   AutoScalingGroup:
     Type: 'AWS::AutoScaling::AutoScalingGroup'
     CreationPolicy:

@@ -265,7 +265,7 @@ Resources:
                 finally:
                     cfnresponse.send(event, context, status, returnAttribute, new_physical_id)
       Runtime: python3.6
-      Timeout: 30
+      Timeout: 300
       TracingConfig:
         Mode: Active
   StorageGatewayAMI:
@@ -499,7 +499,7 @@ Resources:
                 finally:
                     cfnresponse.send(event, context, status, returnAttribute, new_physical_id)
       Runtime: python3.6
-      Timeout: 30
+      Timeout: 300
       TracingConfig:
         Mode: Active
   StorageGateway:
@@ -596,7 +596,7 @@ Resources:
                 finally:
                     cfnresponse.send(event, context, status, returnAttribute, new_physical_id)
       Runtime: python3.6
-      Timeout: 30
+      Timeout: 300
       TracingConfig:
         Mode: Active
   DiskCache:
@@ -686,7 +686,7 @@ Resources:
                 finally:
                     cfnresponse.send(event, context, status, returnAttribute, new_physical_id)
       Runtime: python3.6
-      Timeout: 30
+      Timeout: 300
       TracingConfig:
         Mode: Active
   FileShare:

@@ -218,7 +218,7 @@ function Get-IdentityInstallationToken {
     $loginUrl = $identityUrl + "/api/Account/Login"
     $tokenUrl = $identityUrl + "/api/Account/ClientAccessToken"
     
-    Invoke-WebRequest -Uri $antifUrl -Method Get -ContentType "application/json" -UseBasicParsing -Session websession
+    Invoke-WebRequest -Uri $antifUrl -Method Get -ContentType "application/json" -Session websession -UseBasicParsing | Out-Null
     $websession.Cookies.GetCookies($antifUrl)[1].Name = "XSRF-TOKEN"
     $dataLogin = @{
         tenant          = "host"         
@@ -228,9 +228,9 @@ function Get-IdentityInstallationToken {
     } | ConvertTo-Json
     $temp = $websession.Cookies.GetCookies($antifUrl)[1].Value
     $websession.Headers.'X-XSRF-TOKEN' = $temp
-    Invoke-WebRequest -Uri $loginUrl -Method Post -Body $dataLogin -ContentType "application/json" -UseBasicParsing -WebSession $websession
-    $webresponse3 = Invoke-WebRequest -Uri $tokenUrl -Method Get  -ContentType "application/json" -UseBasicParsing -WebSession $websession
-    return $webresponse3.Content
+    Invoke-WebRequest -Uri $loginUrl -Method Post -Body $dataLogin -ContentType "application/json" -WebSession $websession -UseBasicParsing | Out-Null
+    $tokenResponse = Invoke-WebRequest -Uri $tokenUrl -Method Get  -ContentType "application/json" -WebSession $websession -UseBasicParsing
+    return $tokenResponse.Content
 }
 
 function Convert-FileToJson() {
@@ -266,6 +266,14 @@ function Generate-IdentityTokenAndInsertIntoFile {
         [string] $parameterKey
     )
     $token = Get-IdentityInstallationToken -identityUrl $identityUrl -hostUserName $hostUserName -password $password
+    if($token.GetType().Name -ne "String")
+    {
+        throw "Identity Installation Token was not valid string." 
+    }
+    if([string]::IsNullOrEmpty($token))
+    {
+        throw "Identity Installation Token was empty or null string."
+    }
     $parameters = Convert-FileToJson -filePath $parameterFilePath
     $parameters[$parameterKey] = @{value = $token }
     $jsonParamters = $parameters | ConvertTo-Json 

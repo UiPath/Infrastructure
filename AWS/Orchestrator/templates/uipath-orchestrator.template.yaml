@@ -801,9 +801,10 @@ Parameters:
   OrchestratorVersion:
     Description: UIPath Orchestrator version.
     Type: String
-    Default: 20.10.7
+    Default: 21.4.0
     AllowedValues:
-      - 20.10.7
+      - 21.4.0
+      - 20.10.8
     ConstraintDescription: UIPath Orchestrator version can only contain characters *0–9* and *.* (period).
   OrchestratorInstanceCount:
     Description: Number of UiPath Orchestrator instances (1–20).
@@ -971,6 +972,7 @@ Resources:
       Timeout: 30
       TracingConfig:
         Mode: Active
+
   StorageStack:
     Type: 'AWS::CloudFormation::Stack'
     Properties:
@@ -1135,6 +1137,197 @@ Resources:
         QSS3KeyPrefix: !Sub "${QSS3KeyPrefix}submodules/quickstart-aws-acm-certificate/"
         DomainName: !Ref UiPathFQDN
         HostedZoneID: !Ref HostedZoneID
+  TelemetryLambdaRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      Description: IAM Role to be assumed by Lambda functions which place eventbus events
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'cloudwatch:*'
+                  - 'logs:*'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - "events:PutEvents"
+                Resource: !GetAtt TelemetryEventBus.Arn
+              - Effect: Allow
+                Action:
+                  - 'xray:PutTraceSegments'
+                Resource: '*'
+
+  EventBusRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      Description: IAM Role to be assumed by EventBus for pushing events
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - events.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "events:PutEvents"
+                Resource: !Sub 'arn:aws:events:${AWS::Region}:402050645054:event-bus/default'
+
+  TelemetryEventBus:
+    Type: AWS::Events::EventBus
+    Properties:
+        Name: "uipath"
+
+  EventBusRule:
+    Type: 'AWS::Events::Rule'
+    Properties:
+      Description: Push Event bus events
+      EventBusName: !Ref TelemetryEventBus
+      EventPattern:
+        source:
+          - uipath-deployments
+      State: ENABLED
+      Targets:
+        - Arn: !Sub 'arn:aws:events:${AWS::Region}:402050645054:event-bus/default'
+          Id: uipath-deployments
+          RoleArn: !GetAtt EventBusRole.Arn
+
+  TelemetryLambdaFunction:
+    Type: 'AWS::Lambda::Function'
+    DependsOn: EventBusRule
+    Properties:
+      Description: Build telemetry events
+      Handler: index.handler
+      Role: !GetAtt TelemetryLambdaRole.Arn
+      Code:
+        ZipFile: |
+          import boto3
+          import json
+          import cfnresponse
+          import hashlib
+
+          def create(properties, physical_id):
+              print(json.dumps(properties))
+              cloudwatch_events = boto3.client('events')
+              response = cloudwatch_events.put_events(
+                          Entries=[
+                                  {
+                                      'Detail': json.dumps({
+                                          'deployment': 'orchestrator',
+                                          'event': 'CREATE',
+                                          'StackTag': hashlib.sha256(properties['StackId'].encode('ascii')).hexdigest(),
+                                          'StackNameTag': hashlib.sha256(properties['StackName'].encode('ascii')).hexdigest()
+                                        }),
+                                      'DetailType': 'cfn-request',
+                                      'EventBusName': 'uipath',
+                                      'Resources': [],
+                                      'Source': 'uipath-deployments'
+                                  }
+                              ]
+                            )
+              print(response['Entries'])
+              returnAttribute = {}
+              returnAttribute['Action'] = 'CREATE'
+              return cfnresponse.SUCCESS, '', returnAttribute
+
+          def update(properties, physical_id):
+              print(json.dumps(properties))
+              cloudwatch_events = boto3.client('events')
+              response = cloudwatch_events.put_events(
+                          Entries=[
+                                  {
+                                      'Detail': json.dumps({
+                                          'deployment': 'orchestrator',
+                                          'event': 'UPDATE',
+                                          'StackTag': hashlib.sha256(properties['StackId'].encode('ascii')).hexdigest(),
+                                          'StackNameTag': hashlib.sha256(properties['StackName'].encode('ascii')).hexdigest()
+                                        }),
+                                      'DetailType': 'cfn-request',
+                                      'EventBusName': 'uipath',
+                                      'Resources': [],
+                                      'Source': 'uipath-deployments'
+                                  }
+                              ]
+                            )
+              print(response['Entries'])
+              returnAttribute = {}
+              returnAttribute['Action'] = 'UPDATE'
+              return cfnresponse.SUCCESS, physical_id, returnAttribute
+
+
+          def delete(properties, physical_id):
+              print(json.dumps(properties))
+              cloudwatch_events = boto3.client('events')
+              response = cloudwatch_events.put_events(
+                          Entries=[
+                                  {
+                                      'Detail': json.dumps({
+                                          'deployment': 'orchestrator',
+                                          'event': 'DELETE',
+                                          'StackTag': hashlib.sha256(properties['StackId'].encode('ascii')).hexdigest(),
+                                          'StackNameTag': hashlib.sha256(properties['StackName'].encode('ascii')).hexdigest()
+                                        }),
+                                      'DetailType': 'cfn-request',
+                                      'EventBusName': 'uipath',
+                                      'Resources': [],
+                                      'Source': 'uipath-deployments'
+                                  }
+                              ]
+                            )
+              print(response['Entries'])
+              returnAttribute = {}
+              return cfnresponse.SUCCESS, physical_id, returnAttribute
+
+
+          def handler(event, context):
+              print('Received event: ' + json.dumps(event))
+              status = cfnresponse.FAILED
+              new_physical_id = None
+              returnAttribute = {}
+              try:
+                  properties = event.get('ResourceProperties')
+                  physical_id = event.get('PhysicalResourceId')
+                  status, new_physical_id, returnAttribute = {
+                      'Create': create,
+                      'Update': update,
+                      'Delete': delete
+                  }.get(event['RequestType'], lambda x, y: (cfnresponse.FAILED, None))(properties, physical_id)
+              except Exception as e:
+                  print('Exception: ' + str(e))
+                  status = cfnresponse.FAILED
+              finally:
+                  cfnresponse.send(event, context, status, returnAttribute, new_physical_id)
+      Runtime: python3.8
+      Timeout: 30
+      TracingConfig:
+        Mode: Active
+  TelemetryLambda:
+    Type: 'Custom::TelemetryLambdaFunction'
+    Properties:
+      ServiceToken: !GetAtt TelemetryLambdaFunction.Arn
+      StackId: !Ref 'AWS::StackId'
+      StackName: !Ref 'AWS::StackName'
 
 Outputs:
   FQDNLoadBalancer:
