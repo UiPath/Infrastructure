@@ -5,17 +5,17 @@ Description: >-
   public subnets. (qs-1r2g41216)
 Metadata:
   QuickStartDocumentation:
-    EntrypointName: "Launch into a new VPC"
+    EntrypointName: Launch into a new VPC
     Order: 1
   AWS::CloudFormation::Interface:
     ParameterGroups:
       - Label:
-          default: Availability Zone Configuration
+          default: Availability Zone configuration
         Parameters:
           - AvailabilityZones
           - NumberOfAZs
       - Label:
-          default: Network Configuration
+          default: Network configuration
         Parameters:
           - VPCCIDR
           - PublicSubnetTag1
@@ -25,12 +25,12 @@ Metadata:
           - PrivateSubnetTag2
           - PrivateSubnetTag3
       - Label:
-          default: Robot VM Configuration
+          default: Robot VM configuration
         Parameters:
           - KeyPairName
           - InstanceType
       - Label:
-          default: UiPath Robot Configuration
+          default: UiPath Robot configuration
         Parameters:
           - RobotVersion
           - RobotType
@@ -40,15 +40,15 @@ Metadata:
           - OrchestratorAPIUser
           - OrchestratorAPIPassword
       - Label:
-          default: Quickstart Bucket configuration
+          default: Quick Start S3 bucket configuration
         Parameters:
           - QSS3BucketName
           - QSS3KeyPrefix
     ParameterLabels:
       AvailabilityZones:
-        default: Availability Zone(s) selection
+        default: Availability Zones
       NumberOfAZs:
-        default: Number of AZs to use
+        default: Number of Availability Zones to use
       VPCCIDR:
         default: VPC CIDR
       PrivateSubnetTag1:
@@ -64,33 +64,31 @@ Metadata:
       PublicSubnetTag3:
         default: Public subnet 3 tag
       KeyPairName:
-        default: Instance Key pair
+        default: Instance key pair
       InstanceType:
         default: Instance type
       RobotType:
-        default: UiPath Robot type (attended/unattended).
+        default: UiPath Robot type (attended/unattended)
       RobotVersion:
-        default: UiPath Robot version.
+        default: UiPath Robot version
       OrchestratorURL:
-        default: URL of an existing and licensed Orchestrator.
+        default: UiPath Orchestrator URL
       OrchestratorTenant:
-        default: Tenant name where the Robot will be created.
+        default: UiPath Robot tenant name
       OrchestratorAPIUser:
-        default: Orchestrator API username with role to create/add Robot.
+        default: UiPath Orchestrator API username
       OrchestratorAPIPassword:
-        default: Orchestrator API password
+        default: UiPath Orchestrator API password
       AdminPassword:
-        default: Admin Password
+        default: Administrator password
       QSS3BucketName:
-        default: Template hosting Bucket
+        default: Template-hosting S3 bucket
       QSS3KeyPrefix:
         default: Template folder
 Parameters:
   AvailabilityZones:
     Description: >-
-      List of Availability Zones to use for the subnets in the VPC - maximum of
-      3 AZs are used for this deployment (logical order of your selections is
-      preserved).
+      List of Availability Zones to use for the subnets in the VPC. A maximum of three Availability Zones are used for this deployment.
     Type: 'List<AWS::EC2::AvailabilityZone::Name>'
   NumberOfAZs:
     AllowedValues:
@@ -98,65 +96,64 @@ Parameters:
       - '3'
     Default: '2'
     Description: >-
-      Number of Availability Zones to use in the VPC (upto 3), must match your
-      selections in the list of Availability Zones parameter.
+      Number of Availability Zones to use in the VPC. Must match the number of Availability Zones chosen in the *Availability Zones* parameter.
     Type: String
   VPCCIDR:
     AllowedPattern: '^([0-9]{1,3}\.){2}([0]{1}.)[0]{1}(\/[16]{2})$'
-    ConstraintDescription: CIDR block parameter must be in the form x.x.0.0/16
+    ConstraintDescription: CIDR block parameter must be in the format x.x.0.0/16.
     Default: 10.0.0.0/16
-    Description: 'CIDR block for the VPC, must be in the form x.x.0.0/16.'
+    Description: VPC CIDR block, in format x.x.0.0/16.
     Type: String
   PrivateSubnetTag1:
     AllowedPattern: '^([a-zA-Z0-9+\-._:/@]+=[a-zA-Z0-9+\-.,_:/@ *\\"''\[\]\{\}]*)?$'
     ConstraintDescription: >-
-      tags must be in format "Key=Value" keys can only contain
-      [a-zA-Z0-9+\-._:/@], values can contain [a-zA-Z0-9+\-._:/@ *\\"'\[\]\{\}]
+      Tags must be in format "Key=Value". Key can only contain
+      [a-zA-Z0-9+\-._:/@]. Value can only contain [a-zA-Z0-9+\-._:/@ *\\"'\[\]\{\}]
     Default: Network=Private1
-    Description: Tag to add to private subnet 1 in format Key=Value (Optional).
+    Description: (Optional) Tag to add to private subnet 1, in format Key=Value.
     Type: String
   PrivateSubnetTag2:
     AllowedPattern: '^([a-zA-Z0-9+\-._:/@]+=[a-zA-Z0-9+\-.,_:/@ *\\"''\[\]\{\}]*)?$'
     ConstraintDescription: >-
-      tags must be in format "Key=Value" keys can only contain
-      [a-zA-Z0-9+\-._:/@], values can contain [a-zA-Z0-9+\-._:/@ *\\"'\[\]\{\}]
+      Tags must be in format "Key=Value". Key can only contain
+      [a-zA-Z0-9+\-._:/@]. Value can only contain [a-zA-Z0-9+\-._:/@ *\\"'\[\]\{\}]
     Default: Network=Private2
-    Description: Tag to add to private subnet 2 in format Key=Value (Optional).
+    Description: (Optional) Tag to add to private subnet 2, in format Key=Value.
     Type: String
   PrivateSubnetTag3:
     AllowedPattern: '^([a-zA-Z0-9+\-._:/@]+=[a-zA-Z0-9+\-.,_:/@ *\\"''\[\]\{\}]*)?$'
     ConstraintDescription: >-
-      tags must be in format "Key=Value" keys can only contain
-      [a-zA-Z0-9+\-._:/@], values can contain [a-zA-Z0-9+\-._:/@ *\\"'\[\]\{\}]
+      Tags must be in format "Key=Value". Key can only contain
+      [a-zA-Z0-9+\-._:/@]. Value can only contain [a-zA-Z0-9+\-._:/@ *\\"'\[\]\{\}]
     Default: Network=Private3
-    Description: Tag to add to private subnet 3 in format Key=Value (Optional).
+    Description: (Optional) Tag to add to private subnet 3, in format Key=Value.
     Type: String
   PublicSubnetTag1:
     AllowedPattern: '^([a-zA-Z0-9+\-._:/@]+=[a-zA-Z0-9+\-.,_:/@ *\\"''\[\]\{\}]*)?$'
     ConstraintDescription: >-
-      tags must be in format "Key=Value" keys can only contain
-      [a-zA-Z0-9+\-._:/@], values can contain [a-zA-Z0-9+\-._:/@ *\\"'\[\]\{\}]
+      Tags must be in format "Key=Value". Key can only contain
+      [a-zA-Z0-9+\-._:/@]. Value can only contain [a-zA-Z0-9+\-._:/@ *\\"'\[\]\{\}]
     Default: Network=Public1
-    Description: Tag to add to public subnet 1 in format Key=Value (Optional)
+    Description: (Optional) Tag to add to public subnet 1, in format Key=Value.
     Type: String
   PublicSubnetTag2:
     AllowedPattern: '^([a-zA-Z0-9+\-._:/@]+=[a-zA-Z0-9+\-.,_:/@ *\\"''\[\]\{\}]*)?$'
     ConstraintDescription: >-
-      tags must be in format "Key=Value" keys can only contain
-      [a-zA-Z0-9+\-._:/@], values can contain [a-zA-Z0-9+\-._:/@ *\\"'\[\]\{\}]
+      Tags must be in format "Key=Value". Key can only contain
+      [a-zA-Z0-9+\-._:/@]. Value can only contain [a-zA-Z0-9+\-._:/@ *\\"'\[\]\{\}]
     Default: Network=Public2
-    Description: Tag to add to public subnet 2 in format Key=Value (Optional).
+    Description: (Optional) Tag to add to public subnet 2, in format Key=Value.
     Type: String
   PublicSubnetTag3:
     AllowedPattern: '^([a-zA-Z0-9+\-._:/@]+=[a-zA-Z0-9+\-.,_:/@ *\\"''\[\]\{\}]*)?$'
     ConstraintDescription: >-
-      tags must be in format "Key=Value" keys can only contain
-      [a-zA-Z0-9+\-._:/@], values can contain [a-zA-Z0-9+\-._:/@ *\\"'\[\]\{\}]
+      Tags must be in format "Key=Value". Key can only contain
+      [a-zA-Z0-9+\-._:/@]. Value can only contain [a-zA-Z0-9+\-._:/@ *\\"'\[\]\{\}]
     Default: Network=Public3
-    Description: Tag to add to public subnet 3 in format Key=Value (Optional).
+    Description: (Optional) Tag to add to public subnet 3, in format Key=Value.
     Type: String
   KeyPairName:
-    Description: 'Existing Key Pair, which is to be used to Log in to VM instances.'
+    Description: Key pair used to log in to virtual machine (VM) instances.
     Type: 'AWS::EC2::KeyPair::KeyName'
   InstanceType:
     AllowedValues:
@@ -179,12 +176,12 @@ Parameters:
       - r4.2xlarge
       - r4.4xlarge
       - r4.8xlarge
-    ConstraintDescription: 'Class of instance, must be a valid EC2 instance type from the list.'
+    ConstraintDescription: Must be a valid Amazon EC2 instance type from the list.
     Default: t2.medium
-    Description: EC2 instance type
+    Description: EC2 instance type.
     Type: String
   AdminPassword:
-    Description: Robot's Windows Administrator password to login as.
+    Description: Windows administrator password for UiPath Robot.
     Type: String
     NoEcho: 'true'
     MinLength: '6'
@@ -192,60 +189,70 @@ Parameters:
     AllowedPattern: >-
       (?=^.{6,124}$)((?=.*\d)(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[^A-Za-z0-9])(?=.*[a-z])|(?=.*[^A-Za-z0-9])(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[A-Z])(?=.*[^A-Za-z0-9]))^.*
     ConstraintDescription: >-
-      Windows Administrator Password must contain at least one uppercase letter
-      and be longer than six charaters.
+      Windows administrator password must contain more than six characters, including at least one uppercase letter.
   RobotType:
     Type: String
     Default: Attended
     AllowedValues:
       - Attended
       - Unattended
-    Description: >-
-      Choose what type of UiPath Robot you want to be installed. Options are: Attended or Unattended.
+    Description: Choose the type of UiPath Robot you want to install (attended or unattended).
   RobotVersion:
-    Description: UIPath Robot Version to be installed.
+    Description: UIPath Robot version to install.
     Type: String
-    Default: 20.10.2
+    Default: 21.4.3
     AllowedValues:
-      - 20.10.2
-    ConstraintDescription: 'Robot version number can contain only digits and dot(.), and must .'
+      - 21.4.3
+      - 20.10.7
+    ConstraintDescription: Robot version can only contain characters *0–9* and *.* (period).
   OrchestratorURL:
     Type: String
-    Description: URL of an existing and licensed Orchestrator.
+    Description: UiPath Orchestrator URL.
   OrchestratorTenant:
     Type: String
     Default: default
-    Description: Tenant name where the Robot will be created.
+    Description: Tenant name where the UiPath Robot is created.
   OrchestratorAPIUser:
     Type: String
-    Description: Orchestrator API username with role to create/add Robot.
+    Description: UiPath Orchestrator API username. This must have a role with permissions to add and create robots.
   OrchestratorAPIPassword:
     Type: String
-    Description: Orchestrator API password.
+    Description: UiPath Orchestrator API password.
     NoEcho: 'true'
   QSS3BucketName:
     AllowedPattern: '^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$'
     ConstraintDescription: >-
       Quick Start bucket name can include numbers, lowercase letters, uppercase
       letters, and hyphens (-). It cannot start or end with a hyphen (-).
-    Description: S3 bucket name hosting the Quickstart templates.
+    Description: Name of the S3 bucket for your copy of the Quick Start assets. 
+      Keep the default name unless you are customizing the template. 
+      Changing the name updates code references to point to a new Quick 
+      Start location. This name can include numbers, lowercase letters, 
+      uppercase letters, and hyphens, but do not start or end with a hyphen (-). 
+      See https://aws-quickstart.github.io/option1.html.
     Type: String
     Default: aws-quickstart
   QSS3BucketRegion:
-    Default: eu-central-1
+    Default: us-east-1
     Description: >-
-      The AWS Region where the Quick Start S3 bucket (QSS3BucketName) is hosted.
-      When using your own bucket, you must specify this value.
+       AWS Region where the Quick Start S3 bucket (QSS3BucketName) is hosted. Keep the default Region unless you are customizing the template. Changing this Region updates code references to point to a new Quick Start location. When using your own bucket, specify the Region. See https://aws-quickstart.github.io/option1.html.
     Type: String
     AllowedPattern: (us(-gov)?|ap|ca|cn|eu|sa)-(central|(north|south)?(east|west)?)-\d
-    ConstraintDescription: Quick Start bucket region must be a valid AWS Region code.
+    ConstraintDescription: Must be a valid AWS Region code.
   QSS3KeyPrefix:
     AllowedPattern: '^[0-9a-zA-Z-/]*/$'
     ConstraintDescription: >-
-      Quick Start key prefix can include numbers, lowercase letters, uppercase
-      letters, and hyphens (-), and ending with a slash(/).
+      The Quick Start S3 key prefix can include numbers, lowercase letters,
+      uppercase letters, hyphens (-), and forward slashes (/).
     Default: quickstart-uipath-robot/
-    Description: S3 key prefix under which Quick Start templates are hosted.
+    Description: >-
+      S3 key prefix that is used to simulate a directory for your copy of the 
+      Quick Start assets. Keep the default prefix unless you are customizing 
+      the template. Changing this prefix updates code references to point to 
+      a new Quick Start location. This prefix can include numbers, lowercase 
+      letters, uppercase letters, hyphens (-), and forward slashes (/). 
+      See https://docs.aws.amazon.com/AmazonS3/latest/dev/UsingMetadata.html 
+      and https://aws-quickstart.github.io/option1.html.
     Type: String
 Conditions:
   UsingDefaultBucket: !Equals
@@ -311,12 +318,15 @@ Resources:
         InstanceType: !Ref InstanceType
 Outputs:
   BastionHostPublicIP:
-    Description: Public IP of Bastion host in Public Subnet 1
+    Description: Public IP of bastion host in public subnet 1.
     Value: !GetAtt
       - UiPathRobotStack
       - Outputs.BastionHostPublicIP
   UiPathRobotPrivateIP:
-    Description: Private IP of UiPath Robot in Private Subnet 1
+    Description: Private IP of UiPath Robot in private subnet 1.
     Value: !GetAtt
       - UiPathRobotStack
       - Outputs.UiPathRobotPrivateIP
+  Postdeployment:
+    Description: See the deployment guide for post-deployment steps.
+    Value: https://aws.amazon.com/quickstart/?quickstart-all.sort-by=item.additionalFields.sortDate&quickstart-all.sort-order=desc&awsm.page-quickstart-all=5
