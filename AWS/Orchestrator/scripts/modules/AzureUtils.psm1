@@ -53,34 +53,30 @@ function Send-TelemetryToInsights {
         [Parameter(Mandatory = $false)]
         [string] $sendTelemetryTo = ""
     )
-    if (([appdomain]::CurrentDomain.GetAssemblies() | Where-Object { $_.FullName -like 'Microsoft.ApplicationInsights*' }).Count -eq 0) {
-        Install-TelemetryAssembly
-    }
-    if (!([string]::IsNullOrEmpty($sendTelemetryTo)) -and 
-        (([appdomain]::CurrentDomain.GetAssemblies() | Where-Object { $_.FullName -like 'Microsoft.ApplicationInsights*' }).Count -gt 0)) {
+    if ($sendTelemetryTo) {
         
-        $TelClient = New-Object "Microsoft.ApplicationInsights.TelemetryClient"
-        $TelClient.InstrumentationKey = $sendTelemetryTo
-        $telemetryEvent = New-Object Microsoft.ApplicationInsights.DataContracts.EventTelemetry
-        $telemetryEvent.Name = $name;
-    
-        foreach ($item in $properties.GetEnumerator()) {
-            $telemetryEvent.Properties[$item.Name] = $item.Value
-        }
-    
-        $TelClient.TrackEvent($telemetryEvent)
-        $TelClient.Flush()
+        $dateTimeNow = (Get-Date -UFormat "%Y-%m-%dT%T%Z00")
+        $uri = "https://dc.services.visualstudio.com/v2/track"
+        $payload = @{
+            name = "AppEvents"
+            time = $dateTimeNow
+            iKey = $sendTelemetryTo
+            # tags = @{
+            #     ai.cloud.roleInstance = "AzMarketplaceTelemetry"
+            #     ai.internal.sdkVersion = "rest"
+            # }
+            data = @{
+                baseType = "EventData"
+                baseData = @{
+                    ver        = 2
+                    name       = $name
+                    properties = $properties
+                }
+            }
+        } | ConvertTo-Json -Depth 10
+        Invoke-WebRequest -Method POST -Uri $uri -Body $payload -ContentType "application/json"  -ErrorAction SilentlyContinue -UseBasicParsing
     }
-    else {
-        Write-Host "No telemetry was sent."
-    }
-}
 
-function Install-TelemetryAssembly {
-    
-    Register-PackageSource -Name TelNuGet -Location "https://www.nuget.org/api/v2" -ProviderName NuGet -Force -ErrorAction SilentlyContinue
-    Install-Package Microsoft.ApplicationInsights -Source TelNuGet -Force -SkipDependencies -Destination ./ -RequiredVersion 2.17.0 -ErrorAction SilentlyContinue
-    Add-Type -Path "Microsoft.ApplicationInsights.2.17.0\lib\netstandard2.0\Microsoft.ApplicationInsights.dll" -ErrorAction SilentlyContinue
 }
 
 function Add-TextBetweenStringsInFile {

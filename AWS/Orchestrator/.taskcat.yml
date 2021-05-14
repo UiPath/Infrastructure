@@ -33,10 +33,11 @@ tests:
   default-orchestrator:
     template: ./templates/main.template.yaml
     regions:
-    - us-east-2
+    - eu-central-1
     parameters:
       AvailabilityZones: "$[taskcat_getaz_2]"
       UiPathFQDN: testone.uipathmarketplace.net
+      OrchestratorVersion: 21.4.0
 
   three-az-orchestrator:
     template: ./templates/main.template.yaml
@@ -45,6 +46,8 @@ tests:
     parameters:
       AvailabilityZones: "$[taskcat_getaz_3]"
       UiPathFQDN: testtwo.uipathmarketplace.net
+      NumberOfAZs: 3
+      OrchestratorVersion: 21.4.0
 
   add-license-orchestrator:
     template: ./templates/main.template.yaml
@@ -54,6 +57,7 @@ tests:
       AvailabilityZones: "$[taskcat_getaz_2]"
       UiPathFQDN: testthree.uipathmarketplace.net
       OrchestratorLicense: "orchlicense"
+      OrchestratorVersion: 21.4.0
 
   europe-orchestrator:
     template: ./templates/main.template.yaml
@@ -63,3 +67,13 @@ tests:
       AvailabilityZones: "$[taskcat_getaz_2]"
       UiPathFQDN: testfour.uipathmarketplace.net
       OrchestratorInstanceCount: "3"
+      OrchestratorVersion: 20.10.8
+
+  existing-vpc:
+    template: ./templates/uipath-orchestrator.template.yaml
+    regions:
+      - us-west-2
+    parameters:
+      AvailabilityZones: "$[taskcat_getaz_2]"
+      UiPathFQDN: testfive.uipathmarketplace.net
+      OrchestratorVersion: 20.10.8

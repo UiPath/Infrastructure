@@ -882,9 +882,10 @@ Parameters:
   OrchestratorVersion:
     Description: UIPath Orchestrator version.
     Type: String
-    Default: 20.10.7
+    Default: 21.4.0
     AllowedValues:
-      - 20.10.7
+      - 21.4.0
+      - 20.10.8
     ConstraintDescription: UIPath Orchestrator version can only contain characters *0–9* and *.* (period).
   OrchestratorInstanceCount:
     Description: Number of UiPath Orchestrator instances (1–20).
@@ -954,7 +955,7 @@ Resources:
     Properties:
       TemplateURL: !Sub
         - >-
-          https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}submodules/quickstart-aws-vpc/templates/aws-vpc.template
+          https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}submodules/quickstart-aws-vpc/templates/aws-vpc.template.yaml
         - S3Bucket: !If
             - UsingDefaultBucket
             - !Sub '${QSS3BucketName}-${AWS::Region}'
