@@ -4,13 +4,7 @@ project:
     QSS3KeyPrefix: "quickstart-uipath-robot/"
     QSS3BucketName: "$[taskcat_autobucket]"
     QSS3BucketRegion: "$[taskcat_current_region]"
-    HAAPassword: "$[taskcat_genpass_8]"
     OrchestratorPassword: "$[taskcat_genpass_8]"
-    RDSUsername: "$[taskcat_random-string]"
-    RDSPassword: "$[taskcat_genpass_8]"
-    RDSDBName: "$[taskcat_random-string]"
-    GatewayName: "$[taskcat_random-string]"
-    HAAUser: admin@uipathmarketplace.net
   regions:
   - ap-northeast-1
   - ap-northeast-2
@@ -33,6 +27,20 @@ tests:
   robotsimple:
     template: ./templates/main.template.yaml
     regions:
+    - us-east-2
+    parameters:
+      AvailabilityZones: "$[taskcat_getaz_2]"
+      AdminPassword: "$[taskcat_genpass_8]"
+      RobotRole: localadmin
+      OrchestratorURL: ""
+      OrchestratorAPIUser: ""
+      OrchestratorAPIPassword: ""
+      OrchestratorTenant: ""
+      RobotVersion: 21.4.3
+
+  existing-vpc:
+    template: ./templates/uipath-robot.template.yaml
+    regions:
     - us-west-2
     parameters:
       AvailabilityZones: "$[taskcat_getaz_2]"
@@ -42,3 +50,4 @@ tests:
       OrchestratorAPIUser: ""
       OrchestratorAPIPassword: ""
       OrchestratorTenant: ""
+      RobotVersion: 20.10.7
