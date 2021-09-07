@@ -576,7 +576,7 @@ Resources:
             c:\cfn\sources\UiPathOrchestrator.msi:
               source: !Sub 'https://download.uipath.com/versions/${OrchestratorVersion}/UiPathOrchestrator.msi'
             c:\cfn\sources\NDP472-KB4054530-x86-x64-AllOS-ENU.exe:
-              source: https://download.microsoft.com/download/6/E/4/6E48E8AB-DC00-419E-9704-06DD46E5F81D/NDP472-KB4054530-x86-x64-AllOS-ENU.exe
+              source: https://download.visualstudio.microsoft.com/download/pr/1f5af042-d0e4-4002-9c59-9ba66bcf15f6/089f837de42708daacaae7c04b7494db/NDP472-KB4054530-x86-x64-AllOS-ENU.exe
             c:\cfn\sources\rewrite_amd64_en-US.msi:
               source: https://download.microsoft.com/download/1/2/8/128E2E22-C1B9-44A4-BE2A-5859ED1D4592/rewrite_amd64_en-US.msi
             c:\cfn\sources\dotnet-hosting-3.1.8-win.exe:
