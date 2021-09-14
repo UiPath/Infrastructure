@@ -111,9 +111,9 @@ install_nvidia_driver() {
             sudo apt-get install linux-headers-$(uname -r) 1> /dev/null && \
             sudo apt-get install -y build-essential gcc-multilib dkms 1> /dev/null && \
             if [[ "$distribution"  = "ubuntu16."* ]]; then 
-                sudo apt install -y nvidia-430 1> /dev/null
+                sudo apt install -y nvidia-450 1> /dev/null
             else 
-                sudo apt install -y nvidia-driver-430 1> /dev/null
+                sudo apt install -y nvidia-driver-450 1> /dev/null
             fi  && \
             echo -e "\e[32m**************NVIDIA DRIVERS install SUCCESS! **************" || echo -e "\e[31m--------------NVIDIA DRIVERS install FAILED! --------------"
             tput sgr0
