@@ -98,7 +98,7 @@
                 "description": "Version of the Orchestrator"
             }
         },
-        "isTestAutomationEnabled" : {
+        "isTestAutomationEnabled": {
             "type": "Bool",
             "metadata": {
                 "description": "Flag to enable Test Automation feature in Orchestrator"
@@ -431,6 +431,19 @@
     },
     "resources": [
         {
+            "apiVersion": "2020-06-01",
+            "name": "pid-03591eba-8e8a-432f-b765-dbc073ce594d",
+            "type": "Microsoft.Resources/deployments",
+            "properties": {
+                "mode": "Incremental",
+                "template": {
+                    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                    "contentVersion": "1.0.0.0",
+                    "resources": []
+                }
+            }
+        },
+        {
             "name": "SQLTemplate",
             "type": "Microsoft.Resources/deployments",
             "tags": "[ if(contains(parameters('tagsByResource'), 'Microsoft.Resources/deployments'), parameters('tagsByResource')['Microsoft.Resources/deployments'], json('{}')) ]",
@@ -693,20 +706,20 @@
                     "InsightsKey": {
                         "value": "[reference('PaaSWithIdentityTemplate').outputs.insightsKey.value]"
                     },
-                    "OrchIdentityAppServiceName": { 
-                        "value": "[parameters('OrchIdentityAppServiceName')]" 
+                    "OrchIdentityAppServiceName": {
+                        "value": "[parameters('OrchIdentityAppServiceName')]"
                     },
-                    "OrchIdentityServerHostName": { 
+                    "OrchIdentityServerHostName": {
                         "value": "[reference('PaaSWithIdentityTemplate').outputs.orchIdentityServerHostName.value]"
                     },
                     "OrchestratorHostName": {
                         "value": "[reference('PaaSWithIdentityTemplate').outputs.orchestratorHostName.value]"
                     },
-                    "OrchWebhooksAppServiceName": { 
-                        "value": "[parameters('OrchWebhooksAppServiceName')]" 
+                    "OrchWebhooksAppServiceName": {
+                        "value": "[parameters('OrchWebhooksAppServiceName')]"
                     },
-                    "vmSize": { 
-                        "value": "Standard_D2_v3" 
+                    "vmSize": {
+                        "value": "Standard_D2_v3"
                     },
                     "isTestAutomationEnabled": {
                         "value": "[parameters('isTestAutomationEnabled')]"
