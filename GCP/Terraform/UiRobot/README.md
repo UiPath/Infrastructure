@@ -34,7 +34,7 @@ Terraform v0.12.3
 | app\_name | Base VM name. | string | `"uirobot"` | yes |
 | set\_local\_adminpass | Set local admin password. | string | `"yes"` | yes |
 | admin\_password | Local windows administrator password. If variable 'set_local_adminpass' is 'yes'. | string | `"Local@dminP@55!*"` | yes |
-| robot\_local\_account\_role | Robot local accout role : localadmin or localuser | string | `"localadmin"` | yes |
+| robot\_local\_account\_role | Robot local account role : localadmin or localuser | string | `"localadmin"` | yes |
 | orchestrator\_url | orchestrator url | string | `"https://corp-orchestrator.com"` | yes |
 | orchestrator\_tennant | orchestrator tennant | string | `"default"` | yes |
 | orchestrator\_admin | orchestrator admin username | string | `"admin"` | yes |
