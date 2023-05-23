@@ -46,7 +46,7 @@ variable "admin_password" {
 }
 ## Set Orchestrator local account role : localadmin or localuser
 variable "orchestrator_local_account_role" {
-  description = "Orchestrator local accout role : localadmin or localuser"
+  description = "Orchestrator local account role : localadmin or localuser"
   default     = "localadmin"
 }
 

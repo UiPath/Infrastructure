@@ -43,7 +43,7 @@ variable "admin_password" {
 }
 ## Set Robot local account role : localadmin or localuser
 variable "robot_local_account_role" {
-  description = "Robot local accout role : localadmin or localuser"
+  description = "Robot local account role : localadmin or localuser"
   default = "localadmin" 
 }
 
