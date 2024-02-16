@@ -6,11 +6,13 @@ exec > >(tee -i AIF-log.txt)
 distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
 ARCH=$(/bin/arch)
 
-# VulkanFS and container-selinux - required for RHEL and AMZN distros
-VULKAN_FS_REPO_PKG="ftp://ftp.pbone.net/mirror/ftp.scientificlinux.org/linux/scientific/7.0/x86_64/updates/security/vulkan-filesystem-1.1.73.0-1.el7.noarch.rpm"
-VULKAN_FS_PKG="vulkan-filesystem-1.1.73.0-1.el7.noarch.rpm"
-CONTAINER_SELINUX_REPO_PKG="http://mirror.centos.org/centos/7/extras/x86_64/Packages/container-selinux-2.107-1.el7_6.noarch.rpm"
-CONTAINERD_IO="https://download.docker.com/linux/centos/7/x86_64/stable/Packages/containerd.io-1.2.6-3.3.el7.x86_64.rpm"
+#setting NEEDRESTART_MODE=a for Ubuntu needrestart, to suppres auto restart services prompt on apt-get upgrade - https://askubuntu.com/questions/1367139/apt-get-upgrade-auto-restart-services
+if [[ "$distribution"  = "ubuntu"* ]]; then
+    export NEEDRESTART_MODE=a
+fi
+
+#Update this variable with the current NVIDIA driver branch
+NVIDIA_DRIVER_BRANCH='535'
 
 echo -e "\e[32mUiPath CV Prerequisites"
 tput sgr0
@@ -56,29 +58,44 @@ while getopts "$optspec" optchar; do
     esac
 done
 
+check_secure_boot(){
+
+    #If Secure Boot is enabled, prompt the user to disable it and restart the installation
+
+    echo -e "\e[32mChecking status of Secure Boot"
+    if mokutil --sb-state | grep enabled;then
+        echo -e "\e[31m--------------Secure Boot enabled. Please disable Secure Boot and run the script again. Exiting--------------"
+        tput sgr0
+        exit 1
+    fi
+}
+
 base_prereqs() {
-    if [[ -x "$(command -v wget)" ]] && [[ -x "$(command -v lspci)" ]]  ; then
+    if [[ -x "$(command -v wget)" ]] && [[ -x "$(command -v lspci)" ]] && [[ -x "$(command -v mokutil)" ]] ; then
         return
     fi
 
     # pciutils and wget are not installed on some default images ( ex.: AWS marketplace image)
+
+
     if [[ "$distribution"  = "ubuntu"* ]]; then
-        sudo apt-get update 
-        sudo apt-get upgrade -y 
-        sudo apt-get install -y pciutils wget 
+
+         apt-get update 
+         apt-get upgrade -y 
+         apt-get install -y pciutils wget mokutil
         
 
-    elif  [[ "$distribution"  = "rhel"* ]] || [[ "$distribution"  = "centos"* ]] || [[ "$distribution"  = "amzn"* ]]; then
-        sudo yum update -y  
-        sudo yum install -y pciutils wget  
+    elif  [[ "$distribution"  = "rhel"* ]] || [[ "$distribution"  = "centos"* ]]; then
+         yum update -y  
+         yum install -y pciutils wget mokutil 
 
     else
         echo  "Local OS is not supported. Please install latest version of Docker, NVIDIA DRIVERS v430, NVIDIA-Docker and Docker plugin davfs."
         tput sgr0
         exit 1
     fi
-
 }
+
 
 checking_nvidia_gpu() {
 
@@ -101,141 +118,63 @@ install_nvidia_driver() {
     fi
     echo 'blacklist nouveau' >> /etc/modprobe.d/disable-nouveau.conf
     rmmod nouveau  || true  
-
-
+    echo -e "\e[32mInstalling NVIDIA DRIVERS. Please be patient"
     if [[ "$distribution"  = "ubuntu"* ]]; then
+    
+        # Installing current supported LTS Nvidia Driver Brach
+        apt-get -y update 1> /dev/null && \
+        apt-get install -y nvidia-driver-${NVIDIA_DRIVER_BRANCH}-server 1> /dev/null && \
+        echo -e "\e[32mFinished installing server drivers. Installing NVIDIA utils"
+        apt-get install -y nvidia-utils-${NVIDIA_DRIVER_BRANCH}-server 1> /dev/null && \
+        echo -e "\e[32m**************NVIDIA DRIVERS install SUCCESS! **************" || echo -e "\e[31m--------------NVIDIA DRIVERS install FAILED! --------------"
+        tput sgr0
 
-            echo -e "\e[32mInstalling NVIDIA DRIVERS"
-            sudo add-apt-repository ppa:graphics-drivers/ppa -y   && \
-            sudo apt-get -y update 1> /dev/null && \
-            sudo apt-get install linux-headers-$(uname -r) 1> /dev/null && \
-            sudo apt-get install -y build-essential gcc-multilib dkms 1> /dev/null && \
-            if [[ "$distribution"  = "ubuntu16."* ]]; then 
-                sudo apt install -y nvidia-450 1> /dev/null
-            else 
-                sudo apt install -y nvidia-driver-450 1> /dev/null
-            fi  && \
-            echo -e "\e[32m**************NVIDIA DRIVERS install SUCCESS! **************" || echo -e "\e[31m--------------NVIDIA DRIVERS install FAILED! --------------"
-            tput sgr0
-
-    elif  [[ "$distribution"  = "rhel"* ]] || [[ "$distribution"  = "centos"* ]] || [[ "$distribution"  = "amzn"* ]]; then
-
-            echo -e "\e[32mInstalling NVIDIA DRIVERS"
-            sudo wget ${VULKAN_FS_REPO_PKG}  -O /tmp/${VULKAN_FS_PKG} 1> /dev/null && \
-            sudo rpm -ivh /tmp/${VULKAN_FS_PKG} 1> /dev/null && \
-            sudo yum install -y vulkan-filesystem  1> /dev/null  && \
-            echo -e "\e[32m************** VULKAN FS install SUCCESS! **************" || echo -e "\e[31m-------------- VULKAN FS install FAILED! --------------"
-            tput sgr0
-
-            # if nvidia-smi doesn't work, erase nvidia & cuda
-            sudo yum erase nvidia cuda
-
-            if [[ "$CLOUD" = "azure" ]]; then
-                sudo yum -y update
-                sudo yum group install -y "Development Tools"
-                sudo yum install -y kernel-devel epel-release dkms
-                sudo yum install -y https://www.elrepo.org/elrepo-release-7.0-4.el7.elrepo.noarch.rpm
-                sudo yum install -y kmod-nvidia.x86_64 nvidia-x11-drv.x86_64 nvidia-detect.x86_64
-            else
-                sudo yum install -y  https://dl.fedoraproject.org/pub/epel/epel-release-latest-$(rpm -E '%{rhel}').noarch.rpm  1> /dev/null && \
-                sudo yum -y update 1> /dev/null && \
-                sudo yum group install -y "Development Tools" 1> /dev/null && \
-                sudo yum -y install epel-release && \
-                sudo yum install -y kernel-devel-$(uname -r) kernel-headers-$(uname -r) epel-release dkms 1> /dev/null && \
-                sudo yum -y install dkms && \
-                if [[ "$distribution"  = "rhel8"* ]]; then 
-                    sudo dnf config-manager --add-repo http://developer.download.nvidia.com/compute/cuda/repos/rhel8/${ARCH}/cuda-rhel8.repo
-                    sudo dnf clean all
-                    sudo dnf -y module install nvidia-driver:latest-dkms
-                    # sudo dnf -y install cuda -y
-                    
-                elif [[ "$distribution"  = "rhel7"* ]] || [[ "$distribution"  = "centos7"* ]] || [[ "$distribution"  = "amzn"* ]]; then 
-                    sudo yum-config-manager --add-repo http://developer.download.nvidia.com/compute/cuda/repos/rhel7/${ARCH}/cuda-rhel7.repo
-                    sudo yum sudo yum clean expire-cache
-                    sudo yum install -y nvidia-driver-latest-dkms
-                    # sudo yum install cuda -y
-                else
-                    sudo yum install -y kmod-nvidia.x86_64 nvidia-x11-drv.x86_64 nvidia-detect.x86_64
-                fi  && \
-                echo -e "\e[32m**************NVIDIA DRIVERS install SUCCESS! **************" || echo -e "\e[31m--------------NVIDIA DRIVERS install FAILED! --------------"
-                tput sgr0
-            fi
+    elif  [[ "$distribution"  = "rhel8"* ]] || [[ "$distribution"  = "centos"* ]]; then
+        dnf config-manager --add-repo=https://developer.download.nvidia.com/compute/cuda/repos/rhel8/${ARCH}/cuda-rhel8.repo
+        dnf module install -y nvidia-driver:${NVIDIA_DRIVER_BRANCH} 1> /dev/null && \
+        echo -e "\e[32m**************NVIDIA DRIVERS install SUCCESS! **************" || echo -e "\e[31m--------------NVIDIA DRIVERS install FAILED! --------------"
+        tput sgr0
 
     else
-            echo  "Local OS is not supported. Please install latest version of Docker, NVIDIA DRIVERS v430 and Docker plugin davfs"
+            echo  "Local OS is not supported. Please install latest version of Podman, NVIDIA DRIVERS v${NVIDIA_DRIVER_BRANCH} and NVIDIA Container Toolkit"
             tput sgr0
             exit 1
     fi
 
 }
 
-
-dockerify_VM() {
-
-    if [[ "$distribution"  = "ubuntu"* ]]; then
-
-        echo -e "\e[32mInstalling DOCKER"
-        sudo apt-get install -y apt-transport-https ca-certificates curl  software-properties-common    && \
-        curl  -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -    && \
-        sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"    && \
-        sudo apt-get update    && \
-        sudo apt-get install -y docker-ce    && \
-        sudo usermod -a -G docker $USER    && \
-        echo -e "\e[32m**************DOCKER install SUCCESS! **************" || echo -e "\e[31m--------------DOCKER install FAILED! --------------"
-        tput sgr0
-        systemctl enable --now docker.service
-
-    elif [[ "$distribution"  = "rhel"* ]] || [[ "$distribution"  = "centos"* ]] || [[ "$distribution"  = "amzn"* ]]; then
-
-        echo -e "\e[32mInstalling DOCKER"
-        # sudo yum install -y ${CONTAINER_SELINUX_REPO_PKG}    && \
-        sudo yum install -y yum-utils device-mapper-persistent-data lvm2    && \
-        sudo yum install -y selinux-policy && \
-        if [[ "$distribution"  = "rhel8"* ]]; then 
-            sudo dnf install -y ${CONTAINERD_IO} 
-            sudo dnf config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
-            sudo dnf install -y container-selinux
-            sudo dnf install -y containerd.io
-            sudo dnf -y install docker-ce --nobest
-        else
-            sudo yum install -y ${CONTAINERD_IO} 
-            sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo 
-            sudo yum install -y containerd.io
-            sudo yum install -y container-selinux 
-            sudo yum install -y docker-ce
-        fi  && \
-        sudo usermod -a -G docker $USER    && \
-        echo -e "\e[32m**************DOCKER install SUCCESS! **************" || echo -e "\e[31m--------------DOCKER install FAILED! --------------"
-        tput sgr0
-        systemctl enable --now docker.service
-        systemctl restart docker
-    else
-
-        echo  "Local OS is not supported. Please install latest version of Docker, NVIDIA DRIVERS v430 and Docker plugin davfs"
-        tput sgr0
-        exit 1
-
-    fi
-
-}
-
-
-test_nvidia_docker() {
-
-        echo -e "\e[32mTEST NVIDIA DOCKER"
-        if `docker run --gpus all nvidia/cuda:9.0-base nvidia-smi  2>&1 | grep -q "error waiting for container" `;then
-            echo -e "\e[32m**************Please reboot the VM. **************"
+install_podman(){
+    if ! [ -x "$(command -v podman)" ]; then
+        echo -e "\e[31m--------------PODMAN is not installed! --------------"
+        tput sgr0        
+        echo -e "\e[32mInstalling PODMAN"
+        if [[ "$distribution"  = "ubuntu"* ]]; then
+        #The official repositories contain version podman 3.4.4 which doesn't work with the nvidia container toolkit. 
+        #Installing the latest version available for Ubuntu as per the instructions at https://podman.io/docs/installation#ubuntu
+            mkdir -p /etc/apt/keyrings
+            curl -fsSL "https://download.opensuse.org/repositories/devel:kubic:libcontainers:unstable/xUbuntu_$(lsb_release -rs)/Release.key" \
+            | gpg --dearmor \
+            | tee /etc/apt/keyrings/devel_kubic_libcontainers_unstable.gpg > /dev/null
+            echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/devel_kubic_libcontainers_unstable.gpg]\
+            https://download.opensuse.org/repositories/devel:kubic:libcontainers:unstable/xUbuntu_$(lsb_release -rs)/ /" \
+            | tee /etc/apt/sources.list.d/devel:kubic:libcontainers:unstable.list > /dev/null
+            apt-get update -qq 1> /dev/null
+            apt-get -qq -y install podman 1> /dev/null && \
+            echo -e "\e[32m**************PODMAN install SUCCESS! **************" || echo -e "\e[31m--------------PODMAN install FAILED! --------------"
             tput sgr0
-            exit 1
+        elif [[ "$distribution"  = "rhel8"* ]] || [[ "$distribution"  = "centos"* ]]; then
+            dnf module install -y container-tools 1> /dev/null && \
+            echo -e "\e[32m**************PODMAN install SUCCESS! **************" || echo -e "\e[31m--------------PODMAN install FAILED! --------------"
+            tput sgr0
         fi
-        echo -e "\e[32m**************TEST NVIDIA DOCKER install SUCCESS! **************" || echo -e "\e[31m--------------TEST NVIDIA DOCKER install FAILED! --------------"
+
+    else
+        echo -e "\e[32m**************PODMAN is already installed. **************" 
         tput sgr0
-        
+    fi
 }
 
-
-
-install_nvidia_docker() {
+install_nvidia_toolkit() {
     if  `which nvidia-container-runtime > /dev/null 2>&1`; then
           echo -e "\e[32m**************NVIDIA Container runtime is present. **************"
           tput sgr0
@@ -250,76 +189,62 @@ install_nvidia_docker() {
 
     if [[ "$distribution"  = "ubuntu"* ]]; then
 
-        echo -e "\e[32mInstalling NVIDIA Container runtime"
-        curl  -s -L https://nvidia.github.io/nvidia-container-runtime/gpgkey | sudo apt-key add -   && \
-        curl  -s -L https://nvidia.github.io/nvidia-container-runtime/$distribution/nvidia-container-runtime.list | sudo tee /etc/apt/sources.list.d/nvidia-container-runtime.list     && \
-        sudo apt-get update -y     && \
-        sudo apt-get install -y nvidia-container-runtime     && \
-        echo -e "\e[32m**************NVIDIA Container runtime install SUCCESS! **************" || echo -e "\e[31m--------------NVIDIA Container runtime install FAILED! --------------"
-        tput sgr0
-        sudo systemctl restart docker 
-        # Test if Nvidia-Docker works
-        test_nvidia_docker
+        echo -e "\e[32mInstalling NVIDIA Container Toolkit"
+        curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg \
+        && curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+        sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+        tee /etc/apt/sources.list.d/nvidia-container-toolkit.list && \
+        apt-get update -y > /dev/null && \
+        apt-get install -y nvidia-container-toolkit 1> /dev/null && \
+        nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml > /dev/null && \
+        echo -e "\e[32m**************NVIDIA Container Toolkit install SUCCESS! **************" || echo -e "\e[31m--------------NVIDIA Container Toolkit install FAILED! --------------"
         tput sgr0
         
-    elif  [[ "$distribution"  = "rhel"* ]] || [[ "$distribution"  = "centos"* ]] || [[ "$distribution"  = "amzn"* ]]; then
-        # Update repo keys for RHEL-based distros
-        DIST=$(sed -n 's/releasever=//p' /etc/yum.conf)
-        DIST=${DIST:-$(. /etc/os-release; echo $VERSION_ID)}
-        sudo rpm -e gpg-pubkey-f796ecb0 
-        sudo gpg --homedir /var/lib/yum/repos/$(uname -m)/$DIST/nvidia-container-runtime/gpgdir --delete-key f796ecb0
-        # curl  -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.repo | sudo tee /etc/yum.repos.d/nvidia-docker.repo
-        sudo yum clean expire-cache && \
-        sudo yum makecache && \
-        sudo yum update -y
-
-        echo -e "\e[32mInstalling NVIDIA Container runtime"
-        curl  -s -L https://nvidia.github.io/nvidia-container-runtime/$distribution/nvidia-container-runtime.repo |   sudo tee /etc/yum.repos.d/nvidia-container-runtime.repo
-        sudo yum clean expire-cache && \
-        sudo yum makecache -y && \
-        sudo yum install -y nvidia-container-runtime   && \
-        sudo systemctl restart docker && \
-        echo -e "\e[32m**************NVIDIA Container runtime install SUCCESS! **************" || echo -e "\e[31m--------------NVIDIA Container runtime install FAILED! --------------"
-        tput sgr0
-        sudo systemctl restart docker
-        # Test if Nvidia-Docker works
-        test_nvidia_docker
+    elif  [[ "$distribution"  = "rhel8"* ]] || [[ "$distribution"  = "centos"* ]]; then
+        curl -s -L https://nvidia.github.io/libnvidia-container/stable/rpm/nvidia-container-toolkit.repo | tee /etc/yum.repos.d/nvidia-container-toolkit.repo
+        yum install -y nvidia-container-toolkit 1> /dev/null && \
+        nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml > /dev/null && \
+        echo -e "\e[32m**************NVIDIA Container Toolkit install SUCCESS! **************" || echo -e "\e[31m--------------NVIDIA Container Toolkit install FAILED! --------------"
         tput sgr0
 
     else
-        echo  "Local OS is not supported. Please install latest version of Docker, NVIDIA DRIVERS v430, NVIDIA-Docker and Docker plugin davfs."
+        echo  "Local OS is not supported. Please install latest version of Podman, NVIDIA DRIVERS v${NVIDIA_DRIVER_BRANCH} and NVIDIA Container Toolkit"
         tput sgr0
         exit 1
     fi
 
 }
 
+test_nvidia_toolkit() {
 
-
-install_docker() {
-
-    if ! [ -x "$(command -v docker)" ]; then
-        echo -e "\e[31m--------------DOCKER is not installed! --------------"
+        echo -e "\e[32mTesting NVIDIA container toolkit"
+        if podman run --rm --security-opt=label=disable --device=nvidia.com/gpu=all ubuntu nvidia-smi 2>&1 | grep -i -q "error" ;then
+            echo -e "\e[31m-------------- Test workload run FAILED! Please reboot the VM and run the command 'sudo nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml'. Rerun this script afterwards --------------"
+            tput sgr0
+            exit 1
+        fi
+        echo -e "\e[32m************** Sample workload ran succesfully **************"
         tput sgr0
-        dockerify_VM
-    else
-        echo -e "\e[32m**************DOCKER is already installed. **************" 
-        tput sgr0
-    fi
-
+        
 }
+
+
 
 Main() {
 
     if [[ "$CV_ENV" == "cpu" ]]; then
         base_prereqs
-        install_docker                
+        install_podman              
     elif [[ "$CV_ENV" == "gpu" ]]; then
         base_prereqs
+        check_secure_boot
         checking_nvidia_gpu
         install_nvidia_driver
-        install_docker                
-        install_nvidia_docker
+        install_podman
+        install_nvidia_toolkit
+        test_nvidia_toolkit
+        echo -e "\e[32m************** ALL PREREQUISITES INSTALLED SUCCESSFULLY! **************"
+        tput sgr0
     else
         usage
         exit 1
