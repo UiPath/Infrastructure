@@ -45,8 +45,8 @@ Parameters:
   QSS3BucketName:
     AllowedPattern: '^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$'
     ConstraintDescription: Quick Start bucket name can include numbers, lowercase letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen (-).
-    Default: aws-quickstart
-    Description: S3 bucket name for the Quick Start assets. Quick Start bucket name can include numbers, lowercase letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen (-).
+    Default: uipath-orchestrator
+    Description: This field defaults to UiPath S3 buckets. S3 bucket name for the Quick Start assets. Quick Start bucket name can include numbers, lowercase letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen (-).
     Type: String
   QSS3BucketRegion:
     Default: 'us-east-1'
@@ -79,7 +79,7 @@ Parameters:
     ConstraintDescription: "Please enter a valid FQDN e.g. 'my.domain.name.com, seperated by commas"
     Default: ''
 Conditions:
-  UsingDefaultBucket: !Equals [!Ref QSS3BucketName, 'aws-quickstart']
+  UsingDefaultBucket: !Equals [!Ref QSS3BucketName, 'uipath-orchestrator']
   UserProvidedSAN: !Not
     - !Equals
       - !Join

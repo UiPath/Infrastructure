@@ -95,7 +95,7 @@ Parameters:
 Conditions:
   UsingDefaultBucket: !Equals
     - !Ref QSS3BucketName
-    - aws-quickstart
+    - uipath-orchestrator
   IsMarketplaceDeployment: !Equals
     - !Ref QSS3BucketName
     - !Join

@@ -36,7 +36,6 @@ Parameters:
       Changing the name updates code references to point to a new Quick
       Start location. This name can include numbers, lowercase letters,
       uppercase letters, and hyphens, but do not start or end with a hyphen (-).
-      See https://aws-quickstart.github.io/option1.html.
 Conditions:
   TrialHAA: !Equals
     - !Ref HAALicense

@@ -7,8 +7,8 @@ Parameters:
     ConstraintDescription: Quick Start bucket name can include numbers, lowercase
       letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen
       (-).
-    Default: aws-quickstart
-    Description: S3 bucket name for the Quick Start assets. This string can include
+    Default: uipath-orchestrator
+    Description: This field defaults to UiPath S3 buckets. S3 bucket name for the Quick Start assets. This string can include
       numbers, lowercase letters, uppercase letters, and hyphens (-). It cannot start
       or end with a hyphen (-).
     Type: String
@@ -54,7 +54,7 @@ Metadata:
   UnusedParam: !Ref QSS3BucketRegion
 Conditions:
   CreateDestBucket: !Equals [!Ref DestinationBucket, ""]
-  UsingDefaultBucket: !Equals [!Ref QSS3BucketName, 'aws-quickstart']
+  UsingDefaultBucket: !Equals [!Ref QSS3BucketName, 'uipath-orchestrator']
   NoDestPrefix: !Equals [!Ref StripPrefixAtDestination, 'true']
   RolePathProvided: !Not [!Equals ["", !Ref RolePath]]
   PermissionsBoundaryProvided: !Not [!Equals ["", !Ref PermissionsBoundaryArn]]
