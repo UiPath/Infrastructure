@@ -29,10 +29,60 @@ Parameters:
   FindAMIFunctionArn:
     Description: ARN for Lambda function used to find AMI by name
     Type: String
+  QSS3BucketName:
+    Type: String
+    Description: Name of the S3 bucket for your copy of the Quick Start assets.
+      Keep the default name unless you are customizing the template.
+      Changing the name updates code references to point to a new Quick
+      Start location. This name can include numbers, lowercase letters,
+      uppercase letters, and hyphens, but do not start or end with a hyphen (-).
+      See https://aws-quickstart.github.io/option1.html.
 Conditions:
   TrialHAA: !Equals
     - !Ref HAALicense
     - ''
+  IsMarketplaceDeployment: !Equals
+    - !Ref QSS3BucketName
+    - !Join
+      - "-"
+      - - "uipath-marketplace"
+        - "us-east-1"
+Mappings: 
+  RegionMap: 
+    ap-northeast-1:
+      x8664: "ami-xxxxxxxxxxxx"
+    ap-northeast-2:
+      x8664: "ami-xxxxxxxxxxxx"
+    ap-northeast-3: 
+      x8664: "ami-xxxxxxxxxxxx"
+    ap-south-1:
+      x8664: "ami-xxxxxxxxxxxx"
+    ap-southeast-1:
+      x8664: "ami-xxxxxxxxxxxx"
+    ap-southeast-2:
+      x8664: "ami-xxxxxxxxxxxx"
+    ca-central-1: 
+      x8664: "ami-xxxxxxxxxxxx"
+    eu-central-1: 
+      x8664: "ami-xxxxxxxxxxxx"
+    eu-north-1:
+      x8664: "ami-xxxxxxxxxxxx"
+    eu-west-1:
+      x8664: "ami-xxxxxxxxxxxx"
+    eu-west-2: 
+      x8664: "ami-xxxxxxxxxxxx"
+    eu-west-3:
+      x8664: "ami-xxxxxxxxxxxx"
+    sa-east-1:
+      x8664: "ami-xxxxxxxxxxxx"
+    us-east-1:
+      x8664: "ami-YYYYYYYYYYYYYYYYYY"
+    us-east-2:
+      x8664: "ami-xxxxxxxxxxxx"
+    us-west-1:
+      x8664: "ami-xxxxxxxxxxxx"
+    us-west-2: 
+      x8664: "ami-xxxxxxxxxxxx"
 Resources:
   HaaSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
@@ -72,7 +122,7 @@ Resources:
           CidrIp: !Ref VPCCIDR
         - IpProtocol: tcp
           FromPort: 3333
-          ToPort: 3339
+          ToPort: 3344
           CidrIp: !Ref VPCCIDR
         - IpProtocol: tcp
           FromPort: 36379
@@ -85,6 +135,10 @@ Resources:
         - IpProtocol: tcp
           FromPort: 8004
           ToPort: 8004
+          CidrIp: !Ref VPCCIDR
+        - IpProtocol: tcp
+          FromPort: 8006
+          ToPort: 8006
           CidrIp: !Ref VPCCIDR
         - IpProtocol: tcp
           FromPort: 8443
@@ -126,145 +180,376 @@ Resources:
           FromPort: 5353
           ToPort: 5353
           CidrIp: !Ref VPCCIDR
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 0
+          ToPort: 65535
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: icmp
+          FromPort: 8
+          ToPort: -1
+          CidrIp: !Ref VPCCIDR
+  HAAIamRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Description: IAM Role providing required access for EC2 instance
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore
+  HAAInstanceProfile:
+    Type: 'AWS::IAM::InstanceProfile'
+    Properties:
+      Path: /
+      Roles:
+        - !Ref HAAIamRole
   HAInstanceAMI:
     Type: 'Custom::HAInstanceAMI'
     Properties:
       ServiceToken: !Ref FindAMIFunctionArn
       RegionName: !Ref 'AWS::Region'
-      ImageName: RHEL-7.7*_HVM_GA*
+      ImageName: RHEL-9.4*_HVM-*x86_64*
       Architecture: x86_64
       VirtualizationType: hvm
       Owners: '309956199498'
-  HAMaster:
+  HAMain:
     Type: 'AWS::EC2::Instance'
     Properties:
-      ImageId: !Ref HAInstanceAMI
+      IamInstanceProfile: !Ref HAAInstanceProfile
+      BlockDeviceMappings:
+        - DeviceName: !GetAtt HAInstanceAMI.RootDeviceName
+          Ebs:
+            Encrypted: true
+      ImageId: !If 
+        - IsMarketplaceDeployment
+        - !FindInMap
+          - RegionMap
+          - !Ref 'AWS::Region'
+          - x8664
+        - !Ref HAInstanceAMI
       InstanceType: m4.xlarge
       KeyName: !Ref KeyPairName
       SecurityGroupIds:
         - !Ref HaaSecurityGroup
       SubnetId: !Select [ '0', !Ref SubnetIDs ]
-      UserData: !Base64
-        'Fn::Join':
-          - |+
+      UserData: !If
+        - IsMarketplaceDeployment
+        - !Base64
+            'Fn::Join':
+              - |+
 
-          - - '#!/bin/bash'
-            - yum update -y
-            - yum install -y wget
-            - 'wget https://raw.githubusercontent.com/UiPath/Infrastructure/main/Setup/get-haa.sh'
-            - chmod +x get-haa.sh
-            - !Join
-              - ' '
-              - - sh get-haa.sh
-                - '-u'
-                - !Ref HAAUser
-                - '-p'
-                - !Ref HAAPassword
-                - !If
-                  - TrialHAA
-                  - ''
-                  - !Join
-                    - ''
-                    - - '-l '
-                      - !Ref HAALicense
+              - - '#!/bin/bash'
+                - cd /home/ec2-user/temp
+                - chmod +x get-haa.sh
+                - !Join
+                  - ' '
+                  - - sh get-haa.sh
+                    - '-u'
+                    - !Ref HAAUser
+                    - '-p'
+                    - !Ref HAAPassword
+                    - !If
+                      - TrialHAA
+                      - ''
+                      - !Join
+                        - ''
+                        - - '-l '
+                          - !Ref HAALicense
+                    - '--accept-license-agreement'
+                    - '--verbose'
+        - !Base64
+            'Fn::Join':
+              - |+
+
+              - - '#!/bin/bash'
+                - dnf install -y https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/linux_amd64/amazon-ssm-agent.rpm
+                - systemctl enable amazon-ssm-agent
+                - systemctl start amazon-ssm-agent
+                - yum update -y
+                - yum install -y wget
+                - 'wget https://download.uipath.com/haa/2024.10.0/Rhel9/get-haa.sh'
+                - chmod +x get-haa.sh
+                - !Join
+                  - ' '
+                  - - sh get-haa.sh
+                    - '-u'
+                    - !Ref HAAUser
+                    - '-p'
+                    - !Ref HAAPassword
+                    - !If
+                      - TrialHAA
+                      - ''
+                      - !Join
+                        - ''
+                        - - '-l '
+                          - !Ref HAALicense
+                    - '--accept-license-agreement'
+                    - '--verbose'
       Tags:
         - Key: Name
           Value: !Join
             - '-'
             - - !Ref 'AWS::StackName'
-              - HA-Master
-  HASlave1:
+              - HA-Main
+  HASecondary1:
     Type: 'AWS::EC2::Instance'
     Properties:
-      ImageId: !Ref HAInstanceAMI
+      IamInstanceProfile: !Ref HAAInstanceProfile
+      BlockDeviceMappings:
+        - DeviceName: !GetAtt HAInstanceAMI.RootDeviceName
+          Ebs:
+            Encrypted: true
+      ImageId: !If 
+        - IsMarketplaceDeployment
+        - !FindInMap
+          - RegionMap
+          - !Ref 'AWS::Region'
+          - x8664
+        - !Ref HAInstanceAMI
       InstanceType: m4.xlarge
       KeyName: !Ref KeyPairName
       SecurityGroupIds:
         - !Ref HaaSecurityGroup
       SubnetId: !Select [ '1', !Ref SubnetIDs ]
-      UserData: !Base64
-        'Fn::Join':
-          - |+
+      UserData: !If
+        - IsMarketplaceDeployment
+        - !Base64
+            'Fn::Join':
+              - |+
 
-          - - '#!/bin/bash'
-            - yum update -y
-            - yum install -y wget
-            - 'wget https://raw.githubusercontent.com/UiPath/Infrastructure/main/Setup/get-haa.sh'
-            - chmod +x get-haa.sh
-            - !Join
-              - ' '
-              - - sh get-haa.sh
-                - '-u'
-                - !Ref HAAUser
-                - '-p'
-                - !Ref HAAPassword
-                - '-j '
-                - !GetAtt
-                  - HAMaster
-                  - PrivateIp
+              - - '#!/bin/bash'
+                - cd /home/ec2-user/temp
+                - chmod +x get-haa.sh
+                - tries=0
+                - maxTries=12
+                - !Join
+                  - ''
+                  - - 'until curl -u '
+                    - !Ref HAAUser
+                    - ':'
+                    - !Ref HAAPassword
+                    - ' -k --silent https://'
+                    - !GetAtt
+                      - HAMain
+                      - PrivateIp
+                    - ':9443/v1/bootstrap | tr -d ''[:space:]'' | grep "\"state\":\"completed\""; do'
+                - 'tries=$((tries+1))'
+                - echo "[$tries/$maxTries] Trying to reach the remote API..."
+                - 'if [[ "$tries" == "$maxTries" ]]'
+                - then
+                - 'echo "Timed out while trying to reach cluster API" && exit 1'
+                - fi
+                - sleep 10
+                - done
+                - !Join
+                  - ' '
+                  - - sh get-haa.sh
+                    - '-u'
+                    - !Ref HAAUser
+                    - '-p'
+                    - !Ref HAAPassword
+                    - '-j '
+                    - !GetAtt
+                      - HAMain
+                      - PrivateIp
+                    - '--accept-license-agreement'
+                    - '--verbose'
+        - !Base64
+            'Fn::Join':
+              - |+
+
+              - - '#!/bin/bash'
+                - dnf install -y https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/linux_amd64/amazon-ssm-agent.rpm
+                - systemctl enable amazon-ssm-agent
+                - systemctl start amazon-ssm-agent
+                - yum update -y
+                - yum install -y wget
+                - 'wget https://download.uipath.com/haa/2024.10.0/Rhel9/get-haa.sh'
+                - chmod +x get-haa.sh
+                - tries=0
+                - maxTries=12
+                - !Join
+                  - ''
+                  - - 'until curl -u '
+                    - !Ref HAAUser
+                    - ':'
+                    - !Ref HAAPassword
+                    - ' -k --silent https://'
+                    - !GetAtt
+                      - HAMain
+                      - PrivateIp
+                    - ':9443/v1/bootstrap | tr -d ''[:space:]'' | grep "\"state\":\"completed\""; do'
+                - 'tries=$((tries+1))'
+                - echo "[$tries/$maxTries] Trying to reach the remote API..."
+                - 'if [[ "$tries" == "$maxTries" ]]'
+                - then
+                - 'echo "Timed out while trying to reach cluster API" && exit 1'
+                - fi
+                - sleep 10
+                - done
+                - !Join
+                  - ' '
+                  - - sh get-haa.sh
+                    - '-u'
+                    - !Ref HAAUser
+                    - '-p'
+                    - !Ref HAAPassword
+                    - '-j '
+                    - !GetAtt
+                      - HAMain
+                      - PrivateIp
+                    - '--accept-license-agreement'
+                    - '--verbose'
       Tags:
         - Key: Name
           Value: !Join
             - '-'
             - - !Ref 'AWS::StackName'
-              - HA-Slave-1
-  HASlave2:
+              - HA-Secondary-1
+  HASecondary2:
     Type: 'AWS::EC2::Instance'
     Properties:
-      ImageId: !Ref HAInstanceAMI
+      IamInstanceProfile: !Ref HAAInstanceProfile
+      BlockDeviceMappings:
+        - DeviceName: !GetAtt HAInstanceAMI.RootDeviceName
+          Ebs:
+            Encrypted: true
+      ImageId: !If 
+        - IsMarketplaceDeployment
+        - !FindInMap
+          - RegionMap
+          - !Ref 'AWS::Region'
+          - x8664
+        - !Ref HAInstanceAMI
       InstanceType: m4.xlarge
       KeyName: !Ref KeyPairName
       SecurityGroupIds:
         - !Ref HaaSecurityGroup
       SubnetId: !Select [ '1',  !Ref SubnetIDs ]
-      UserData: !Base64
-        'Fn::Join':
-          - |+
+      UserData: !If
+        - IsMarketplaceDeployment
+        - !Base64
+            'Fn::Join':
+              - |+
 
-          - - '#!/bin/bash'
-            - yum update -y
-            - yum install -y wget
-            - 'wget https://raw.githubusercontent.com/UiPath/Infrastructure/main/Setup/get-haa.sh'
-            - chmod +x get-haa.sh
-            - !Join
-              - ' '
-              - - sh get-haa.sh
-                - '-u'
-                - !Ref HAAUser
-                - '-p'
-                - !Ref HAAPassword
-                - '-j '
-                - !GetAtt
-                  - HAMaster
-                  - PrivateIp
+              - - '#!/bin/bash'
+                - cd /home/ec2-user/temp
+                - chmod +x get-haa.sh
+                - tries=0
+                - maxTries=12
+                - !Join
+                  - ''
+                  - - 'until curl -u '
+                    - !Ref HAAUser
+                    - ':'
+                    - !Ref HAAPassword
+                    - ' -k --silent https://'
+                    - !GetAtt
+                      - HAMain
+                      - PrivateIp
+                    - ':9443/v1/bootstrap | tr -d ''[:space:]'' | grep "\"state\":\"completed\""; do'
+                - 'tries=$((tries+1))'
+                - echo "[$tries/$maxTries] Trying to reach the remote API..."
+                - 'if [[ "$tries" == "$maxTries" ]]'
+                - then
+                - 'echo "Timed out while trying to reach cluster API" && exit 1'
+                - fi
+                - sleep 10
+                - done
+                - !Join
+                  - ' '
+                  - - sh get-haa.sh
+                    - '-u'
+                    - !Ref HAAUser
+                    - '-p'
+                    - !Ref HAAPassword
+                    - '-j '
+                    - !GetAtt
+                      - HAMain
+                      - PrivateIp
+                    - '--accept-license-agreement'
+                    - '--verbose'
+        - !Base64
+            'Fn::Join':
+              - |+
+
+              - - '#!/bin/bash'
+                - dnf install -y https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/linux_amd64/amazon-ssm-agent.rpm
+                - systemctl enable amazon-ssm-agent
+                - systemctl start amazon-ssm-agent
+                - yum update -y
+                - yum install -y wget
+                - 'wget https://download.uipath.com/haa/2024.10.0/Rhel9/get-haa.sh'
+                - chmod +x get-haa.sh
+                - tries=0
+                - maxTries=12
+                - !Join
+                  - ''
+                  - - 'until curl -u '
+                    - !Ref HAAUser
+                    - ':'
+                    - !Ref HAAPassword
+                    - ' -k --silent https://'
+                    - !GetAtt
+                      - HAMain
+                      - PrivateIp
+                    - ':9443/v1/bootstrap | tr -d ''[:space:]'' | grep "\"state\":\"completed\""; do'
+                - 'tries=$((tries+1))'
+                - echo "[$tries/$maxTries] Trying to reach the remote API..."
+                - 'if [[ "$tries" == "$maxTries" ]]'
+                - then
+                - 'echo "Timed out while trying to reach cluster API" && exit 1'
+                - fi
+                - sleep 10
+                - done
+                - !Join
+                  - ' '
+                  - - sh get-haa.sh
+                    - '-u'
+                    - !Ref HAAUser
+                    - '-p'
+                    - !Ref HAAPassword
+                    - '-j '
+                    - !GetAtt
+                      - HAMain
+                      - PrivateIp
+                    - '--accept-license-agreement'
+                    - '--verbose'
       Tags:
         - Key: Name
           Value: !Join
             - '-'
             - - !Ref 'AWS::StackName'
-              - HA-Slave-2
+              - HA-Secondary-2
 Outputs:
-  HAMasterID:
-    Value: !Ref HAMaster
-    Description: ID of HA Master VM in Private Subnet 1
-  HAMasterPrivateIP:
+  HAMainID:
+    Value: !Ref HAMain
+    Description: ID of HA Main VM in Private Subnet 1
+  HAMainPrivateIP:
     Value: !GetAtt
-      - HAMaster
+      - HAMain
       - PrivateIp
-    Description: Private IP of HA Master VM in Private Subnet 1
-  HASlave1ID:
-    Value: !Ref HASlave1
-    Description: ID of HA Slave 1 VM in Private Subnet 1
-  HASlave1PrivateIP:
+    Description: Private IP of HA Main VM in Private Subnet 1
+  HASecondary1ID:
+    Value: !Ref HASecondary1
+    Description: ID of HA Secondary 1 VM in Private Subnet 1
+  HASecondary1PrivateIP:
     Value: !GetAtt
-      - HASlave1
+      - HASecondary1
       - PrivateIp
-    Description: Private IP of HA Slave 1 VM in Private Subnet 1
-  HASlave2ID:
-    Value: !Ref HASlave2
-    Description: ID of HA Slave 2 VM in Private Subnet 1
-  HASlave2PrivateIP:
+    Description: Private IP of HA Secondary 1 VM in Private Subnet 1
+  HASecondary2ID:
+    Value: !Ref HASecondary2
+    Description: ID of HA Secondary 2 VM in Private Subnet 1
+  HASecondary2PrivateIP:
     Value: !GetAtt
-      - HASlave2
+      - HASecondary2
       - PrivateIp
-    Description: Private IP of HA Slave 2 VM in Private Subnet 1
+    Description: Private IP of HA Secondary 2 VM in Private Subnet 1

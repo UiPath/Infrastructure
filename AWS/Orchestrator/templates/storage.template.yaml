@@ -164,23 +164,35 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
-                  - 'storagegateway:*'
-                Resource: '*'
+                  - 'storagegateway:ActivateGateway'
+                  - 'storagegateway:AddCache'
+                  - 'storagegateway:ListLocalDisks'
+                  - 'storagegateway:CreateNFSFileShare'
+                  - 'storagegateway:DeleteGateway'
+                  - 'storagegateway:DeleteFileShare'
+                  - 'storagegateway:AddTagsToResource'
+                Resource: !Sub 'arn:${AWS::Partition}:storagegateway:*:*:*'
               - Effect: Allow
                 Action:
                   - 'ec2:DescribeInstanceStatus'
-                  - "ec2:CreateNetworkInterface"
-                  - "ec2:DescribeNetworkInterfaces"
-                  - "ec2:DeleteNetworkInterface"
-                  - "ec2:AssignPrivateIpAddresses"
-                  - "ec2:UnassignPrivateIpAddresses"
+                  - 'ec2:CreateNetworkInterface'
+                  - 'ec2:DescribeNetworkInterfaces'
+                  - 'ec2:DeleteNetworkInterface'
+                  - 'ec2:AssignPrivateIpAddresses'
+                  - 'ec2:UnassignPrivateIpAddresses'
+                Resource: !Sub 'arn:${AWS::Partition}:ec2:*:*:*'
+              - Effect: Allow
+                Action:
+                  - 'ec2:DescribeInstanceStatus'
+                  - 'ec2:DescribeNetworkInterfaces'
+                  - 'ec2:DescribeImages'
                 Resource: '*'
               - Effect: Allow
                 Action:
                   - 'logs:CreateLogGroup'
                   - 'logs:CreateLogStream'
                   - 'logs:PutLogEvents'
-                Resource: '*'
+                Resource: !Sub 'arn:${AWS::Partition}:logs:*:*:*'
               - Effect: Allow
                 Action:
                   - 'ssm:DescribeParameters'
@@ -189,7 +201,7 @@ Resources:
                   - 'ssm:GetParameter'
                   - 'ssm:SendCommand'
                   - 'ssm:GetCommandInvocation'
-                Resource: '*'
+                Resource: !Sub 'arn:${AWS::Partition}:ssm:*:*:parameter/aws/service/storagegateway/ami/FILE_S3/latest'
               - Sid: 'PassExecutionRole'
                 Effect: Allow
                 Action:
@@ -198,7 +210,7 @@ Resources:
               - Effect: Allow
                 Action:
                   - 'xray:PutTraceSegments'
-                Resource: '*'
+                Resource: !Sub 'arn:${AWS::Partition}:xray:*:*:*'
   FindStorageGatewayAMIFunction:
     Type: 'AWS::Lambda::Function'
     Properties:
@@ -213,25 +225,42 @@ Resources:
             import boto3
             import cfnresponse
             import threading
+            def getRootDevice(imageId, regionName):
+                rootDeviceName = ''
+                ec2 = boto3.client('ec2', regionName)
+                images = ec2.describe_images(
+                    ExecutableUsers=['all'],
+                    Filters=[
+                        { 'Name': 'image-id', 'Values': [imageId] }
+                    ]
+                )['Images']
+                if len(images) > 0:
+                    rootDeviceName = images[0]['RootDeviceName']
+                print(regionName, imageId, rootDeviceName)
+                return rootDeviceName
             def create(properties, physical_id):
                 regionName = properties['RegionName']
                 ssm = boto3.client('ssm', region_name=regionName)
                 imageId = ''
+                rootDeviceName = ''
                 try:
                     imageId = ssm.get_parameter(
                         Name='/aws/service/storagegateway/ami/FILE_S3/latest'
                     )['Parameter']['Value']
+                    rootDeviceName = getRootDevice(imageId, regionName)
                 except:
                     return cfnresponse.FAILED, '', {}
                 print(regionName, imageId)
                 returnAttribute = {}
                 returnAttribute['ImageId'] = imageId
+                returnAttribute['RootDeviceName'] = rootDeviceName
                 returnAttribute['Action'] = 'CREATE'
                 return cfnresponse.SUCCESS, imageId, returnAttribute
             def update(properties, physical_id):
                 imageId = physical_id
                 returnAttribute = {}
                 returnAttribute['ImageId'] = imageId
+                returnAttribute['RootDeviceName'] = getRootDevice(imageId, properties['RegionName'])
                 returnAttribute['Action'] = 'UPDATE'
                 return cfnresponse.SUCCESS, imageId, returnAttribute
             def delete(properties, physical_id):
@@ -264,7 +293,7 @@ Resources:
                     status = cfnresponse.FAILED
                 finally:
                     cfnresponse.send(event, context, status, returnAttribute, new_physical_id)
-      Runtime: python3.6
+      Runtime: python3.12
       Timeout: 300
       TracingConfig:
         Mode: Active
@@ -282,9 +311,12 @@ Resources:
         - DeviceName: /dev/sdb
           Ebs:
             DeleteOnTermination: true
-            Encrypted: false
+            Encrypted: true
             VolumeSize: 150
             VolumeType: gp2
+        - DeviceName: !GetAtt StorageGatewayAMI.RootDeviceName
+          Ebs:
+            Encrypted: true
       EbsOptimized: true
       ImageId: !Ref StorageGatewayAMI
       InstanceType: m4.xlarge
@@ -302,6 +334,8 @@ Resources:
       Tenancy: default
   ActivationKeyFunction:
     Type: 'AWS::Lambda::Function'
+    DependsOn:
+      - Gateway
     Properties:
       Description: Activates a Storage Gateway
       Handler: index.handler
@@ -314,6 +348,7 @@ Resources:
             import boto3
             import cfnresponse
             import threading
+            import urllib3
             ec2 = boto3.client('ec2')
             def create(properties, physical_id):
                 instanceId = properties['InstanceId']
@@ -336,12 +371,13 @@ Resources:
                     time.sleep(30)
                 print('Retrieving activation key ...')
                 activationKey = ''
-                url = 'redirect_url=$(curl -f -s -S -w \'%%{redirect_url}\' "http://%s/?activationRegion=%s")  && echo $redirect_url' % (instanceIP,instanceRegion)
-                redirect_url = os.popen(url).read()
-                if redirect_url == '' or redirect_url is None:
+                http = urllib3.PoolManager()
+                r = http.request('GET', f'http://{instanceIP}/?activationRegion={instanceRegion}', redirect=False)
+                redirect_url = r.get_redirect_location()
+                if not redirect_url:
                     raise Exception(f'No redirect url returned for ip: {instanceIP}')
-                activationKey = redirect_url[redirect_url.find('activationKey=')+14:len(redirect_url)-1]
-                if activationKey is None or activationKey is '':
+                activationKey = redirect_url[redirect_url.find('activationKey=')+14:]
+                if not activationKey:
                     raise Exception(f'Unable to extract the key from the returned redirect url: {redirect_url}')
                 print(f'Activation Key = "{activationKey}"')
                 returnAttribute = {}
@@ -384,7 +420,7 @@ Resources:
                     status = cfnresponse.FAILED
                 finally:
                     cfnresponse.send(event, context, status, returnAttribute, new_physical_id)
-      Runtime: python3.6
+      Runtime: python3.12
       Timeout: 900
       TracingConfig:
         Mode: Active
@@ -498,7 +534,7 @@ Resources:
                     status = cfnresponse.FAILED
                 finally:
                     cfnresponse.send(event, context, status, returnAttribute, new_physical_id)
-      Runtime: python3.6
+      Runtime: python3.12
       Timeout: 300
       TracingConfig:
         Mode: Active
@@ -595,7 +631,7 @@ Resources:
                     status = cfnresponse.FAILED
                 finally:
                     cfnresponse.send(event, context, status, returnAttribute, new_physical_id)
-      Runtime: python3.6
+      Runtime: python3.12
       Timeout: 300
       TracingConfig:
         Mode: Active
@@ -685,7 +721,7 @@ Resources:
                     status = cfnresponse.FAILED
                 finally:
                     cfnresponse.send(event, context, status, returnAttribute, new_physical_id)
-      Runtime: python3.6
+      Runtime: python3.12
       Timeout: 300
       TracingConfig:
         Mode: Active

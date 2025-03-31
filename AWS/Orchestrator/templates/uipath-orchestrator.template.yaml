@@ -12,6 +12,7 @@ Metadata:
       - Label:
           default: Network configuration
         Parameters:
+          - BastionIngressCIDR
           - VPCCIDR
           - VPCID
           - PublicSubnetIDs
@@ -59,6 +60,8 @@ Metadata:
           - QSS3BucketName
           - QSS3KeyPrefix
     ParameterLabels:
+      BastionIngressCIDR:
+        default: Bastion Ingress CIDR
       VPCCIDR:
         default: VPC CIDR
       VPCID:
@@ -113,6 +116,11 @@ Parameters:
     ConstraintDescription: Must be in format x.x.0.0/16.
     Default: 10.0.0.0/16
     Description: VPC CIDR block, in format x.x.0.0/16.
+    Type: String
+  BastionIngressCIDR:
+    AllowedPattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|1[0-9]|2[0-9]|3[0-2]))$'
+    ConstraintDescription: Must be in format x.x.x.x/y.
+    Description: CIDR block Ingress for the Bastion Instance
     Type: String
   VPCID:
     Type: 'AWS::EC2::VPC::Id'
@@ -801,10 +809,9 @@ Parameters:
   OrchestratorVersion:
     Description: UIPath Orchestrator version.
     Type: String
-    Default: 21.4.0
+    Default: 24.10.1
     AllowedValues:
-      - 21.4.0
-      - 20.10.8
+      - 24.10.1
     ConstraintDescription: UIPath Orchestrator version can only contain characters *0–9* and *.* (period).
   OrchestratorInstanceCount:
     Description: Number of UiPath Orchestrator instances (1–20).
@@ -851,7 +858,7 @@ Parameters:
     ConstraintDescription: >-
       The Quick Start S3 key prefix can include numbers, lowercase letters,
       uppercase letters, hyphens (-), and forward slashes (/).
-    Default: quickstart-uipath-robot/
+    Default: quickstart-uipath-orchestrator/
     Description: >-
       S3 key prefix that is used to simulate a directory for your copy of the
       Quick Start assets. Keep the default prefix unless you are customizing
@@ -895,7 +902,7 @@ Resources:
                   - 'logs:CreateLogGroup'
                   - 'logs:CreateLogStream'
                   - 'logs:PutLogEvents'
-                Resource: 'arn:aws:logs:*:*:*'
+                Resource: !Sub arn:${AWS::Partition}:logs:*:*:*
               - Effect: Allow
                 Action:
                   - 'xray:PutTraceSegments'
@@ -913,6 +920,19 @@ Resources:
           - - import boto3
             - import json
             - import cfnresponse
+            - 'def getRootDevice(imageId, regionName):'
+            - '    rootDeviceName = '''''
+            - '    ec2 = boto3.client(''ec2'', regionName)'
+            - '    images = ec2.describe_images('
+            - '        ExecutableUsers=[''all''],'
+            - '        Filters=['
+            - '            { ''Name'': ''image-id'', ''Values'': [imageId] }'
+            - '        ]'
+            - '    )[''Images'']'
+            - '    if len(images) > 0:'
+            - '        rootDeviceName = images[0][''RootDeviceName'']'
+            - '    print(regionName, imageId, rootDeviceName)'
+            - '    return rootDeviceName'
             - 'def create(properties, physical_id):'
             - '    regionName = properties[''RegionName'']'
             - '    imageName = properties[''ImageName'']'
@@ -933,15 +953,18 @@ Resources:
             - '    )[''Images'']'
             - '    if len(images) > 0:'
             - '        imageId = images[0][''ImageId'']'
+            - '        rootDeviceName = images[0][''RootDeviceName'']'
             - '    print(regionName, imageId)'
             - '    returnAttribute = {}'
             - '    returnAttribute[''ImageId''] = imageId'
+            - '    returnAttribute[''RootDeviceName''] = rootDeviceName'
             - '    returnAttribute[''Action''] = ''CREATE'''
             - '    return cfnresponse.SUCCESS, imageId, returnAttribute'
             - 'def update(properties, physical_id):'
             - '    imageId = physical_id'
             - '    returnAttribute = {}'
             - '    returnAttribute[''ImageId''] = imageId'
+            - '    returnAttribute[''RootDeviceName''] = getRootDevice(imageId, properties[''RegionName''])'
             - '    returnAttribute[''Action''] = ''UPDATE'''
             - '    return cfnresponse.SUCCESS, imageId, returnAttribute'
             - 'def delete(properties, physical_id):'
@@ -968,7 +991,7 @@ Resources:
             - '        status = cfnresponse.FAILED'
             - '    finally:'
             - '        cfnresponse.send(event, context, status, returnAttribute, new_physical_id)'
-      Runtime: python3.6
+      Runtime: python3.12
       Timeout: 30
       TracingConfig:
         Mode: Active
@@ -1040,6 +1063,7 @@ Resources:
         FindAMIFunctionArn: !GetAtt
           - FindAMIFunction
           - Arn
+        QSS3BucketName: !Ref QSS3BucketName
   DatabaseStack:
     Type: 'AWS::CloudFormation::Stack'
     Properties:
@@ -1109,21 +1133,22 @@ Resources:
         GatewayPrivateIP: !GetAtt
           - StorageStack
           - Outputs.GatewayVMPrivateIP1
-        HAMasterPrivateIP: !GetAtt
+        HAMainPrivateIP: !GetAtt
           - HAStack
-          - Outputs.HAMasterPrivateIP
-        HASlave1PrivateIP: !GetAtt
+          - Outputs.HAMainPrivateIP
+        HASecondary1PrivateIP: !GetAtt
           - HAStack
-          - Outputs.HASlave1PrivateIP
-        HASlave2PrivateIP: !GetAtt
+          - Outputs.HASecondary1PrivateIP
+        HASecondary2PrivateIP: !GetAtt
           - HAStack
-          - Outputs.HASlave2PrivateIP
+          - Outputs.HASecondary2PrivateIP
         HAPort: !Ref HAPort
         HAAPassword: !Ref HAAPassword
         QSS3BucketName: !Ref QSS3BucketName
         QSS3BucketRegion: !Ref QSS3BucketRegion
         QSS3KeyPrefix: !Ref QSS3KeyPrefix
         Fqdn: !Ref UiPathFQDN
+        BastionIngressCIDR: !Ref BastionIngressCIDR
   ConfigureSSLStack:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -1137,197 +1162,6 @@ Resources:
         QSS3KeyPrefix: !Sub "${QSS3KeyPrefix}submodules/quickstart-aws-acm-certificate/"
         DomainName: !Ref UiPathFQDN
         HostedZoneID: !Ref HostedZoneID
-  TelemetryLambdaRole:
-    Type: 'AWS::IAM::Role'
-    Properties:
-      Description: IAM Role to be assumed by Lambda functions which place eventbus events
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-                - lambda.amazonaws.com
-            Action:
-              - 'sts:AssumeRole'
-      Path: /
-      Policies:
-        - PolicyName: root
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              - Effect: Allow
-                Action:
-                  - 'cloudwatch:*'
-                  - 'logs:*'
-                Resource: '*'
-              - Effect: Allow
-                Action:
-                  - "events:PutEvents"
-                Resource: !GetAtt TelemetryEventBus.Arn
-              - Effect: Allow
-                Action:
-                  - 'xray:PutTraceSegments'
-                Resource: '*'
-
-  EventBusRole:
-    Type: 'AWS::IAM::Role'
-    Properties:
-      Description: IAM Role to be assumed by EventBus for pushing events
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-                - events.amazonaws.com
-            Action:
-              - 'sts:AssumeRole'
-      Path: /
-      Policies:
-        - PolicyName: root
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              - Effect: Allow
-                Action:
-                  - "events:PutEvents"
-                Resource: !Sub 'arn:aws:events:${AWS::Region}:402050645054:event-bus/default'
-
-  TelemetryEventBus:
-    Type: AWS::Events::EventBus
-    Properties:
-        Name: "uipath"
-
-  EventBusRule:
-    Type: 'AWS::Events::Rule'
-    Properties:
-      Description: Push Event bus events
-      EventBusName: !Ref TelemetryEventBus
-      EventPattern:
-        source:
-          - uipath-deployments
-      State: ENABLED
-      Targets:
-        - Arn: !Sub 'arn:aws:events:${AWS::Region}:402050645054:event-bus/default'
-          Id: uipath-deployments
-          RoleArn: !GetAtt EventBusRole.Arn
-
-  TelemetryLambdaFunction:
-    Type: 'AWS::Lambda::Function'
-    DependsOn: EventBusRule
-    Properties:
-      Description: Build telemetry events
-      Handler: index.handler
-      Role: !GetAtt TelemetryLambdaRole.Arn
-      Code:
-        ZipFile: |
-          import boto3
-          import json
-          import cfnresponse
-          import hashlib
-
-          def create(properties, physical_id):
-              print(json.dumps(properties))
-              cloudwatch_events = boto3.client('events')
-              response = cloudwatch_events.put_events(
-                          Entries=[
-                                  {
-                                      'Detail': json.dumps({
-                                          'deployment': 'orchestrator',
-                                          'event': 'CREATE',
-                                          'StackTag': hashlib.sha256(properties['StackId'].encode('ascii')).hexdigest(),
-                                          'StackNameTag': hashlib.sha256(properties['StackName'].encode('ascii')).hexdigest()
-                                        }),
-                                      'DetailType': 'cfn-request',
-                                      'EventBusName': 'uipath',
-                                      'Resources': [],
-                                      'Source': 'uipath-deployments'
-                                  }
-                              ]
-                            )
-              print(response['Entries'])
-              returnAttribute = {}
-              returnAttribute['Action'] = 'CREATE'
-              return cfnresponse.SUCCESS, '', returnAttribute
-
-          def update(properties, physical_id):
-              print(json.dumps(properties))
-              cloudwatch_events = boto3.client('events')
-              response = cloudwatch_events.put_events(
-                          Entries=[
-                                  {
-                                      'Detail': json.dumps({
-                                          'deployment': 'orchestrator',
-                                          'event': 'UPDATE',
-                                          'StackTag': hashlib.sha256(properties['StackId'].encode('ascii')).hexdigest(),
-                                          'StackNameTag': hashlib.sha256(properties['StackName'].encode('ascii')).hexdigest()
-                                        }),
-                                      'DetailType': 'cfn-request',
-                                      'EventBusName': 'uipath',
-                                      'Resources': [],
-                                      'Source': 'uipath-deployments'
-                                  }
-                              ]
-                            )
-              print(response['Entries'])
-              returnAttribute = {}
-              returnAttribute['Action'] = 'UPDATE'
-              return cfnresponse.SUCCESS, physical_id, returnAttribute
-
-
-          def delete(properties, physical_id):
-              print(json.dumps(properties))
-              cloudwatch_events = boto3.client('events')
-              response = cloudwatch_events.put_events(
-                          Entries=[
-                                  {
-                                      'Detail': json.dumps({
-                                          'deployment': 'orchestrator',
-                                          'event': 'DELETE',
-                                          'StackTag': hashlib.sha256(properties['StackId'].encode('ascii')).hexdigest(),
-                                          'StackNameTag': hashlib.sha256(properties['StackName'].encode('ascii')).hexdigest()
-                                        }),
-                                      'DetailType': 'cfn-request',
-                                      'EventBusName': 'uipath',
-                                      'Resources': [],
-                                      'Source': 'uipath-deployments'
-                                  }
-                              ]
-                            )
-              print(response['Entries'])
-              returnAttribute = {}
-              return cfnresponse.SUCCESS, physical_id, returnAttribute
-
-
-          def handler(event, context):
-              print('Received event: ' + json.dumps(event))
-              status = cfnresponse.FAILED
-              new_physical_id = None
-              returnAttribute = {}
-              try:
-                  properties = event.get('ResourceProperties')
-                  physical_id = event.get('PhysicalResourceId')
-                  status, new_physical_id, returnAttribute = {
-                      'Create': create,
-                      'Update': update,
-                      'Delete': delete
-                  }.get(event['RequestType'], lambda x, y: (cfnresponse.FAILED, None))(properties, physical_id)
-              except Exception as e:
-                  print('Exception: ' + str(e))
-                  status = cfnresponse.FAILED
-              finally:
-                  cfnresponse.send(event, context, status, returnAttribute, new_physical_id)
-      Runtime: python3.8
-      Timeout: 30
-      TracingConfig:
-        Mode: Active
-  TelemetryLambda:
-    Type: 'Custom::TelemetryLambdaFunction'
-    Properties:
-      ServiceToken: !GetAtt TelemetryLambdaFunction.Arn
-      StackId: !Ref 'AWS::StackId'
-      StackName: !Ref 'AWS::StackName'
 
 Outputs:
   FQDNLoadBalancer:
@@ -1344,18 +1178,15 @@ Outputs:
       - ','
       - - !GetAtt
           - HAStack
-          - Outputs.HAMasterPrivateIP
+          - Outputs.HAMainPrivateIP
         - !GetAtt
           - HAStack
-          - Outputs.HASlave1PrivateIP
+          - Outputs.HASecondary1PrivateIP
         - !GetAtt
           - HAStack
-          - Outputs.HASlave2PrivateIP
+          - Outputs.HASecondary2PrivateIP
   NugetStorageS3Bucket:
     Description: S3 bucket with UiPath Orchestrator NuGet packages.
     Value: !GetAtt
       - StorageStack
       - Outputs.NugetStorageBucketName
-  Postdeployment:
-    Description: See the deployment guide for post-deployment steps.
-    Value: https://aws.amazon.com/quickstart/?quickstart-all.sort-by=item.additionalFields.sortDate&quickstart-all.sort-order=desc&awsm.page-quickstart-all=5

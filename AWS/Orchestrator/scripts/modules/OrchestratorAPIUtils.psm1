@@ -177,6 +177,10 @@ function Remove-ChangePasswordOnFirstLoginPolicy {
         [string]$orchUrl,
 
         [Parameter(Mandatory = $true)]
+        [ValidateScript( { if (($_ -as [System.URI]).AbsoluteURI -eq $null) { throw "Invalid" } return $true })]
+        [string]$identityUrl,
+
+        [Parameter(Mandatory = $true)]
         [string]$orchAdmin,
     
         [Parameter(Mandatory = $true)]
@@ -191,14 +195,17 @@ function Remove-ChangePasswordOnFirstLoginPolicy {
         -orchPassword $orchPassword `
         -tenant $tenant
 
-    $orchSettingsURL = "$orchUrl/odata/Settings"
+    $orchSettingsURL = "$identityUrl/api/Setting"
     $body = @{
-        Name  = "Auth.Password.ShouldChangePasswordAfterFirstLogin"
-        Value = "false"
-        Scope = "All"
-        Id    = "Auth.Password.ShouldChangePasswordAfterFirstLogin"
+        settings = @(
+            @{
+                key = "Auth.Password.ShouldChangePasswordAfterFirstLogin"
+                value = "false"
+            }
+        )
     } | ConvertTo-Json
-    Invoke-RestMethod -Uri "$orchSettingsURL('Auth.Password.ShouldChangePasswordAfterFirstLogin')" `
+    $orchSettingsURL
+    Invoke-RestMethod -Uri "$orchSettingsURL" `
         -Method Put `
         -ContentType "application/json;odata.metadata=minimal;odata.streaming=true" `
         -UseBasicParsing `
@@ -221,10 +228,10 @@ function Get-IdentityInstallationToken {
     Invoke-WebRequest -Uri $antifUrl -Method Get -ContentType "application/json" -Session websession -UseBasicParsing | Out-Null
     $websession.Cookies.GetCookies($antifUrl)[1].Name = "XSRF-TOKEN"
     $dataLogin = @{
-        tenant          = "host"         
-        usernameOrEmail = $hostUserName         
-        password        = $password         
-        rememberLogin   = $true     
+        partitionName   = "host"
+        usernameOrEmail = $hostUserName
+        password        = $password
+        rememberLogin   = $true
     } | ConvertTo-Json
     $temp = $websession.Cookies.GetCookies($antifUrl)[1].Value
     $websession.Headers.'X-XSRF-TOKEN' = $temp
@@ -276,7 +283,8 @@ function Generate-IdentityTokenAndInsertIntoFile {
     }
     $parameters = Convert-FileToJson -filePath $parameterFilePath
     $parameters[$parameterKey] = @{value = $token }
-    $jsonParamters = $parameters | ConvertTo-Json 
-    Write-JsonToFile -filePath $parameterFilePath -jsonObject $jsonParamters
+    $parameters.PSObject.Properties.Remove("orchestratorAdminPassword")
+    $jsonParameters = $parameters | ConvertTo-Json 
+    Write-JsonToFile -filePath $parameterFilePath -jsonObject $jsonParameters
     return
 }

@@ -10,6 +10,7 @@ param(
     
 try {
     $ErrorActionPreference = "Stop"
+    Add-Type -Path (${env:ProgramFiles(x86)} + "\AWS SDK for .NET\bin\Net45\AWSSDK.S3.dll")
 
     $parentDir = Split-Path $Destination -Parent
     if (-not(Test-Path $parentDir)) {
@@ -23,7 +24,11 @@ try {
         Write-Verbose "Trying to download from bucket $($Uri.Host) key $($Uri.PathAndQuery.Trim(""/""))"
         while ($tries -ge 1) {
             try {
-                Read-S3Object -BucketName $Uri.Host -Key $Uri.PathAndQuery.Trim("/") -File $Destination -ErrorAction Stop
+                
+                Write-Verbose "Gettting $($Uri.PathAndQuery.Trim(""/"")) try: $tries"
+                $s3Client = New-Object -TypeName Amazon.S3.AmazonS3Client
+                $s3Obj = $s3Client.GetObject($Uri.Host, $Uri.PathAndQuery.Trim("/"))
+                $s3Obj.WriteResponseStreamToFile($Destination)
                 break
             }
             catch {
@@ -33,8 +38,8 @@ try {
                     throw $_
                 }
                 else {
-                    Write-Verbose "Failed download. Retrying again in 1 second"
-                    Start-Sleep 1
+                    Write-Verbose "Failed download. Retrying again in 3 second"
+                    Start-Sleep 3
                 }
             }
         }

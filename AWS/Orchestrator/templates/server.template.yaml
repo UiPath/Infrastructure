@@ -70,14 +70,14 @@ Parameters:
   GatewayPrivateIP:
     Description: Private IP Address of Storage Gateway VM
     Type: String
-  HAMasterPrivateIP:
-    Description: Private IP Address of HA Master Instance
+  HAMainPrivateIP:
+    Description: Private IP Address of HA Main Instance
     Type: String
-  HASlave1PrivateIP:
-    Description: Private IP Address of HA Slave1 Instance
+  HASecondary1PrivateIP:
+    Description: Private IP Address of HA Secondary1 Instance
     Type: String
-  HASlave2PrivateIP:
-    Description: Private IP Address of HA Slave2 Instance
+  HASecondary2PrivateIP:
+    Description: Private IP Address of HA Secondary2 Instance
     Type: String
   HAPort:
     Description: Port on which HA listens to
@@ -89,6 +89,9 @@ Parameters:
   Fqdn:
     Description: The fully qualified domain name where the load balancer listens
     Type: String
+  BastionIngressCIDR:
+    Description: CIDR block Ingress for the Bastion Instance
+    Type: String
 Conditions:
   UsingDefaultBucket: !Equals
     - !Ref QSS3BucketName
@@ -96,45 +99,45 @@ Conditions:
   IsMarketplaceDeployment: !Equals
     - !Ref QSS3BucketName
     - !Join
-      - ""
+      - "-"
       - - "uipath-marketplace"
-        - !Ref "AWS::Region"
+        - "us-east-1"
 Mappings: 
   RegionMap: 
     ap-northeast-1:
-      x8664: "ami-0cd7548f41e94c7c3"
+      x8664: "ami-xxxxxxxxxxxx"
     ap-northeast-2:
-      x8664: "ami-09daec357c044db89"
+      x8664: "ami-xxxxxxxxxxxx"
     ap-northeast-3: 
-      x8664: "ami-065db20ffac337944"
+      x8664: "ami-xxxxxxxxxxxx"
     ap-south-1:
-      x8664: "ami-0703f52ebe65d78d1"
+      x8664: "ami-xxxxxxxxxxxx"
     ap-southeast-1:
-      x8664: "ami-00dfabbb673c6aafd"
+      x8664: "ami-xxxxxxxxxxxx"
     ap-southeast-2:
-      x8664: "ami-0d4eeffc41d875eb6"
+      x8664: "ami-xxxxxxxxxxxx"
     ca-central-1: 
-      x8664: "ami-01f4139e9e2776bf3"
+      x8664: "ami-xxxxxxxxxxxx"
     eu-central-1: 
-      x8664: "ami-0396ccac19ad21e30"
+      x8664: "ami-xxxxxxxxxxxx"
     eu-north-1:
-      x8664: "ami-06caa0e4ba75ad035"
+      x8664: "ami-xxxxxxxxxxxx"
     eu-west-1:
-      x8664: "ami-0f0bcea5c4dadf8dd"
+      x8664: "ami-xxxxxxxxxxxx"
     eu-west-2: 
-      x8664: "ami-0130b30b871519e80"
+      x8664: "ami-xxxxxxxxxxxx"
     eu-west-3:
-      x8664: "ami-00910c0c13bd24d06"
+      x8664: "ami-xxxxxxxxxxxx"
     sa-east-1:
-      x8664: "ami-005363a6adac20686"
+      x8664: "ami-xxxxxxxxxxxx"
     us-east-1:
-      x8664: "ami-063aef39a9148edf6"
+      x8664: "ami-YYYYYYYYYYYYYYYYYY"
     us-east-2:
-      x8664: "ami-0a0237616454b3b5c"
+      x8664: "ami-xxxxxxxxxxxx"
     us-west-1:
-      x8664: "ami-01d436d3f5dd65455"
+      x8664: "ami-xxxxxxxxxxxx"
     us-west-2: 
-      x8664: "ami-0c61cea817720d195"
+      x8664: "ami-xxxxxxxxxxxx"     
 Resources:
   OrchestratorSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
@@ -154,12 +157,17 @@ Resources:
           FromPort: 3389
           ToPort: 3389
           CidrIp: !Ref VPCCIDR
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 0
+          ToPort: 65535
+          CidrIp: 0.0.0.0/0
   HostInstanceAMI:
     Type: 'Custom::HostInstanceAMI'
     Properties:
       ServiceToken: !Ref FindAMIFunctionArn
       RegionName: !Ref 'AWS::Region'
-      ImageName: Windows_Server-2019-English-Full-Base-*
+      ImageName: Windows_Server-2022-English-Full-Base-*
       Architecture: x86_64
       VirtualizationType: hvm
       Owners: amazon
@@ -176,6 +184,8 @@ Resources:
             Action:
               - 'sts:AssumeRole'
       Description: IAM Role providing required access for EC2 instance
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore
   OrchestratorInstanceProfile:
     Type: 'AWS::IAM::InstanceProfile'
     Properties:
@@ -241,11 +251,11 @@ Resources:
                   - 'logs:CreateLogGroup'
                   - 'logs:CreateLogStream'
                   - 'logs:PutLogEvents'
-                Resource: '*'
+                Resource: !Sub arn:${AWS::Partition}:logs:*:*:*
               - Effect: Allow
                 Action:
                   - 'xray:PutTraceSegments'
-                Resource: '*'
+                Resource: !Sub arn:${AWS::Partition}:xray:*:*:*
   ConfigBucketCleanupFunction:
     Type: 'AWS::Lambda::Function'
     Properties:
@@ -301,7 +311,7 @@ Resources:
                   status = cfnresponse.FAILED
               finally:
                   cfnresponse.send(event, context, status, returnAttribute, new_physical_id)
-      Runtime: python3.6
+      Runtime: python3.12
       Timeout: 30
       TracingConfig:
         Mode: Active
@@ -363,7 +373,10 @@ Resources:
               - logs:DescribeLogGroups
               - logs:CreateLogStream
               - logs:CreateLogGroup
-            Resource: "*"
+            Resource:
+              - !Sub arn:${AWS::Partition}:logs:*:*:*
+              - !Sub arn:${AWS::Partition}:cloudwatch:*:*:*
+              - !Sub arn:${AWS::Partition}:ec2:*:*:*
             Effect: Allow
       PolicyName: CloudwatchLogsAccess
       Roles:
@@ -401,13 +414,19 @@ Resources:
         Statement:
           - Effect: Allow
             Action:
-              - 'dynamodb:*'
+              - dynamodb:ConditionCheckItem
+              - dynamodb:PutItem
+              - dynamodb:DescribeTable
+              - dynamodb:DeleteItem
+              - dynamodb:GetItem
+              - dynamodb:Scan
+              - dynamodb:Query
             Resource: !GetAtt ConfigTable.Arn
       Roles:
         - !Ref OrchestratorIamRole
       PolicyName: ConfigDynamoDbTableAccess
-  LaunchConfiguration:
-    Type: 'AWS::AutoScaling::LaunchConfiguration'
+  OrchestratorLaunchTemplate:
+    Type: 'AWS::EC2::LaunchTemplate'
     Metadata:
       AWS::CloudFormation::Authentication:
         S3AccessCreds:
@@ -420,6 +439,7 @@ Resources:
             - cloudwatch_install
             - cloudwatch_setup
             - cloudwatch_agent_restart
+            - install_ssm_agent
             - setup
             - prerequisites
             - install
@@ -427,7 +447,6 @@ Resources:
             - cloudwatch_install
             - cloudwatch_setup
             - cloudwatch_agent_restart
-            - setup
             - install
         cloudwatch_install:
           files:
@@ -503,6 +522,20 @@ Resources:
               command: powershell -Command "C:\\'Program Files'\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1 -a stop"
             02_start_service:
               command: powershell -Command "C:\\'Program Files'\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1 -a fetch-config -m ec2 -c file:C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent.json -s"
+        install_ssm_agent:
+          files:
+            C:\cfn\sources\SSMAgent_latest.exe:
+              source: 'https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/windows_amd64/AmazonSSMAgentSetup.exe'
+          commands:
+            01install_ssm_agent:
+              command: powershell -Command "[System.Net.ServicePointManager]::SecurityProtocol = 'TLS12'; $progressPreference = 'silentlyContinue'; Start-Process -FilePath C:\cfn\sources\SSMAgent_latest.exe -ArgumentList /S -Wait"
+              ignoreErrors: "true"
+            02cleanup_ssm_agent:
+              command: powershell -Command "rm -Force C:\cfn\sources\SSMAgent_latest.exe"
+              ignoreErrors: "true"
+            03start_ssm_agent:
+              command: powershell -Command "Restart-Service AmazonSSMAgent"
+              ignoreErrors: "true"
         setup:
           files:
             c:\cfn\cfn-hup.conf:
@@ -515,8 +548,8 @@ Resources:
               content: !Sub |
                 [cfn-auto-reloader-hook]
                 triggers=post.update
-                path=Resources.LaunchConfiguration.Metadata
-                action=cfn-init.exe -v -c config -s ${AWS::StackName} -r LaunchConfiguration --region ${AWS::Region}
+                path=Resources.OrchestratorLaunchTemplate.Metadata
+                action=cfn-init.exe -v -c config -s ${AWS::StackName} -r OrchestratorLaunchTemplate --region ${AWS::Region}
             c:\cfn\scripts\Install-UiPathOrchestrator.ps1:
               source:
                 !Sub
@@ -574,13 +607,13 @@ Resources:
         prerequisites:
           files:
             c:\cfn\sources\UiPathOrchestrator.msi:
-              source: !Sub 'https://download.uipath.com/versions/${OrchestratorVersion}/UiPathOrchestrator.msi'
+              source: !Sub 'https://download.uipath.com/versions/${OrchestratorVersion}-standalone/UiPathOrchestrator.msi'
             c:\cfn\sources\NDP472-KB4054530-x86-x64-AllOS-ENU.exe:
               source: https://download.visualstudio.microsoft.com/download/pr/1f5af042-d0e4-4002-9c59-9ba66bcf15f6/089f837de42708daacaae7c04b7494db/NDP472-KB4054530-x86-x64-AllOS-ENU.exe
             c:\cfn\sources\rewrite_amd64_en-US.msi:
               source: https://download.microsoft.com/download/1/2/8/128E2E22-C1B9-44A4-BE2A-5859ED1D4592/rewrite_amd64_en-US.msi
-            c:\cfn\sources\dotnet-hosting-3.1.8-win.exe:
-              source: https://download.visualstudio.microsoft.com/download/pr/854cbd11-4b96-4a44-9664-b95991c0c4f7/8ec4944a5bd770faba2f769e647b1e6e/dotnet-hosting-3.1.8-win.exe
+            c:\cfn\sources\dotnet-hosting-8.0.14-win.exe:
+              source: https://download.visualstudio.microsoft.com/download/pr/fdec46ca-0355-4fa5-a0fb-a7b798d24957/c44beca075d298a722ff18adbfad3b81/dotnet-hosting-8.0.14-win.exe
           commands:
             a-install-dotnet-framework:
               command: start /wait c:\cfn\sources\NDP472-KB4054530-x86-x64-AllOS-ENU.exe /q /norestart
@@ -593,7 +626,7 @@ Resources:
               waitAfterCompletion: '0'
               ignoreErrors: false
             d-install-dotnet-core:
-              command: start /wait c:\cfn\sources\dotnet-hosting-3.1.8-win.exe OPT_NO_RUNTIME=1 /q /norestart
+              command: start /wait c:\cfn\sources\dotnet-hosting-8.0.14-win.exe OPT_NO_RUNTIME=1 /q /norestart
               waitAfterCompletion: '0'
               ignoreErrors: false
         install:
@@ -615,9 +648,9 @@ Resources:
                   - '-redisServerHost'
                   - !Join
                     - ','
-                    - - !Ref HAMasterPrivateIP
-                      - !Ref HASlave1PrivateIP
-                      - !Ref HASlave2PrivateIP
+                    - - !Ref HAMainPrivateIP
+                      - !Ref HASecondary1PrivateIP
+                      - !Ref HASecondary2PrivateIP
                   - '-redisServerPort'
                   - !Ref HAPort
                   - '-redisServerPassword'
@@ -639,46 +672,50 @@ Resources:
                   - '-Verbose'
               waitAfterCompletion: '0'
     Properties:
-      AssociatePublicIpAddress: false
-      BlockDeviceMappings:
-        - DeviceName: /dev/sda1
-          Ebs:
+      LaunchTemplateData:
+        NetworkInterfaces:
+          - DeviceIndex: 0
+            AssociatePublicIpAddress: false
             DeleteOnTermination: true
-            Encrypted: false
-            VolumeSize: 100
-            VolumeType: gp2
-      ImageId: !If 
-        - IsMarketplaceDeployment
-        - !FindInMap
-          - RegionMap
-          - !Ref 'AWS::Region'
-          - x8664
-        - !GetAtt HostInstanceAMI.ImageId 
-      IamInstanceProfile: !GetAtt OrchestratorInstanceProfile.Arn
-      InstanceType: !Ref InstanceType
-      KeyName: !Ref KeyPairName
-      LaunchConfigurationName: !Join
-        - '-'
-        - - !Ref 'AWS::StackName'
-          - Orchestrator-LaunchConfiguration
-      PlacementTenancy: default
-      SecurityGroups:
-        - !Ref OrchestratorSecurityGroup
-      UserData: 
-        !If 
+            Groups:
+              - !Ref OrchestratorSecurityGroup
+        BlockDeviceMappings:
+          - DeviceName: !GetAtt HostInstanceAMI.RootDeviceName
+            Ebs:
+              DeleteOnTermination: true
+              Encrypted: true
+              VolumeSize: 100
+              VolumeType: gp2
+        ImageId: !If 
           - IsMarketplaceDeployment
-          - !Base64
-              Fn::Sub: | 
-                <script>
-                cfn-init.exe -v -c marketplaceConfig -s ${AWS::StackId} -r LaunchConfiguration --region ${AWS::Region}
-                cfn-signal.exe -e %errorlevel% --stack ${AWS::StackId} --resource AutoScalingGroup --region ${AWS::Region}
-                </script>
-          - !Base64
-              Fn::Sub: | 
-                <script>
-                cfn-init.exe -v -c config -s ${AWS::StackId} -r LaunchConfiguration --region ${AWS::Region}
-                cfn-signal.exe -e %errorlevel% --stack ${AWS::StackId} --resource AutoScalingGroup --region ${AWS::Region}
-                </script>     
+          - !FindInMap
+            - RegionMap
+            - !Ref 'AWS::Region'
+            - x8664
+          - !GetAtt HostInstanceAMI.ImageId 
+        IamInstanceProfile:
+          Arn: !GetAtt
+            - OrchestratorInstanceProfile
+            - Arn
+        InstanceType: !Ref InstanceType
+        KeyName: !Ref KeyPairName
+        Placement:
+          Tenancy: default
+        UserData: 
+          !If 
+            - IsMarketplaceDeployment
+            - !Base64
+                Fn::Sub: |
+                  <script>
+                  cfn-init.exe -v -c marketplaceConfig -s ${AWS::StackId} -r OrchestratorLaunchTemplate --region ${AWS::Region}
+                  cfn-signal.exe -e %errorlevel% --stack ${AWS::StackId} --resource AutoScalingGroup --region ${AWS::Region}
+                  </script>
+            - !Base64
+                Fn::Sub: |
+                  <script>
+                  cfn-init.exe -v -c config -s ${AWS::StackId} -r OrchestratorLaunchTemplate --region ${AWS::Region}
+                  cfn-signal.exe -e %errorlevel% --stack ${AWS::StackId} --resource AutoScalingGroup --region ${AWS::Region}
+                  </script>
   AutoScalingGroup:
     Type: 'AWS::AutoScaling::AutoScalingGroup'
     CreationPolicy:
@@ -688,7 +725,11 @@ Resources:
     Properties:
       DesiredCapacity: !Ref OrchestratorInstanceCount
       HealthCheckType: EC2
-      LaunchConfigurationName: !Ref LaunchConfiguration
+      LaunchTemplate:
+        LaunchTemplateId: !Ref OrchestratorLaunchTemplate
+        Version: !GetAtt
+          - OrchestratorLaunchTemplate
+          - LatestVersionNumber
       MaxSize: '20'
       MetricsCollection:
         - Granularity: 1Minute
@@ -803,17 +844,26 @@ Resources:
         - IpProtocol: tcp
           FromPort: 3389
           ToPort: 3389
+          CidrIp: !Ref BastionIngressCIDR 
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 0
+          ToPort: 65535
           CidrIp: 0.0.0.0/0
   BastionHost:
     Type: 'AWS::EC2::Instance'
     Properties:
       ImageId: !Ref HostInstanceAMI
+      BlockDeviceMappings:
+        - DeviceName: !GetAtt HostInstanceAMI.RootDeviceName
+          Ebs:
+            Encrypted: true
       InstanceType: !Ref InstanceType
       KeyName: !Ref KeyPairName
       NetworkInterfaces:
         - AssociatePublicIpAddress: true
           DeleteOnTermination: true
-          DeviceIndex: '0'
+          DeviceIndex: 0
           GroupSet:
             - !Ref BastionSecurityGroup
           SubnetId: !Select [ '0', !Ref PublicSubnetIDs ]
@@ -825,7 +875,7 @@ Resources:
               - BastionHost
 Outputs:
   LaunchTemplate:
-    Value: !Ref LaunchConfiguration
+    Value: !Ref OrchestratorLaunchTemplate
     Description: Launch configuration template
   AutoScalingGroup:
     Value: !Ref AutoScalingGroup

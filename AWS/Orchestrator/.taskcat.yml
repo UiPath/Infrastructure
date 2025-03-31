@@ -15,17 +15,13 @@ project:
   - ap-northeast-1
   - ap-northeast-2
   - ap-south-1
-  - ap-east-1
   - ca-central-1
   - eu-central-1
   - eu-west-1
   - eu-west-2
   - eu-west-3
-  - me-south-1
-  - sa-east-1
   - us-east-1
   - us-east-2
-  - us-west-1
   - us-west-2
   shorten_stack_name: true
   package_lambda: false
@@ -35,39 +31,12 @@ tests:
     regions:
     - eu-central-1
     parameters:
-      AvailabilityZones: "$[taskcat_getaz_2]"
-      UiPathFQDN: testone.uipathmarketplace.net
-      OrchestratorVersion: 21.4.0
-
-  three-az-orchestrator:
-    template: ./templates/main.template.yaml
-    regions:
-    - us-east-1
-    parameters:
       AvailabilityZones: "$[taskcat_getaz_3]"
-      UiPathFQDN: testtwo.uipathmarketplace.net
-      NumberOfAZs: 3
-      OrchestratorVersion: 21.4.0
-
-  add-license-orchestrator:
-    template: ./templates/main.template.yaml
-    regions:
-    - us-west-1
-    parameters:
-      AvailabilityZones: "$[taskcat_getaz_2]"
-      UiPathFQDN: testthree.uipathmarketplace.net
-      OrchestratorLicense: "orchlicense"
-      OrchestratorVersion: 21.4.0
-
-  europe-orchestrator:
-    template: ./templates/main.template.yaml
-    regions:
-    - eu-west-1
-    parameters:
-      AvailabilityZones: "$[taskcat_getaz_2]"
-      UiPathFQDN: testfour.uipathmarketplace.net
+      UiPathFQDN: testone.uipathmarketplace.net
       OrchestratorInstanceCount: "3"
-      OrchestratorVersion: 20.10.8
+      NumberOfAZs: 3
+      OrchestratorVersion: 24.10.1
+      BastionIngressCIDR: 0.0.0.0/0
 
   existing-vpc:
     template: ./templates/uipath-orchestrator.template.yaml
@@ -76,4 +45,5 @@ tests:
     parameters:
       AvailabilityZones: "$[taskcat_getaz_2]"
       UiPathFQDN: testfive.uipathmarketplace.net
-      OrchestratorVersion: 20.10.8
+      OrchestratorVersion: 24.10.1
+      BastionIngressCIDR: 0.0.0.0/0
