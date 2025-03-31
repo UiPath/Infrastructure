@@ -1,0 +1,228 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: "(qs-1qu5sufei) Create a public ACM Certificate."
+Metadata:
+  LintSpellExclude:
+    - Auto Scaling
+    - Hosted
+    - Domain
+  QuickStartDocumentation:
+    EntrypointName: "Create public ACM certificate"
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: DNS configuration
+        Parameters:
+          - DomainName
+          - HostedZoneID
+          - SubjectAlternativeNames
+      - Label:
+          default: AWS Quick Start configuration
+        Parameters:
+          - QSS3BucketName
+          - QSS3BucketRegion
+          - QSS3KeyPrefix
+      - Label:
+          default: IAM
+        Parameters:
+          - IamRoleArn
+    ParameterLabels:
+      QSS3BucketName:
+        default: Quick Start S3 bucket name
+      QSS3KeyPrefix:
+        default: Quick Start S3 object key prefix
+      QSS3BucketRegion:
+        default: Quick Start S3 bucket Region
+      HostedZoneID:
+        default: Route 53–hosted zone ID
+      DomainName:
+        default: Domain name
+      IamRoleArn:
+        default: ARN of a pre-deployed IAM Role
+      SubjectAlternativeNames:
+        default: Subject AlternativeNames
+Parameters:
+  # Quick Start Configuration
+  QSS3BucketName:
+    AllowedPattern: '^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$'
+    ConstraintDescription: Quick Start bucket name can include numbers, lowercase letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen (-).
+    Default: aws-quickstart
+    Description: S3 bucket name for the Quick Start assets. Quick Start bucket name can include numbers, lowercase letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen (-).
+    Type: String
+  QSS3BucketRegion:
+    Default: 'us-east-1'
+    Description: 'The AWS Region where the Quick Start S3 bucket (QSS3BucketName) is hosted. When using your own bucket, you must specify this value.'
+    Type: String
+  QSS3KeyPrefix:
+    AllowedPattern: '^[0-9a-zA-Z-/]*$'
+    ConstraintDescription: Quick Start key prefix can include numbers, lowercase letters, uppercase letters, hyphens (-), and forward slash (/).
+    Default: quickstart-aws-acm-certificate/
+    Description: S3 key prefix for the Quick Start assets. Quick Start key prefix can include numbers, lowercase letters, uppercase letters, hyphens (-), and forward slash (/).
+    Type: String
+  HostedZoneID:
+    Description: '[OPTIONAL]: Route 53–hosted zone ID to use. If left blank, validation of the Domain will occur via email.'
+    Type: String
+    MaxLength: '32'
+    Default: ''
+  DomainName:
+    Description: 'Fully qualified domain name for the ACM certificate.'
+    Type: String
+    AllowedPattern: ^(?!.*?_.*?)(?!(?:[\w]+?\.)?\-[\w\.\-]*?)(?![\w]+?\-\.(?:[\w\.\-]+?))(?=[\w])(?=[\w\.\-]*?\.+[\w\.\-]*?)(?![\w\.\-]{254})(?!(?:\.?[\w\-\.]*?[\w\-]{64,}\.)+?)[\w\.\-]+?(?<![\w\-\.]*?\.[\d]+?)(?<=[\w\-]{2,})(?<![\w\-]{25})$
+    ConstraintDescription: "Please enter a valid FQDN e.g. 'my.domain.name.com"
+    MaxLength: '256'
+  IamRoleArn:
+    Description: ARN of a pre-deployed IAM Role with sufficient permissions for the lambda; see the ACMCertificateRole resource in this template for reference
+    Type: String
+    Default: ''
+  SubjectAlternativeNames:
+    Description: 'Subject Alternative Names seperated by commas. Must be valid FQDNs'
+    Type: CommaDelimitedList
+    ConstraintDescription: "Please enter a valid FQDN e.g. 'my.domain.name.com, seperated by commas"
+    Default: ''
+Conditions:
+  UsingDefaultBucket: !Equals [!Ref QSS3BucketName, 'aws-quickstart']
+  UserProvidedSAN: !Not
+    - !Equals
+      - !Join
+        - ','
+        - !Ref SubjectAlternativeNames
+      - ''
+  SetupRoute53:
+    Fn::And:
+      - Fn::Not:
+          - Fn::Equals:
+              - Ref: HostedZoneID
+              - ''
+      - Fn::Not:
+          - Fn::Equals:
+              - Ref: DomainName
+              - ''
+  UseEmailForACMValidation:
+    Fn::And:
+      - Fn::Equals:
+          - Ref: HostedZoneID
+          - ''
+      - Fn::Not:
+          - Fn::Equals:
+              - Ref: DomainName
+              - ''
+  CustomerProvidedIAM:
+    Fn::Not:
+      - Fn::Equals:
+          - Ref: IamRoleArn
+          - ''
+  StackProvidedIAM:
+    Fn::Not:
+      - Condition: CustomerProvidedIAM
+Resources:
+  # So we can copy the ACM lambda everywhere
+  CopyZips:
+    Metadata:
+      cfn-lint:
+        config:
+          ignore_checks:
+            - W9198
+            - W9901
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL:
+        !Sub
+          - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}submodules/lambda-copyzips/templates/copy-zips.template.yaml'
+          - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+            S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
+      Parameters:
+        QSS3BucketName: !Ref QSS3BucketName
+        QSS3KeyPrefix: !Ref QSS3KeyPrefix
+        SourceObjects: "functions/packages/ACMCert/lambda.zip"
+  ACMCertificateRole:
+    Condition: StackProvidedIAM
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: "ACM"
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: "acm:RequestCertificate"
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - acm:DescribeCertificate
+                  - acm:DeleteCertificate
+                Resource:
+                  - !Sub "arn:${AWS::Partition}:acm:${AWS::Region}:${AWS::AccountId}:certificate/*"
+              - Effect: Allow
+                Action:
+                  - route53:ChangeResourceRecordSets
+                Resource:
+                  - Fn::Sub: arn:${AWS::Partition}:route53:::hostedzone/${HostedZoneID}
+  ACMCertificateLambda:
+    Condition: SetupRoute53
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Creates and verifies an ACM certificate using DNS validation and route53
+      Handler: lambda_function.handler
+      Runtime: python3.12
+      Role: !If [StackProvidedIAM, !GetAtt ACMCertificateRole.Arn, !Ref IamRoleArn]
+      Timeout: 900
+      Code:
+        S3Bucket: !GetAtt "CopyZips.Outputs.LambdaZipsBucket"
+        S3Key: !Sub "${QSS3KeyPrefix}functions/packages/ACMCert/lambda.zip"
+  ACMCertificateDNS:
+    Condition: SetupRoute53
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken:
+        Fn::GetAtt:
+          - ACMCertificateLambda
+          - Arn
+      HostedZoneId:
+        Ref: HostedZoneID
+      HostNames: !Split
+        - ','
+        - !Join
+          - ','
+          - - !Sub "*.${DomainName}"
+            - !If
+              - UserProvidedSAN
+              - !Join [',', !Ref SubjectAlternativeNames]
+              - !Ref AWS::NoValue
+            - !Ref DomainName
+  ACMCertificateEmail:
+    Condition: UseEmailForACMValidation
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName:
+        Ref: DomainName
+      SubjectAlternativeNames: !If
+        - UserProvidedSAN
+        - !Split
+          - ','
+          - !Join
+            - ','
+            - - !Sub "*.${DomainName}"
+              - !Join [',', !Ref SubjectAlternativeNames]
+        - !Sub "*.${DomainName}"
+      DomainValidationOptions:
+        - DomainName:
+            Ref: DomainName
+          ValidationDomain:
+            Ref: DomainName
+Outputs:
+  ACMCertificate:
+    Condition: SetupRoute53
+    Description: ARN of the ACM-Generated SSL Certificate
+    Value: !GetAtt "ACMCertificateDNS.Arn"
+  ACMCertificateArn:
+    Condition: UseEmailForACMValidation
+    Description: ARN of the ACM-Generated SSL Certificate
+    Value: !Ref "ACMCertificateEmail"
