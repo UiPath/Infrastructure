@@ -74,9 +74,9 @@ Parameters:
     Type: String
     Default: ''
   SubjectAlternativeNames:
-    Description: 'Subject Alternative Names seperated by commas. Must be valid FQDNs'
+    Description: 'Subject Alternative Names separated by commas. Must be valid FQDNs'
     Type: CommaDelimitedList
-    ConstraintDescription: "Please enter a valid FQDN e.g. 'my.domain.name.com, seperated by commas"
+    ConstraintDescription: "Please enter a valid FQDN e.g. 'my.domain.name.com, separated by commas"
     Default: ''
 Conditions:
   UsingDefaultBucket: !Equals [!Ref QSS3BucketName, 'uipath-orchestrator']
