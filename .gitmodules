@@ -2,11 +2,3 @@
 	path = AWS/Robot/submodules/quickstart-aws-vpc
 	url = https://github.com/aws-quickstart/quickstart-aws-vpc.git
 	branch = main
-[submodule "AWS/Orchestrator/submodules/quickstart-aws-vpc"]
-	path = AWS/Orchestrator/submodules/quickstart-aws-vpc
-	url = https://github.com/aws-quickstart/quickstart-aws-vpc.git
-	branch = main
-[submodule "AWS/Orchestrator/submodules/quickstart-aws-acm-certificate"]
-	path = AWS/Orchestrator/submodules/quickstart-aws-acm-certificate
-	url = https://github.com/aws-quickstart/quickstart-aws-acm-certificate.git
-	branch = main

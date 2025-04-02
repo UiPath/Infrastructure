@@ -100,8 +100,10 @@ param(
 $ErrorActionPreference = "Stop"
 [System.String]$rootDirectory = "C:\cfn"
 [System.String]$installLog = Join-Path -Path $script:rootDirectory -ChildPath "log\install.log"
+[System.String]$scriptLog = Join-Path -Path $script:rootDirectory -ChildPath "log\script.log"
 [System.String]$orchestratorHost = ([System.URI]$publicUrl).Host
 [System.String]$orchestratorTenant = "host"
+Start-Transcript -Path $scriptLog -Append -IncludeInvocationHeader
 
 function Main {
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
@@ -135,7 +137,9 @@ param(
 )
 
     try {
-        New-WebBinding -Name $siteName -IPAddress "*" -Port 443 -Protocol "https"
+        if (-not $(Get-WebBinding -Name "UiPath Orchestrator")){
+            New-WebBinding -Name $siteName -IPAddress "*" -Port 443 -Protocol "https"
+        }
         Stop-Website -Name $siteName
         Start-Website -Name $siteName
         Write-Verbose "Adding new binding and restarting Orchestrator WebSite !"
@@ -372,8 +376,8 @@ function Test-OrchestratorInstallation {
                     throw $_
                 }
                 else {
-                    Write-Verbose "Failed to GET $Url. Retrying again in 10 seconds"
-                    Start-Sleep 10
+                    Write-Verbose "Failed to GET $Url. Retrying again in 30 seconds"
+                    Start-Sleep 30
                 }
             }
         }
@@ -390,6 +394,7 @@ function Test-OrchestratorInstallation {
 try {
     . "$PSScriptRoot\Get-File.ps1" -Source "s3://$configS3BucketName/config.json" -Destination "$rootDirectory\config.json" -Verbose
     . "$PSScriptRoot\Get-File.ps1" -Source "s3://$configS3BucketName/$orchestratorHost.pfx" -Destination "$rootDirectory\$orchestratorHost.pfx" -Verbose
+    . "$PSScriptRoot\Get-File.ps1" -Source "s3://$configS3BucketName/UiPath.Orchestrator.dll.config" -Destination "$rootDirectory\UiPath.Orchestrator.dll.config" -Verbose
 }
 catch {
     Write-Verbose "No file was downloaded from s3://$configS3BucketName/config.json"
@@ -401,6 +406,7 @@ try {
         . "$PSScriptRoot\Set-MutexLock.ps1" -Release -TableName $configTableName -Verbose
         . "$PSScriptRoot\Install-SelfSignedCertificate.ps1" -rootPath "$rootDirectory" -certificatePassword $orchestratorAdminPassword -orchestratorHost $orchestratorHost
         Main
+        Copy-Item "$rootDirectory\UiPath.Orchestrator.dll.config" -Destination "C:\Program Files (x86)\UiPath\Orchestrator\UiPath.Orchestrator.dll.config" -Force
         Restart-OrchestratorSite
         $bearerToken = Connect-ToOrchestrator -tenant $orchestratorTenant -username $orchestratorAdminUsername -password $orchestratorAdminPassword
         Set-OrchestratorLicense -licenseCode $orchestratorLicenseCode -tenant $orchestratorTenant -username $orchestratorAdminUsername -bearerToken $bearerToken
@@ -416,6 +422,7 @@ try {
         Set-OrchestratorLicense -licenseCode $orchestratorLicenseCode -tenant $orchestratorTenant -username $orchestratorAdminUsername -bearerToken $bearerToken
         Write-Verbose "Uploading the configuration"
         . "$PSScriptRoot\Write-ConfigToS3.ps1" -Source "$rootDirectory\config.json" -Destination "s3://$configS3BucketName/config.json"
+        . "$PSScriptRoot\Write-ConfigToS3.ps1" -Source "C:\Program Files (x86)\UiPath\Orchestrator\UiPath.Orchestrator.dll.config" -Destination "s3://$configS3BucketName/UiPath.Orchestrator.dll.config"
         . "$PSScriptRoot\Write-ConfigToS3.ps1" -Source "$rootDirectory\$orchestratorHost.pfx" -Destination "s3://$configS3BucketName/$orchestratorHost.pfx"
         . "$PSScriptRoot\Set-MutexLock.ps1" -Release -TableName $configTableName -Verbose
     }

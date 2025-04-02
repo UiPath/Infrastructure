@@ -1,0 +1,174 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: This CloudFormation Template invokes another template responsible for
+  copying files to a local region S3 Bucket for AWS Lambda. (qs-1s1i3qaas)
+Parameters:
+  QSS3BucketName:
+    AllowedPattern: ^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$
+    ConstraintDescription: Quick Start bucket name can include numbers, lowercase
+      letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen
+      (-).
+    Default: uipath-orchestrator
+    Description: This field defaults to UiPath S3 buckets. S3 bucket name for the Quick Start assets. This string can include
+      numbers, lowercase letters, uppercase letters, and hyphens (-). It cannot start
+      or end with a hyphen (-).
+    Type: String
+  QSS3KeyPrefix:
+    AllowedPattern: ^[0-9a-zA-Z-/]*$
+    ConstraintDescription: Quick Start key prefix can include numbers, lowercase letters,
+      uppercase letters, hyphens (-), and forward slash (/).
+    Description: S3 key prefix for the Quick Start assets. Quick Start key prefix
+      can include numbers, lowercase letters, uppercase letters, hyphens (-), and
+      forward slash (/).
+    Type: String
+  QSS3BucketRegion:
+    Default: 'us-east-1'
+    Description: "Deprecated. This has no effect and has been retained for backwards compatibility."
+    Type: String
+  DestinationBucket:
+    Type: String
+    Default: ""
+  SourceObjects:
+    Type: CommaDelimitedList
+    Default: ""
+  StripPrefixAtDestination:
+    Type: String
+    Default: 'false'
+    AllowedValues:
+      - 'true'
+      - 'false'
+  PermissionsBoundaryArn:
+    Description: Will be attached to all created IAM Roles to satisfy security requirements
+    Type: String
+    Default: ''
+  RolePath:
+    Description: Will be attached to all created IAM Roles to satisfy security requirements
+    Type: String
+    Default: ''
+  IamRoleArn:
+    Description: ARN of a pre-deployed IAM Role with sufficient permissions for the lambda;
+      see the CopyRole resource in this template for reference
+    Type: String
+    Default: ''
+Metadata:
+  # this is a no-op, to work around linting for unused parameter, which we need to retain for compatability
+  UnusedParam: !Ref QSS3BucketRegion
+Conditions:
+  CreateDestBucket: !Equals [!Ref DestinationBucket, ""]
+  UsingDefaultBucket: !Equals [!Ref QSS3BucketName, 'uipath-orchestrator']
+  NoDestPrefix: !Equals [!Ref StripPrefixAtDestination, 'true']
+  RolePathProvided: !Not [!Equals ["", !Ref RolePath]]
+  PermissionsBoundaryProvided: !Not [!Equals ["", !Ref PermissionsBoundaryArn]]
+  DeployIam: !Equals ["", !Ref IamRoleArn]
+Resources:
+  LambdaZipsBucket:
+    Condition: CreateDestBucket
+    Type: "AWS::S3::Bucket"
+  CopyRole:
+    Type: AWS::IAM::Role
+    Condition: DeployIam
+    Properties:
+      Path: !If [RolePathProvided, !Ref RolePath, !Ref AWS::NoValue]
+      PermissionsBoundary:
+        !If [
+          PermissionsBoundaryProvided,
+          !Ref PermissionsBoundaryArn,
+          !Ref AWS::NoValue,
+        ]
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+      - PolicyName: ConfigPolicy
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+            - Sid: S3Get
+              Effect: Allow
+              Action:
+              - s3:GetObject
+              Resource: !Sub
+                - arn:${AWS::Partition}:s3:::${S3Bucket}/${QSS3KeyPrefix}*
+                - S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
+            - Sid: S3Put
+              Effect: Allow
+              Action:
+              - s3:PutObject
+              - s3:DeleteObject
+              Resource: !Sub
+              - arn:${AWS::Partition}:s3:::${DestBucket}/*
+              - DestBucket: !If [CreateDestBucket, !Ref LambdaZipsBucket, !Ref DestinationBucket]
+  CopyZips:
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt CopyZipsFunction.Arn
+      DestRegion: !Ref "AWS::Region"
+      DestBucket: !If [CreateDestBucket, !Ref LambdaZipsBucket, !Ref DestinationBucket]
+      SourceBucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
+      Prefix: !Ref QSS3KeyPrefix
+      Objects: !Ref SourceObjects
+      DestinationPrefix: !If
+        - NoDestPrefix
+        - ''
+        - !Ref QSS3KeyPrefix
+  CopyZipsFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Copies objects from a source S3 bucket to a destination
+      Handler: index.handler
+      Runtime: python3.12
+      Role: !If [DeployIam, !GetAtt CopyRole.Arn, !Ref IamRoleArn]
+      Timeout: 240
+      Code:
+        ZipFile: |
+          import json
+          import logging
+          import threading
+          import boto3
+          import cfnresponse
+          def copy_objects(source_bucket, dest_bucket, source_prefix, destination_prefix, objects):
+              s3 = boto3.client('s3')
+              for o in objects:
+                  copy_source = {
+                      'Bucket': source_bucket,
+                      'Key': source_prefix + o
+                  }
+                  s3.copy_object(CopySource=copy_source, Bucket=dest_bucket, Key=destination_prefix + o)
+          def delete_objects(bucket, prefix, objects):
+              s3 = boto3.client('s3')
+              objects = {'Objects': [{'Key': prefix + o} for o in objects]}
+              s3.delete_objects(Bucket=bucket, Delete=objects)
+          def timeout(event, context):
+              logging.error('Execution is about to time out, sending failure response to CloudFormation')
+              cfnresponse.send(event, context, cfnresponse.FAILED, {}, None)
+          def handler(event, context):
+              # make sure we send a failure to CloudFormation if the function is going to timeout
+              timer = threading.Timer((context.get_remaining_time_in_millis() / 1000.00) - 0.5, timeout, args=[event, context])
+              timer.start()
+              print('Received event: %s' % json.dumps(event))
+              status = cfnresponse.SUCCESS
+              try:
+                  source_bucket = event['ResourceProperties']['SourceBucket']
+                  dest_bucket = event['ResourceProperties']['DestBucket']
+                  source_prefix = event['ResourceProperties']['Prefix']
+                  objects = event['ResourceProperties']['Objects']
+                  destination_prefix = event['ResourceProperties'].get('DestinationPrefix', source_prefix)
+                  if event['RequestType'] == 'Delete':
+                      delete_objects(dest_bucket, destination_prefix, objects)
+                  else:
+                      copy_objects(source_bucket, dest_bucket, source_prefix, destination_prefix, objects)
+              except Exception as e:
+                  logging.error('Exception: %s' % e, exc_info=True)
+                  status = cfnresponse.FAILED
+              finally:
+                  timer.cancel()
+                  cfnresponse.send(event, context, status, {}, None)
+Outputs:
+  LambdaZipsBucket:
+    Description: S3 Bucket for the Lambda Function Code
+    Value: !If [CreateDestBucket, !Ref LambdaZipsBucket, !Ref DestinationBucket]

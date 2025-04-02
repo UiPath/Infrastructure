@@ -17,7 +17,7 @@ param(
 try {
     $ErrorActionPreference = "Stop"
 
-    Add-Type -Path (${env:ProgramFiles(x86)} + "\AWS Tools\PowerShell\AWSPowerShell\AWSSDK.DynamoDBv2.dll")
+    Add-Type -Path (${env:ProgramFiles(x86)} + "\AWS SDK for .NET\bin\Net45\AWSSDK.DynamoDBv2.dll")
 
     $client = New-Object -TypeName Amazon.DynamoDBv2.AmazonDynamoDBClient
     $table = [Amazon.DynamoDBv2.DocumentModel.Table]::LoadTable($client, $TableName)

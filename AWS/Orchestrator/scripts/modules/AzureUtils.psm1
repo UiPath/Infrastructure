@@ -99,3 +99,64 @@ function Add-TextBetweenStringsInFile {
     $regex = "(?<=$regexTextStart)[^$regexTextEnd]*"
     (Get-Content $filePath) -replace $regex, $textToAdd | Set-Content $filePath
 }
+
+function Ensure-SharedImageDefinition {
+    
+    Param(
+        [parameter(Mandatory = $true)]
+        [System.Object] $gallery,
+        [parameter(Mandatory = $true)]
+        [System.Object] $image
+    )
+
+    try {
+        $existingimageDefinition = Get-AzGalleryImageDefinition -GalleryName $gallery.Name -ResourceGroupName $gallery.ResourceGroupName -Name $gallery.myImageDefinition
+    }
+    catch{
+        if ($_.Exception.Message.Contains("The Resource 'Microsoft.Compute/galleries/$($gallery.Name)/images/$($gallery.myImageDefinition)' under resource group '$($gallery.ResourceGroupName)' was not found")) {
+            $newimageDefinition = New-AzGalleryImageDefinition `
+                -GalleryName $gallery.Name `
+                -ResourceGroupName $gallery.ResourceGroupName `
+                -Location $gallery.Location `
+                -Name $gallery.myImageDefinition `
+                -OsState generalized `
+                -OsType $image.OsType `
+                -Publisher $image.myPublisher `
+                -Offer $image.myOffer `
+                -Sku $image.mySKU `
+                -HyperVGeneration $image.HyperVGeneration
+        
+            return $newimageDefinition
+        }
+        else{
+            Write-Error -Exception $_.Exception -Message "Could not ensure image definition"
+            throw $_.Exception.Message
+        }
+    }
+    return $existingimageDefinition
+}
+
+function Increment-ImageVersion {
+    
+    Param(
+        [parameter(Mandatory = $true)]
+        [System.Object] $gallery
+    )
+
+    try {
+        $existingImageVersions = (Get-AzGalleryImageVersion -GalleryName $gallery.Name -ResourceGroupName $gallery.ResourceGroupName -GalleryImageDefinitionName $gallery.myImageDefinition).Name
+        [int]$max = 0
+        foreach ($version in $existingImageVersions) {
+            [int]$currVers = [int]$version.split(".")[-1]
+            if ( $currVers -gt $max) {
+                $max = $currVers
+            }
+        }
+        return $max + 1
+
+    }
+    catch{
+        Write-Error -Exception $_.Exception -Message "Could not increment image version"
+        throw $_.Exception.Message
+    }
+}
