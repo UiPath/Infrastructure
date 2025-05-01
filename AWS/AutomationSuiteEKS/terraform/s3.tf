@@ -61,4 +61,7 @@ output "s3_common_bucket_id" {
   description = "The ID of the common S3 bucket"
   value       = aws_s3_bucket.automation_suite_common.id
 }
-
+output "s3_common_bucket_region" {
+  description = "The region of the common S3 bucket"
+  value       = aws_s3_bucket.automation_suite_common.region
+}

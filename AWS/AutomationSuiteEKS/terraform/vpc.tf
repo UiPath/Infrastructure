@@ -29,6 +29,27 @@ locals {
 
   # Combine all subnets if secondary CIDR is enabled
   all_private_subnets = var.enable_secondary_cidr ? concat(local.private_subnets, local.secondary_private_subnets) : local.private_subnets
+
+  # Create a list of primary subnet ids, subnets and their azs
+  private_subnet_list = [
+    for s in data.aws_subnet.private :
+    {
+      id   = s.id
+      az   = s.availability_zone
+      cidr = s.cidr_block
+    }
+    if contains(local.private_subnets, s.cidr_block)
+  ]
+  # Create a list of secondary subnet ids, subnets and their azs
+  secondary_private_subnet_list = [
+    for s in data.aws_subnet.private :
+    {
+      id   = s.id
+      az   = s.availability_zone
+      cidr = s.cidr_block
+    }
+    if contains(local.secondary_private_subnets, s.cidr_block)
+  ]
 }
 
 # Get available AZs
@@ -38,6 +59,15 @@ data "aws_availability_zones" "available" {
     values = ["opt-in-not-required"]
   }
 }
+
+# Get subnet ids
+data "aws_subnet" "private" {
+  for_each   = toset(local.all_private_subnets)
+  cidr_block = each.key
+  vpc_id     = module.vpc.vpc_id
+  depends_on = [module.vpc]
+}
+
 
 # Create VPC
 module "vpc" {
@@ -75,10 +105,8 @@ module "vpc" {
 
   # Subnet specific tags
   public_subnet_tags = {
-    "Name"                   = "${var.tag_prefix}${var.vpc_name}-public"
     "kubernetes.io/role/elb" = "1"
   }
-
 
   private_subnet_tags = {
     "kubernetes.io/role/internal-elb" = "1"
@@ -121,7 +149,13 @@ output "nat_public_ips" {
   value       = module.vpc.nat_public_ips
 }
 
-output "azs" {
-  description = "List of availability zones used"
-  value       = local.azs
+output "private_subnet_list" {
+  description = "List of private subnets with their IDs, availability zones, and CIDR blocks"
+  value       = local.private_subnet_list
 }
+
+output "secondary_private_subnet_list" {
+  description = "List of secondary private subnets with their IDs, availability zones, and CIDR blocks"
+  value       = local.secondary_private_subnet_list
+}
+

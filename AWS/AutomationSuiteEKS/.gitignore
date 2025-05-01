@@ -28,3 +28,4 @@ tfplan
 .DS_Store
 Thumbs.db
 .directory
+test/

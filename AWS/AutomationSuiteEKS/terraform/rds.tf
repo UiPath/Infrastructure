@@ -24,9 +24,11 @@ module "db" {
   storage_encrypted = var.rds_storage_encrypted
 
   # Authentication
-  username = var.rds_username
-  password = var.rds_password
-  port     = var.rds_port
+  # Disable password management with secret manager
+  manage_master_user_password = false
+  username                    = var.rds_username
+  password                    = var.rds_password
+  port                        = var.rds_port
 
   multi_az               = var.rds_multi_az
   db_subnet_group_name   = module.vpc.database_subnet_group

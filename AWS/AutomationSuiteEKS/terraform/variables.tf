@@ -83,24 +83,6 @@ variable "enable_vpn_gateway" {
 }
 
 /**
- * eks Configuration Variables
- * This file contains all variables related to eks configuration
- */
-
-# variable "eks_cluster_name" {
-#   description = "Name of the EKS cluster"
-#   type        = string
-#   default     = "main-eks-cluster"
-# }
-
-# variable "eks_cluster_version" {
-#   description = "Version of the EKS cluster"
-#   type        = string
-#   default     = "1.31"
-# }
-
-
-/**
   * S3 Configuration Variables
   * This file contains all variables related to S3 configuration
   */
@@ -229,4 +211,105 @@ variable "rds_timezone" {
   description = "Timezone for the RDS instance"
   type        = string
   default     = "GMT Standard Time"
+}
+
+/**
+ * Elasticache Configuration Variables
+  * This file contains all variables related to Elasticache configuration
+  */
+
+variable "elasticache_cluster_name" {
+  description = "Name of the Elasticache cluster"
+  type        = string
+  default     = "main-redis-cluster"
+}
+
+variable "elasticache_auth_token" {
+  description = "Authentication token for the Elasticache cluster"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "elasticache_num_of_cache_clusters" {
+  description = "Number of replicas for the Elasticache cluster"
+  type        = number
+  default     = 2
+}
+
+variable "elasticache_node_type" {
+  description = "Node type for the Elasticache cluster"
+  type        = string
+  default     = "cache.t2.small"
+}
+
+variable "elasticache_engine_version" {
+  description = "Engine version for the Elasticache cluster"
+  type        = string
+  default     = "7.1"
+}
+
+variable "elasticache_maintenance_window" {
+  description = "Maintenance window for the Elasticache cluster"
+  type        = string
+  default     = "sun:00:00-sun:03:00"
+}
+
+variable "elasticache_port" {
+  description = "Port for the Elasticache cluster"
+  type        = number
+  default     = 6379
+}
+
+variable "elasticache_parameter_group_name" {
+  description = "Name of the Elasticache parameter group"
+  type        = string
+  default     = "default.redis7"
+}
+
+/**
+ * eks Configuration Variables
+ * This file contains all variables related to eks configuration
+ */
+
+variable "eks_cluster_name" {
+  description = "Name of the EKS cluster"
+  type        = string
+  default     = "main-eks-cluster"
+}
+
+variable "eks_cluster_version" {
+  description = "Version of the EKS cluster"
+  type        = string
+  default     = "1.31"
+}
+
+variable "enable_eks_public_access" {
+  description = "Whether to enable public access to the EKS cluster"
+  type        = bool
+  default     = true
+}
+
+variable "eks_node_group_name" {
+  description = "Name of the EKS node group"
+  type        = string
+  default     = "main-eks-node-group"
+}
+
+variable "eks_instance_type" {
+  description = "Instance type for the main EKS node group"
+  type        = string
+  default     = "c6a.4xlarge"
+}
+
+variable "eks_node_max_pod" {
+  description = "Maximum number of pods per node. This value varies on intance types, so for more details, refer to https://github.com/aws/amazon-vpc-cni-k8s/blob/master/misc/eni-max-pods.txt"
+  type        = number
+  default     = 234
+}
+
+variable "eks_worker_node_port" {
+  description = "Opened port for the EKS node group"
+  type        = number
+  default     = 443
 }
