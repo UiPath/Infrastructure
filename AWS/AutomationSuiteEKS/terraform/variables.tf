@@ -313,3 +313,87 @@ variable "eks_worker_node_port" {
   type        = number
   default     = 443
 }
+
+/**
+  * EC2 Configuration Variables
+  * This file contains all variables related to EC2 configuration
+  * By default, no EC2 instance is created
+  */
+
+variable "create_ec2_instance" {
+  description = "Whether to create an EC2 instance"
+  type        = bool
+  default     = false
+}
+
+variable "ec2_instance_name" {
+  description = "Name of the EC2 instance"
+  type        = string
+  default     = "main-ec2-instance"
+}
+
+variable "ec2_ami_prefix" {
+  description = "Prefix of AMI ID for the EC2 instance"
+  type        = string
+  default     = "Windows_Server-2022-English-Full-Base-*" # Windows Server 2022
+}
+
+variable "ec2_ami_owner" {
+  description = "Owner of the AMI for the EC2 instance"
+  type        = string
+  default     = "amazon"
+}
+
+variable "ec2_instance_type" {
+  description = "Instance type for the EC2 instance"
+  type        = string
+  default     = "t3.large"
+}
+
+variable "is_ec2_public" {
+  description = "Whether the EC2 instance is public. By default, it is public. If set to false, it will be private."
+  type        = bool
+  default     = true
+}
+
+variable "ec2_volume_size" {
+  description = "Volume size for the EC2 instance in GB"
+  type        = number
+  default     = 100
+}
+
+variable "ec2_port" {
+  description = "Port for the EC2 instance. Default is 3389 (RDP)"
+  type        = number
+  default     = 3389
+}
+
+variable "ec2_allowed_cidr_blocks" {
+  description = "Allowed CIDR blocks for the EC2 instance. If empty, it will only allow the IP address where the Terraform is executed."
+  type        = string
+  default     = ""
+}
+
+variable "use_ec2_user_data" {
+  description = "Whether to use user data for the EC2 instance. By default, it is set to true."
+  type        = bool
+  default     = true
+}
+
+variable "ec2_user_data_name" {
+  description = "Name of the user data file for the EC2 instance. By default, it is set to 'windows_user_data.tftpl', which installs Microsoft Edge and UiPath Studio."
+  type        = string
+  default     = "windows_user_data.tftpl"
+}
+
+variable "get_ec2_password" {
+  description = "Whether to get the password for the EC2 instance. By default, it is set to false."
+  type        = bool
+  default     = false
+}
+
+variable "ec2_key_name" {
+  description = "Name of the key pair for the EC2 instance. By default, it is set to 'main-key-pair'."
+  type        = string
+  default     = ""
+}

@@ -4,6 +4,10 @@
   * - Configurable ingress and egress rules
   */
 
+# Get the current public IP address
+data "http" "current_ip" {
+  url = "https://checkip.amazonaws.com/"
+}
 
 # RDS
 module "db_sg" {
@@ -47,24 +51,34 @@ module "elasticache_sg" {
   tags = var.tags
 }
 
-# EKS worker nodes
-# module "eks_worker_sg" {
-#   source  = "terraform-aws-modules/security-group/aws"
-#   version = "~> 5.0"
+# EC2
+module "ec2_sg" {
+  source  = "terraform-aws-modules/security-group/aws"
+  version = "~> 5.0"
+  create  = var.create_ec2_instance
 
-#   name   = "${var.tag_prefix}${var.eks_cluster_name}-worker-nodes"
-#   vpc_id = module.vpc.vpc_id
+  name   = "${var.tag_prefix}${var.ec2_instance_name}"
+  vpc_id = module.vpc.vpc_id
 
-#   # Ingress rules
-#   ingress_with_cidr_blocks = [
-#     for subnet in module.vpc.private_subnets_cidr_blocks : {
-#       description = "Allow private subnets to access EKS worker nodes"
-#       from_port   = var.eks_worker_node_port
-#       to_port     = var.eks_worker_node_port
-#       protocol    = "tcp"
-#       cidr_blocks = subnet
-#     }
-#   ]
-
-#   tags = var.tags
-# }
+  # Ingress rules
+  ingress_with_cidr_blocks = [
+    {
+      description = "Allow RDP access to EC2 instance"
+      from_port   = var.ec2_port
+      to_port     = var.ec2_port
+      protocol    = "tcp"
+      cidr_blocks = length(var.ec2_allowed_cidr_blocks) == 0 ? "${chomp(data.http.current_ip.response_body)}/32" : var.ec2_allowed_cidr_blocks
+    }
+  ]
+  # Egress rules
+  egress_with_cidr_blocks = [
+    {
+      description = "Allow all outbound traffic from EC2 instance"
+      from_port   = 0
+      to_port     = 0
+      protocol    = "-1"
+      cidr_blocks = "0.0.0.0/0"
+    }
+  ]
+  tags = var.tags
+}
