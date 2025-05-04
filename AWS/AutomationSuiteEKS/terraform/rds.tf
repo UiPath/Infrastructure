@@ -2,6 +2,7 @@
  * RDS Terraform Configuration
   * - Creates a new RDS instance with specified configurations
   * - Configurable instance type, storage, and backup settings
+  * - This code is using terraform-aws-modules/rds/aws module (https://github.com/terraform-aws-modules/terraform-aws-rds)
   */
 
 module "db" {

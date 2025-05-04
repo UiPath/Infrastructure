@@ -3,7 +3,8 @@
  * - Creates EC2 instance with specified AMI and intance type
  * - Default AMI is windows server 2022 and its access is only allowed from the specified IP and/or an IP address where the terraform is executed
  * - By default, the following software is installed:
- * - UiPath Studio, Rorbots, MS edge and MS SQL Server Management Studio
+ *  - UiPath Studio, Rorbots, MS edge and MS SQL Server Management Studio
+ * - This code is using terraform-aws-modules/ec2-instance/aws module (https://github.com/terraform-aws-modules/terraform-aws-ec2-instance)
  */
 
 data "aws_ami" "latest_windows" {

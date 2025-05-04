@@ -4,6 +4,7 @@
   * - Configurable node groups and IAM roles
   * - Optional public access and cluster creator admin permissions
   * - Optional secondary CIDR blocks for worker nodes
+  * - This code is using terraform-aws-modules/eks/aws module (https://github.com/terraform-aws-modules/terraform-aws-eks)
   */
 
 provider "kubectl" {

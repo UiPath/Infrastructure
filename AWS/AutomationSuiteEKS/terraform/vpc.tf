@@ -3,6 +3,7 @@
  * - Creates a new VPC with public and private subnets
  * - Configurable NAT Gateway deployment (single or one per AZ)
  * - Optional secondary CIDR block support
+ * - This code is using terraform-aws-modules/vpc/aws module (https://github.com/terraform-aws-modules/terraform-aws-vpc)
  */
 
 # Local variable for AZ calculation if none provided

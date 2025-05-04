@@ -2,6 +2,7 @@
  * Security Groups Terraform Configuration
   * - Creates security groups for various services
   * - Configurable ingress and egress rules
+  * - This code is using terraform-aws-modules/security-group/aws module (https://github.com/terraform-aws-modules/terraform-aws-security-group)
   */
 
 # Get the current public IP address

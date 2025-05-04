@@ -3,6 +3,7 @@
   * - Creates a Redis cluster with specified node type and engine version
   * - Configurable number of replicas and cluster mode settings
   * - Optional parameter group for custom Redis settings
+  * - This code is using terraform-aws-modules/elasticache/aws module (https://github.com/terraform-aws-modules/terraform-aws-elasticache)
   */
 
 module "elasticache" {
