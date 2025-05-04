@@ -55,6 +55,11 @@ module "eks" {
     aws-efs-csi-driver = {
       most_recent = true
     }
+
+    metrics-server = {
+      most_recent = true
+    }
+
     vpc-cni = {
       before_compute = true
       most_recent    = true # To ensure access to the latest settings provided
@@ -289,3 +294,19 @@ resource "aws_iam_policy" "load_balancer_controller" {
     ]
   })
 }
+
+# Outputs
+
+output "eks_cluster_name" {
+  description = "The name of the EKS cluster"
+  value       = module.eks.cluster_name
+}
+output "eks_cluster_endpoint" {
+  description = "The endpoint of the EKS cluster"
+  value       = module.eks.cluster_endpoint
+}
+output "region" {
+  description = "The region of the EKS cluster"
+  value       = var.aws_region
+}
+

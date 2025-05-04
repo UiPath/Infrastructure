@@ -10,7 +10,7 @@
 variable "aws_region" {
   description = "AWS region to deploy resources"
   type        = string
-  default     = "us-east-1"
+  default     = ""
 }
 
 variable "tag_prefix" {
@@ -28,6 +28,11 @@ variable "tags" {
   }
 }
 
+variable "fqdn" {
+  description = "Fully Qualified Domain Name (FQDN) for your Automaiton Suite without https. This is used for s3's cors configuration."
+  type        = string
+  default     = ""
+}
 
 /**
  * VPC Configuration Variables
@@ -56,12 +61,6 @@ variable "secondary_vpc_cidr" {
   description = "Secondary CIDR block for the VPC (if enabled) - Using CGNAT range by default"
   type        = string
   default     = "100.64.0.0/16"
-}
-
-variable "azs" {
-  description = "Availability Zones"
-  type        = list(string)
-  default     = []
 }
 
 variable "single_nat_gateway" {
@@ -97,12 +96,6 @@ variable "s3_force_destroy" {
   description = "Whether to force destroy the S3 bucket"
   type        = bool
   default     = true
-}
-
-variable "s3_cors_allowed_origins" {
-  description = "Allowed origins for CORS configuration"
-  type        = list(string)
-  default     = ["*"]
 }
 
 /**
@@ -169,12 +162,6 @@ variable "rds_multi_az" {
   description = "Whether to enable Multi-AZ for the RDS instance"
   type        = bool
   default     = false
-}
-
-variable "rds_subnet_group_name" {
-  description = "Name of the RDS subnet group"
-  type        = string
-  default     = "main-rds-subnet-group"
 }
 
 variable "rds_maintenance_window" {
@@ -308,11 +295,6 @@ variable "eks_node_max_pod" {
   default     = 234
 }
 
-variable "eks_worker_node_port" {
-  description = "Opened port for the EKS node group"
-  type        = number
-  default     = 443
-}
 
 /**
   * EC2 Configuration Variables

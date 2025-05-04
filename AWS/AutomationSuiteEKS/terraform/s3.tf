@@ -28,7 +28,7 @@ resource "aws_s3_bucket_cors_configuration" "automation_suite_common" {
   cors_rule {
     allowed_headers = ["*"]
     allowed_methods = ["POST", "GET", "PUT", "HEAD", "DELETE"]
-    allowed_origins = var.s3_cors_allowed_origins
+    allowed_origins = length(var.fqdn) > 0 ? ["https://${var.fqdn}"] : ["*"]
     expose_headers  = ["x-amz-server-side-encryption", "x-amz-request-id", "x-amz-id-2", "etag"]
     max_age_seconds = 3000
   }

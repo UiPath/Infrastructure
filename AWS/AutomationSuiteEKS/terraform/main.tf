@@ -14,6 +14,18 @@ terraform {
       source  = "gavinbunney/kubectl"
       version = ">= 1.7.0"
     }
+    tls = {
+      source  = "hashicorp/tls"
+      version = "~> 4.1.0"
+    }
+    http = {
+      source  = "hashicorp/http"
+      version = "~> 3.5.0"
+    }
+    template = {
+      source  = "hashicorp/template"
+      version = "~> 2.2.0"
+    }
   }
   required_version = ">= 1.0.0"
 }
@@ -22,4 +34,7 @@ provider "aws" {
   region = var.aws_region
 }
 
-
+output "fqdn" {
+  description = "The FQDN for your Automation Suite"
+  value       = var.fqdn
+}
