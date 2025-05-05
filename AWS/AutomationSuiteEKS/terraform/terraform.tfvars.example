@@ -1,0 +1,201 @@
+/**
+  * This file is used to set default values for variables in Terraform.
+  * It is automatically loaded by Terraform when you run commands.
+  * You can override these values by providing your own .tfvars file.
+  */
+
+#### General Variables ####
+
+## AWS Region (Required)
+## This is the region where all resources will be created.
+aws_region = ""
+
+## Tag Prefix
+## This is an optional prefix for all tags.
+## Default value is set to an empty string.
+# tag_prefix = ""
+
+## Tags
+## These are the tags that will be applied to all resources.
+## Default tags include Environment: dev and CreatedBy: Terraform.
+tags = {
+  Environment = "dev"
+  CreatedBy   = "Terraform"
+}
+
+
+#### VPC Configuration Variables ####
+
+## VPC Name
+## Default value is set to "main-vpc". 
+# vpc_name = ""
+
+##  VPC CIDR
+## This is the primary CIDR block for the VPC.
+## Default value is set to 10.0.0.0/16"
+# vpc_cidr = "10.0.0.0/16"
+
+## Enable Secondary CIDR
+## This is a boolean value that determines whether to enable a secondary CIDR block.
+##### Experimental feature #####
+# enable_secondary_cidr = true
+
+## Secondary VPC CIDR
+## This is the secondary CIDR block for the VPC. Usually a CGNAT range is used for this CIDR.
+## Default value is set to 100.64.0.0/16"
+# secondary_vpc_cidr = "100.64.0.0/16"
+
+# NAT Gateway Configuration Variables
+## Enable NAT Gateway
+## This is a boolean value that determines whether to enable a NAT Gateway.
+# enable_nat_gateway = true
+
+## Single NAT Gateway
+## This is a boolean value that determines whether to use a single NAT Gateway for all availability zones.
+## Default value is set to true.
+# single_nat_gateway = true
+
+## Enable VPN Gateway
+## This is a boolean value that determines whether to enable a VPN Gateway.
+## Default value is set to false.
+# enable_vpn_gateway = false
+
+
+#### S3 Configuration Variables ####
+
+## S3 Bucket Name (Required)
+## This is the name of the S3 bucket that will be created.
+s3_bucket_name = ""
+
+## S3 Bucket Force Destroy
+## This indicates all objects (including any locked objects) should be deleted from the bucket when the bucket is destroyed so that the bucket can be destroyed without error.
+## Default value is set to true.
+# s3_force_destroy = false
+
+## S3 Bucket CORS Allowed Origins
+## This is a list of allowed origins for CORS configuration.
+## Default value is ["*"].
+# s3_cors_allowed_origins = [ "*" ]
+
+#### RDS Configuration Variables ####
+
+## RDS Instance Name
+## This is the name of the RDS instance that will be created.
+## Default value is set to "main-mssql"
+# rds_instance_name = "main-mssql"
+
+## RDS Engine
+## This is the database engine for the RDS instance.
+## Default value is set to "sqlserver-se".
+# rds_engine = "sqlserver-se"
+
+## RDS Engine Version
+## This is the version of the database engine for the RDS instance.
+## Default value is set to "15.0".
+# rds_engine_version = "15.0"
+
+## RDS Instance Type
+## This is the instance type for the RDS instance.
+## Default value is set to "db.t4g.xlarge".
+# rds_instance_type = "db.t4g.xlarge"
+
+## RDS Username
+## This is the master username for the RDS instance.
+## Default value is set to "admin".
+# rds_username = "admin"
+
+## RDS Password (Required)
+## This is the master password for the RDS instance.
+rds_password = ""
+
+## RDS Port
+## This is the port for the RDS instance.
+## Default value is set to 1433.
+# rds_port = 1433
+
+## RDS multi-AZ
+## This is a boolean value that determines whether to enable Multi-AZ for the RDS instance.
+## Default value is set to false.
+# rds_multi_az = true
+
+#### Elasticache Configuration Variables ####
+
+## Elasticache Cluster Name
+## This is the name of the Elasticache cluster that will be created.
+## Default value is set to "main-redis-cluster".
+# elasticache_cluster_name = ""
+
+##  Elasticache Auth Token (Required)
+## This is the authentication token for the Elasticache cluster.
+elasticache_auth_token = ""
+
+## Elasticache Engine Version
+## This is the version of the database engine for the Elasticache cluster.
+## Default value is set to "7.1".
+# elasticache_engine_version = "7.1"
+
+## Elasticache Node Type
+## This is the instance type for the Elasticache cluster.
+## Default value is set to "cache.t2.small".
+# elasticache_node_type = "cache.t2.small"
+
+## Elasticache Port
+## This is the port for the Elasticache cluster.
+## Default value is set to 6379.
+# elasticache_port = 6379
+
+## Elasticache Parameter Group Name
+## This is the name of the Elasticache parameter group.
+## Default value is set to "default.redis7".
+# elasticache_parameter_group_name = "default.redis7"
+
+#### EKS Configuration Variables ####
+
+## EKS Cluster Name
+## This is the name of the EKS cluster that will be created.
+## Default value is set to "main-eks-cluster".
+# eks_cluster_name = ""
+
+## EKS Instance Type
+## This is the instance type for the EKS cluster.
+## Default value is set to "c6a.4xlarge". Please check if this instance type is available in your region.
+# eks_instance_type = "c6a.4xlarge"
+
+## EKS Node Max Pod number
+## This is the maximum number of pods that can be run on a node.
+## The maximum number of pods is determined by the instance type. Refer to https://github.com/aws/amazon-vpc-cni-k8s/blob/master/misc/eni-max-pods.txt for more details.
+## Default value is set to 234.
+# eks_node_max_pod = 234
+
+## EKS Node Group Name
+## This is the name of the EKS node group that will be created.
+## Default value is set to "main-eks-node-group".
+# eks_node_group_name = ""
+
+#### EC2 Configuration Variables ####
+
+## Create a Windows EC2 Instance
+## This is a boolean value that determines whether to create an EC2 instance.
+## Default value is set to false.
+# create_ec2_instance = false
+
+## EC2 Instance Name
+## This is the name of the EC2 instance that will be created.
+## Default value is set to "main-ec2".
+# ec2_instance_name = ""
+
+## Is EC2 Public
+## This is a boolean value that determines whether the EC2 instance is public.
+## Default value is set to true.
+# is_ec2_public = true
+
+## EC2 Allowed CIDR Blocks
+## This is a list of CIDR blocks that are allowed to access the EC2 instance.
+## Default value is set to the current public IP address.
+# ec2_allowed_cidr_blocks = ["0.0.0.0/0"] # e.g. Allow access from anywhere
+
+## Get EC2 Password
+## This is a boolean value that determines whether to get the password for the EC2 instance.
+## Default value is set to false.
+# get_ec2_password = true
+
