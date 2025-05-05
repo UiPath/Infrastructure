@@ -152,7 +152,7 @@ chmod +x uipathctl
 ## Creating `input.json`
 
 Prepare `input.json` with your own values.  
-Replace placeholders marked by `<>`. Only Orchestrator and Platform components are enabled in this example. Should you like to customize the components, please refer to [Conifguring input.json](https://docs.uipath.com/automation-suite/automation-suite/2024.10/installation-guide-eks-aks/configuring-inputjson) for more details.
+Replace placeholders marked by `<>`. Only Orchestrator and Platform components are enabled in this example. Should you like to customize the components, please refer to [Configuring input.json](https://docs.uipath.com/automation-suite/automation-suite/2024.10/installation-guide-eks-aks/configuring-inputjson) for more details.
 
 <details>
 
